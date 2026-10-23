@@ -1,0 +1,6 @@
+name = "durak-supabase-check"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+# Scheduled for two UTC times daily; not a guarantee against Supabase free-tier pausing.
+[triggers]
+crons = ["0 8,20 * * *"]
