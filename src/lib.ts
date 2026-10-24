@@ -7,7 +7,7 @@ export const supabase = createClient(configured ? url : 'https://example.supabas
 })
 export type Mode = 'natural'|'double_single'|'single_double'|'double_double'
 export const MODES: {id:Mode;name:string;detail:string;min:number;max:number;games:number}[]=[
-  {id:'natural',name:'Natural Durak',detail:'1 deck · 1 game',min:3,max:8,games:1},
+  {id:'natural',name:'Durak',detail:'1 deck · 1 game',min:3,max:8,games:1},
   {id:'double_single',name:'Double Single',detail:'2 combined decks · 1 game',min:3,max:16,games:1},
   {id:'single_double',name:'Single Double',detail:'2 separate decks · 2 parallel games',min:3,max:8,games:2},
   {id:'double_double',name:'Double Double',detail:'4 decks · 2 parallel games',min:3,max:16,games:2}

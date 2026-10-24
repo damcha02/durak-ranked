@@ -133,7 +133,7 @@ create or replace function private.register_user() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
  insert into public.profiles(id,username)
- values(new.id,'player_'||substr(replace(new.id::text,'-',''),1,16));
+ values(new.id,'player_'||substr(replace(new.id::text,'-',''),1,15));
  insert into public.ratings(user_id,mode)
  select new.id,x.m from unnest(enum_range(null::public.durak_mode)) as x(m);
  return new;
