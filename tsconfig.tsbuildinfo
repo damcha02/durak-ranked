@@ -1,1 +1,1 @@
-{"root":["./src/App.tsx","./src/lib.ts","./src/main.tsx","./src/rating.ts","./src/vite-env.d.ts","./vite.config.ts"],"version":"5.9.3"}
+{"root":["./src/App.tsx","./src/authValidation.ts","./src/lib.ts","./src/main.tsx","./src/rating.ts","./src/theme.ts","./src/usernameSignIn.ts","./src/vite-env.d.ts","./vite.config.ts"],"version":"5.9.3"}

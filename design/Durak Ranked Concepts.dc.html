@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Source+Sans+3:wght@400;600;700&family=Alegreya:wght@500;700&family=Alegreya+Sans:wght@400;500;700&family=Figtree:wght@400;500;600;700&family=Libre+Caslon+Text:wght@400;700&family=Karla:wght@400;500;700&display=swap" rel="stylesheet"><style>body{margin:0;background:#e9e6e0;font-family:system-ui,sans-serif}a{color:#2F5D46}a:hover{color:#1f4232}.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}.dv-opts{display:flex;flex-direction:column;gap:56px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 13px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.6)}.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}.dv-next{margin:22px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}</style></helmet>
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Durak Ranked · four visual concepts (phones 390 × 844, auth screens fixed; home screens shown at full scroll length)</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a><strong style="color:#1a1a1a">A. The scorebook</strong> — the score pad beside the deck</div>
+<div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start;width:2720px;padding:32px;background:#d8d2c6;border-radius:12px">
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">1 · Sign in</div>
+<div style="width:410px;padding:10px;background:#1d1b19;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#F6F0E4;display:flex;flex-direction:column;font-family:'Source Sans 3',system-ui,sans-serif;color:#2A2723">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="flex:1;padding:40px 28px 48px;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="width:44px;height:60px;border:2px solid #2A2723;border-radius:5px;background:#FBF7EE;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:3px 3px 0 #D9CFBD">♠</div>
+<h1 style="margin:0;font:600 36px/1.1 'Newsreader',Georgia,serif">Durak Ranked</h1>
+<div style="width:56px;height:1px;background:#A8834A"></div>
+<p style="margin:0;font-size:17px;line-height:1.5;color:#5F574C;text-wrap:pretty">A scorebook for your Durak table. Play with real cards, vote on who lost, and keep a rating for each game mode.</p>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #D9CFBD">
+<div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;border-bottom:2px solid #2A2723;margin-bottom:-1px">Sign in</div>
+<div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:17px;color:#6A6257">Create account</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px">
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:600">Username or email<span style="height:52px;display:flex;align-items:center;padding:0 14px;background:#FBF7EE;border:1px solid #9C917F;border-radius:6px;font-weight:400;font-size:17px">cookie</span></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:600">Password<span style="height:52px;display:flex;align-items:center;padding:0 14px;background:#FBF7EE;border:1px solid #9C917F;border-radius:6px;font-weight:400;font-size:17px;letter-spacing:2px">••••••••••••</span></label>
+</div>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;background:#2F5D46;color:#FBF7EE;border-radius:6px;font-size:17px;font-weight:600">Sign in</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#2A2723"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">2 · Create account from invite (error state)</div>
+<div style="width:410px;padding:10px;background:#1d1b19;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#F6F0E4;display:flex;flex-direction:column;font-family:'Source Sans 3',system-ui,sans-serif;color:#2A2723">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="flex:1;padding:28px 28px 48px;display:flex;flex-direction:column;gap:22px">
+<div style="display:flex;align-items:center;gap:12px"><div style="width:24px;height:33px;border:1.5px solid #2A2723;border-radius:3px;background:#FBF7EE;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:15px">♠</div><span style="font:600 22px 'Newsreader',Georgia,serif">Durak Ranked</span></div>
+<div style="padding:14px 16px;background:#EFE5CF;border:1px solid #C9B486;border-radius:6px;font-size:16px;line-height:1.5">You've been invited to table <strong style="letter-spacing:.06em">K7Q2M9XA</strong>. Sign in or create an account and you'll join it straight away.</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #D9CFBD">
+<div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:17px;color:#6A6257">Sign in</div>
+<div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;border-bottom:2px solid #2A2723;margin-bottom:-1px">Create account</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px">
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:600">Username<span style="height:52px;display:flex;align-items:center;padding:0 14px;background:#FBF7EE;border:2px solid #9E3B32;border-radius:6px;font-weight:400;font-size:17px">cookie</span><span style="font-size:15px;color:#9E3B32;font-weight:600">This username may already be taken.</span></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:600">Email address<span style="height:52px;display:flex;align-items:center;padding:0 14px;background:#FBF7EE;border:1px solid #9C917F;border-radius:6px;font-weight:400;font-size:17px">cookie@example.com</span></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:600">Password<span style="height:52px;display:flex;align-items:center;padding:0 14px;background:#FBF7EE;border:1px solid #9C917F;border-radius:6px;font-weight:400;font-size:17px;letter-spacing:2px">••••••••••</span><span style="font-size:15px;color:#6A6257;font-weight:400">At least 10 characters</span></label>
+</div>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;background:#2F5D46;color:#FBF7EE;border-radius:6px;font-size:17px;font-weight:600">Create account</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#2A2723"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">3 · Home with active tables (full scroll)</div>
+<div style="width:410px;padding:10px;background:#1d1b19;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#F6F0E4;display:flex;flex-direction:column;font-family:'Source Sans 3',system-ui,sans-serif;color:#2A2723">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="height:56px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 20px;border-bottom:1px solid #D9CFBD">
+<div style="display:flex;align-items:center;gap:10px;min-height:44px"><div style="width:22px;height:30px;border:1.5px solid #2A2723;border-radius:3px;background:#FBF7EE;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:14px">♠</div><span style="font:600 20px 'Newsreader',Georgia,serif">Durak Ranked</span></div>
+<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><span style="width:36px;height:36px;border-radius:50%;border:1.5px solid #2A2723;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;background:#FBF7EE">CO</span></div>
+</div>
+<div style="flex:1;padding:24px 20px 36px;display:flex;flex-direction:column;gap:32px">
+<div><h1 style="margin:0;font:500 30px/1.15 'Newsreader',Georgia,serif">Good evening, cookie</h1><p style="margin:6px 0 0;font-size:17px;color:#5F574C">Your game is still going.</p></div>
+<div style="background:#FBF7EE;border:1px solid #D9CFBD;border-radius:6px;padding:20px;display:flex;flex-direction:column;gap:16px;box-shadow:0 1px 0 #D9CFBD">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div><div style="font-size:15px;color:#6A6257">Return to table</div><div style="font:600 26px/1.2 'Newsreader',Georgia,serif;margin-top:2px">Single Double</div></div><span style="border:1.5px solid #2F5D46;color:#2F5D46;padding:3px 9px;border-radius:4px;font-size:15px;font-weight:700;transform:rotate(-3deg);white-space:nowrap;margin-top:4px">in progress</span></div>
+<div style="border-top:1px solid #A8834A;border-bottom:1px solid #E4DACA">
+<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #E4DACA;font-size:16px"><span style="color:#6A6257">Table</span><span style="font-weight:600;letter-spacing:.08em">PL3VD8ZE</span></div>
+<div style="display:flex;justify-content:space-between;padding:10px 0;font-size:16px"><span style="color:#6A6257">Status</span><span>Game in progress</span></div>
+</div>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;background:#2F5D46;color:#FBF7EE;border-radius:6px;font-size:17px;font-weight:600">Return to table</div>
+</div>
+<div><h2 style="margin:0 0 6px;font:600 21px 'Newsreader',Georgia,serif">Other tables</h2>
+<div style="min-height:64px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #A8834A;border-bottom:1px solid #E4DACA">
+<div><div style="font-size:17px;font-weight:600">Durak</div><div style="font-size:16px;color:#6A6257">Table K7Q2M9XA · Waiting for players</div></div><span style="font-size:22px;color:#6A6257">›</span></div>
+</div>
+<div><h2 style="margin:0 0 12px;font:600 21px 'Newsreader',Georgia,serif">Start a table</h2>
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px solid #A8834A;border-bottom:1px solid #E4DACA"><div><div style="font-size:15px;color:#6A6257">Game mode</div><div style="font-size:18px;font-weight:600">Durak</div><div style="font-size:16px;color:#6A6257">1 deck · 1 game · 3–8 players</div></div><span style="min-height:44px;padding:0 6px;display:flex;align-items:center;color:#2F5D46;font-weight:700;font-size:17px;text-decoration:underline;text-underline-offset:3px">Change</span></div>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:600">Friend group <span style="font-weight:400;color:#6A6257;display:contents">(optional)</span><span style="height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:#FBF7EE;border:1px solid #9C917F;border-radius:6px;font-weight:400;font-size:17px">Thursday regulars<span>▾</span></span></label>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;background:#2F5D46;color:#FBF7EE;border-radius:6px;font-size:17px;font-weight:600">Create table</div>
+</div></div>
+<div><h2 style="margin:0 0 12px;font:600 21px 'Newsreader',Georgia,serif">Join a table</h2>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:600">Table code<span style="display:flex;gap:10px;font-weight:400"><span style="flex:1;height:52px;display:flex;align-items:center;padding:0 14px;background:#FBF7EE;border:1px solid #9C917F;border-radius:6px;font-size:17px;color:#6A6257;letter-spacing:.12em">8 characters</span><span style="width:84px;height:52px;display:flex;align-items:center;justify-content:center;border:1.5px solid #2F5D46;color:#2F5D46;border-radius:6px;font-weight:700;font-size:17px">Join</span></span></label>
+<p style="margin:8px 0 0;font-size:15px;line-height:1.45;color:#6A6257">Type the 8-character code from the host, or scan the QR code on their phone.</p></div>
+<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><h2 style="margin:0;font:600 21px 'Newsreader',Georgia,serif">Your ratings</h2><span style="min-height:44px;display:flex;align-items:center;color:#2F5D46;font-weight:700;font-size:16px;text-decoration:underline;text-underline-offset:3px">See rankings</span></div>
+<div style="border-top:1px solid #A8834A">
+<div style="display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:center;min-height:56px;border-bottom:1px solid #E4DACA"><div><div style="font-size:17px;font-weight:600">Durak</div><div style="font-size:15px;color:#6A6257">17 games</div></div>
+<span style="display:flex;gap:7px;align-items:center"><span style="position:relative;display:flex;gap:3px"><span style="width:1.5px;height:16px;background:#2A2723"></span><span style="width:1.5px;height:16px;background:#2A2723"></span><span style="width:1.5px;height:16px;background:#2A2723"></span><span style="width:1.5px;height:16px;background:#2A2723"></span><span style="position:absolute;left:-3px;right:-3px;top:7px;height:1.5px;background:#2A2723;transform:rotate(-28deg)"></span></span><span style="position:relative;display:flex;gap:3px"><span style="width:1.5px;height:16px;background:#2A2723"></span><span style="width:1.5px;height:16px;background:#2A2723"></span><span style="width:1.5px;height:16px;background:#2A2723"></span><span style="width:1.5px;height:16px;background:#2A2723"></span><span style="position:absolute;left:-3px;right:-3px;top:7px;height:1.5px;background:#2A2723;transform:rotate(-28deg)"></span></span><span style="position:relative;display:flex;gap:3px"><span style="width:1.5px;height:16px;background:#2A2723"></span><span style="width:1.5px;height:16px;background:#2A2723"></span><span style="width:1.5px;height:16px;background:#2A2723"></span><span style="width:1.5px;height:16px;background:#2A2723"></span><span style="position:absolute;left:-3px;right:-3px;top:7px;height:1.5px;background:#2A2723;transform:rotate(-28deg)"></span></span><span style="display:flex;gap:3px"><span style="width:1.5px;height:16px;background:#2A2723"></span><span style="width:1.5px;height:16px;background:#2A2723"></span></span></span>
+<span style="font:600 21px 'Newsreader',Georgia,serif;font-variant-numeric:tabular-nums;min-width:58px;text-align:right">1,243</span></div>
+<div style="display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:center;min-height:56px;border-bottom:1px solid #E4DACA"><div><div style="font-size:17px;font-weight:600">Double Single</div><div style="font-size:15px;color:#6A6257">4 games</div></div>
+<span style="display:flex;gap:3px"><span style="width:1.5px;height:16px;background:#2A2723"></span><span style="width:1.5px;height:16px;background:#2A2723"></span><span style="width:1.5px;height:16px;background:#2A2723"></span><span style="width:1.5px;height:16px;background:#2A2723"></span></span>
+<span style="font:600 21px 'Newsreader',Georgia,serif;min-width:58px;text-align:right;color:#9E3B32">1,188</span></div>
+<div style="display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;min-height:56px;border-bottom:1px solid #E4DACA"><div><div style="font-size:17px;font-weight:600">Single Double</div><div style="font-size:15px;color:#6A6257">No games yet</div></div><span style="font:500 21px 'Newsreader',Georgia,serif;color:#6A6257;text-align:right">1,200</span></div>
+<div style="display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;min-height:56px;border-bottom:1px solid #E4DACA"><div><div style="font-size:17px;font-weight:600">Double Double</div><div style="font-size:15px;color:#6A6257">No games yet</div></div><span style="font:500 21px 'Newsreader',Georgia,serif;color:#6A6257;text-align:right">1,200</span></div>
+</div></div>
+</div>
+<div style="flex:none;display:grid;grid-template-columns:repeat(4,1fr);background:#FBF7EE;border-top:1px solid #D9CFBD;padding-bottom:34px">
+<div style="height:56px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;box-shadow:inset 0 2px 0 #2A2723">Home</div>
+<div style="height:56px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5F574C">Rankings</div>
+<div style="height:56px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5F574C">Groups</div>
+<div style="height:56px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5F574C">Profile</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#2A2723"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">4 · Home for a new user, mode picker open</div>
+<div style="width:410px;padding:10px;background:#1d1b19;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#F6F0E4;display:flex;flex-direction:column;font-family:'Source Sans 3',system-ui,sans-serif;color:#2A2723">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="height:56px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 20px;border-bottom:1px solid #D9CFBD">
+<div style="display:flex;align-items:center;gap:10px;min-height:44px"><div style="width:22px;height:30px;border:1.5px solid #2A2723;border-radius:3px;background:#FBF7EE;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:14px">♠</div><span style="font:600 20px 'Newsreader',Georgia,serif">Durak Ranked</span></div>
+<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><span style="width:36px;height:36px;border-radius:50%;border:1.5px solid #2A2723;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;background:#FBF7EE">CO</span></div>
+</div>
+<div style="flex:1;padding:24px 20px 36px;display:flex;flex-direction:column;gap:32px">
+<div><h1 style="margin:0;font:500 30px/1.15 'Newsreader',Georgia,serif">Good evening, cookie</h1><p style="margin:6px 0 0;font-size:17px;color:#5F574C">No tables yet. Start one, or join a friend's.</p></div>
+<div><h2 style="margin:0 0 4px;font:600 21px 'Newsreader',Georgia,serif">Start a table</h2><p style="margin:0 0 12px;font-size:16px;color:#6A6257">Choose a game mode</p>
+<div role="radiogroup" style="border-top:1px solid #A8834A">
+<div style="display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:start;padding:14px 4px;border-bottom:1px solid #E4DACA;background:#FBF7EE"><span style="width:22px;height:22px;border-radius:50%;border:2px solid #2F5D46;display:flex;align-items:center;justify-content:center;margin-top:2px"><span style="width:12px;height:12px;border-radius:50%;background:#2F5D46"></span></span><div><div style="font-size:18px;font-weight:700">Durak <span style="font-weight:400;font-size:15px;color:#6A6257">· default</span></div><div style="font-size:16px;color:#5F574C">1 deck · 1 game · 3–8 players</div></div></div>
+<div style="display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:start;padding:14px 4px;border-bottom:1px solid #E4DACA"><span style="width:22px;height:22px;border-radius:50%;border:2px solid #9C917F;box-sizing:border-box;margin-top:2px"></span><div><div style="font-size:18px;font-weight:600">Double Single</div><div style="font-size:16px;color:#5F574C">2 combined decks · 1 game · 3–16 players</div></div></div>
+<div style="display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:start;padding:14px 4px;border-bottom:1px solid #E4DACA"><span style="width:22px;height:22px;border-radius:50%;border:2px solid #9C917F;box-sizing:border-box;margin-top:2px"></span><div><div style="font-size:18px;font-weight:600">Single Double</div><div style="font-size:16px;color:#5F574C">2 separate decks · 2 parallel games · 3–8 players</div></div></div>
+<div style="display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:start;padding:14px 4px;border-bottom:1px solid #E4DACA"><span style="width:22px;height:22px;border-radius:50%;border:2px solid #9C917F;box-sizing:border-box;margin-top:2px"></span><div><div style="font-size:18px;font-weight:600">Double Double</div><div style="font-size:16px;color:#5F574C">4 decks · 2 parallel games · 3–16 players</div></div></div>
+</div>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;background:#2F5D46;color:#FBF7EE;border-radius:6px;font-size:17px;font-weight:600;margin-top:16px">Create table</div>
+</div>
+<div><h2 style="margin:0 0 12px;font:600 21px 'Newsreader',Georgia,serif">Join a table</h2>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:600">Table code<span style="display:flex;gap:10px;font-weight:400"><span style="flex:1;height:52px;display:flex;align-items:center;padding:0 14px;background:#FBF7EE;border:1px solid #9C917F;border-radius:6px;font-size:17px;color:#6A6257;letter-spacing:.12em">8 characters</span><span style="width:84px;height:52px;display:flex;align-items:center;justify-content:center;border:1.5px solid #2F5D46;color:#2F5D46;border-radius:6px;font-weight:700;font-size:17px">Join</span></span></label>
+<p style="margin:8px 0 0;font-size:15px;line-height:1.45;color:#6A6257">Type the 8-character code from the host, or scan the QR code on their phone.</p></div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-top:1px solid #A8834A;border-bottom:1px solid #E4DACA"><div><div style="font-size:17px;font-weight:600">Your ratings</div><div style="font-size:15px;color:#6A6257">Everyone starts at 1,200</div></div><span style="min-height:44px;display:flex;align-items:center;color:#2F5D46;font-weight:700;font-size:16px;text-decoration:underline;text-underline-offset:3px">See rankings</span></div>
+</div>
+<div style="flex:none;display:grid;grid-template-columns:repeat(4,1fr);background:#FBF7EE;border-top:1px solid #D9CFBD;padding-bottom:34px">
+<div style="height:56px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;box-shadow:inset 0 2px 0 #2A2723">Home</div>
+<div style="height:56px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5F574C">Rankings</div>
+<div style="height:56px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5F574C">Groups</div>
+<div style="height:56px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5F574C">Profile</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#2A2723"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">5 · Header and bottom navigation states</div>
+<div style="width:390px;display:flex;flex-direction:column;gap:20px;font-family:'Source Sans 3',system-ui,sans-serif;color:#2A2723">
+<div style="font:600 13px system-ui;color:#5a544b">Header</div>
+<div style="height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 20px;border-bottom:1px solid #D9CFBD;background:#F6F0E4;border-radius:8px">
+<div style="display:flex;align-items:center;gap:10px;min-height:44px"><div style="width:22px;height:30px;border:1.5px solid #2A2723;border-radius:3px;background:#FBF7EE;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:14px">♠</div><span style="font:600 20px 'Newsreader',Georgia,serif">Durak Ranked</span></div>
+<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><span style="width:36px;height:36px;border-radius:50%;border:1.5px solid #2A2723;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;background:#FBF7EE">CO</span></div>
+</div>
+<div style="font:600 13px system-ui;color:#5a544b">Bottom nav · Home active</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);background:#FBF7EE;border:1px solid #D9CFBD;border-radius:8px;overflow:hidden">
+<div style="height:56px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;box-shadow:inset 0 2px 0 #2A2723">Home</div><div style="height:56px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5F574C">Rankings</div><div style="height:56px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5F574C">Groups</div><div style="height:56px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5F574C">Profile</div>
+</div>
+<div style="font:600 13px system-ui;color:#5a544b">Bottom nav · Rankings active, keyboard focus on Groups</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);background:#FBF7EE;border:1px solid #D9CFBD;border-radius:8px;padding:4px">
+<div style="height:52px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5F574C">Home</div><div style="height:52px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;box-shadow:inset 0 2px 0 #2A2723">Rankings</div><div style="height:52px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#2A2723;outline:3px solid #2F5D46;outline-offset:-3px;border-radius:6px">Groups</div><div style="height:52px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5F574C">Profile</div>
+</div>
+<p style="margin:0;font:13px/1.5 system-ui;color:#5a544b">Text-only tabs; the active tab gets an ink rule along its top edge and bold weight. Focus is a 3px forest-green outline (:focus-visible only), inset so it never clips at the screen edge.</p>
+</div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">6 · Table lobby (preview)</div>
+<div style="width:410px;padding:10px;background:#1d1b19;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#F6F0E4;display:flex;flex-direction:column;font-family:'Source Sans 3',system-ui,sans-serif;color:#2A2723">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="height:56px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 20px;border-bottom:1px solid #D9CFBD">
+<div style="display:flex;align-items:center;gap:10px;min-height:44px"><div style="width:22px;height:30px;border:1.5px solid #2A2723;border-radius:3px;background:#FBF7EE;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:14px">♠</div><span style="font:600 20px 'Newsreader',Georgia,serif">Durak Ranked</span></div>
+<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><span style="width:36px;height:36px;border-radius:50%;border:1.5px solid #2A2723;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;background:#FBF7EE">CO</span></div>
+</div>
+<div style="flex:1;padding:24px 20px 36px;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div><h1 style="margin:0;font:500 30px/1.15 'Newsreader',Georgia,serif">Single Double</h1><div style="font-size:16px;color:#6A6257;margin-top:4px">Table <strong style="color:#2A2723;letter-spacing:.08em">PL3VD8ZE</strong></div></div><span style="border:1.5px solid #6A6257;color:#5F574C;padding:3px 9px;border-radius:4px;font-size:15px;font-weight:700;transform:rotate(-3deg);margin-top:8px">waiting</span></div>
+<div style="height:48px;display:flex;align-items:center;justify-content:center;border:1.5px solid #2F5D46;color:#2F5D46;border-radius:6px;font-weight:700;font-size:17px">Invite / QR</div>
+<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><h2 style="margin:0;font:600 21px 'Newsreader',Georgia,serif">Players</h2><span style="font-size:16px;color:#6A6257">2 of 8</span></div>
+<div style="border-top:1px solid #A8834A">
+<div style="display:flex;align-items:center;gap:12px;min-height:64px;border-bottom:1px solid #E4DACA"><span style="width:40px;height:40px;border-radius:50%;border:1.5px solid #2A2723;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;background:#FBF7EE;flex:none">CO</span><div style="flex:1"><div style="display:flex;align-items:center;gap:8px;font-size:17px;font-weight:600">cookie<span style="font-size:14px;font-weight:600;border:1px solid #9C917F;border-radius:4px;padding:0 6px;color:#5F574C">you</span></div><div style="font-size:15px;color:#6A6257">♛ Host</div></div><span style="font-size:16px;font-weight:600">★ 5.0</span></div>
+<div style="display:flex;align-items:center;gap:12px;min-height:64px;border-bottom:1px solid #E4DACA"><span style="width:40px;height:40px;border-radius:50%;border:1.5px solid #2A2723;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;background:#FBF7EE;flex:none">MA</span><div style="flex:1;font-size:17px;font-weight:600">Masha</div><span style="font-size:16px;font-weight:600">★ 4.8</span></div>
+<div style="display:flex;align-items:center;gap:12px;min-height:64px;border-bottom:1px solid #E4DACA;color:#6A6257"><span style="width:40px;height:40px;border-radius:50%;border:1.5px dashed #9C917F;box-sizing:border-box;flex:none"></span><div style="font-size:16px">Waiting for one more player</div></div>
+</div></div>
+<p style="margin:0;font-size:17px;text-align:center;color:#5F574C">Need 1 more player to start</p>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;background:#DDD3C1;color:#5A5247;border-radius:6px;font-size:17px;font-weight:600">Start new game</div>
+</div>
+<div style="flex:none;display:grid;grid-template-columns:repeat(4,1fr);background:#FBF7EE;border-top:1px solid #D9CFBD;padding-bottom:34px">
+<div style="height:56px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;box-shadow:inset 0 2px 0 #2A2723">Home</div><div style="height:56px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5F574C">Rankings</div><div style="height:56px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5F574C">Groups</div><div style="height:56px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5F574C">Profile</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#2A2723"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">Desktop · home, 1280 wide</div>
+<div style="width:1280px;background:#F6F0E4;border-radius:10px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.12);font-family:'Source Sans 3',system-ui,sans-serif;color:#2A2723">
+<div style="height:64px;display:flex;align-items:center;gap:40px;padding:0 48px;border-bottom:1px solid #D9CFBD;background:#FBF7EE">
+<div style="display:flex;align-items:center;gap:10px"><div style="width:22px;height:30px;border:1.5px solid #2A2723;border-radius:3px;background:#FBF7EE;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:14px">♠</div><span style="font:600 21px 'Newsreader',Georgia,serif">Durak Ranked</span></div>
+<div style="display:flex;gap:8px;flex:1"><span style="height:64px;display:flex;align-items:center;padding:0 12px;font-weight:700;box-shadow:inset 0 -2px 0 #2A2723">Home</span><span style="height:64px;display:flex;align-items:center;padding:0 12px;color:#5F574C">Rankings</span><span style="height:64px;display:flex;align-items:center;padding:0 12px;color:#5F574C">Groups</span><span style="height:64px;display:flex;align-items:center;padding:0 12px;color:#5F574C">Profile</span></div>
+<span style="width:36px;height:36px;border-radius:50%;border:1.5px solid #2A2723;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">CO</span>
+</div>
+<div style="max-width:1080px;margin:0 auto;padding:40px 0 56px;display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:56px">
+<div style="display:flex;flex-direction:column;gap:32px">
+<div><h1 style="margin:0;font:500 38px/1.15 'Newsreader',Georgia,serif">Good evening, cookie</h1><p style="margin:6px 0 0;font-size:18px;color:#5F574C">Your game is still going.</p></div>
+<div style="background:#FBF7EE;border:1px solid #D9CFBD;border-radius:6px;padding:24px;display:flex;align-items:center;justify-content:space-between;gap:24px">
+<div><div style="font-size:15px;color:#6A6257">Return to table</div><div style="font:600 28px/1.2 'Newsreader',Georgia,serif">Single Double</div><div style="font-size:16px;color:#5F574C;margin-top:4px">Table <strong style="letter-spacing:.08em;color:#2A2723">PL3VD8ZE</strong> · Game in progress</div></div>
+<div style="height:52px;padding:0 28px;display:flex;align-items:center;background:#2F5D46;color:#FBF7EE;border-radius:6px;font-size:17px;font-weight:600;flex:none">Return to table</div></div>
+<div><h2 style="margin:0 0 6px;font:600 21px 'Newsreader',Georgia,serif">Other tables</h2><div style="min-height:60px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #A8834A;border-bottom:1px solid #E4DACA"><div><strong>Durak</strong> <span style="color:#6A6257">· Table K7Q2M9XA · Waiting for players</span></div><span style="color:#6A6257;font-size:22px">›</span></div></div>
+<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><h2 style="margin:0;font:600 21px 'Newsreader',Georgia,serif">Your ratings</h2><span style="color:#2F5D46;font-weight:700;text-decoration:underline;text-underline-offset:3px">See rankings</span></div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #A8834A;border-bottom:1px solid #E4DACA">
+<div style="padding:14px 0"><div style="font-weight:600">Durak</div><div style="font:600 24px 'Newsreader',Georgia,serif">1,243</div><div style="font-size:15px;color:#6A6257">17 games</div></div>
+<div style="padding:14px 16px;border-left:1px solid #E4DACA"><div style="font-weight:600">Double Single</div><div style="font:600 24px 'Newsreader',Georgia,serif;color:#9E3B32">1,188</div><div style="font-size:15px;color:#6A6257">4 games</div></div>
+<div style="padding:14px 16px;border-left:1px solid #E4DACA"><div style="font-weight:600">Single Double</div><div style="font:500 24px 'Newsreader',Georgia,serif;color:#6A6257">1,200</div><div style="font-size:15px;color:#6A6257">No games yet</div></div>
+<div style="padding:14px 16px;border-left:1px solid #E4DACA"><div style="font-weight:600">Double Double</div><div style="font:500 24px 'Newsreader',Georgia,serif;color:#6A6257">1,200</div><div style="font-size:15px;color:#6A6257">No games yet</div></div>
+</div></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:32px">
+<div style="background:#FBF7EE;border:1px solid #D9CFBD;border-radius:6px;padding:24px;display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font:600 21px 'Newsreader',Georgia,serif">Start a table</h2>
+<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #A8834A;border-bottom:1px solid #E4DACA;padding:10px 0"><div><div style="font-weight:600;font-size:17px">Durak</div><div style="font-size:15px;color:#6A6257">1 deck · 1 game · 3–8 players</div></div><span style="color:#2F5D46;font-weight:700;text-decoration:underline;text-underline-offset:3px">Change</span></div>
+<span style="height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border:1px solid #9C917F;border-radius:6px">Thursday regulars<span>▾</span></span>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;background:#2F5D46;color:#FBF7EE;border-radius:6px;font-size:17px;font-weight:600">Create table</div></div>
+<div style="display:flex;flex-direction:column;gap:8px"><h2 style="margin:0 0 4px;font:600 21px 'Newsreader',Georgia,serif">Join a table</h2><div style="display:flex;gap:10px"><span style="flex:1;height:48px;display:flex;align-items:center;padding:0 14px;background:#FBF7EE;border:1px solid #9C917F;border-radius:6px;color:#6A6257;letter-spacing:.12em">Table code</span><span style="width:84px;height:48px;display:flex;align-items:center;justify-content:center;border:1.5px solid #2F5D46;color:#2F5D46;border-radius:6px;font-weight:700">Join</span></div><p style="margin:0;font-size:15px;color:#6A6257">Type the 8-character code from the host, or scan the QR code on their phone.</p></div>
+</div></div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">Style sheet</div>
+<div style="width:560px;background:#FBF7EE;border-radius:10px;padding:28px;box-sizing:border-box;font-family:'Source Sans 3',system-ui,sans-serif;color:#2A2723;display:flex;flex-direction:column;gap:22px">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;font-size:14px">
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:6px;background:#F6F0E4;border:1px solid #D9CFBD;flex:none"></span><span><strong>Background</strong> #F6F0E4</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:6px;background:#FBF7EE;border:1px solid #D9CFBD;flex:none"></span><span><strong>Surface</strong> #FBF7EE</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:6px;background:#2A2723;flex:none"></span><span><strong>Text</strong> #2A2723</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:6px;background:#6A6257;flex:none"></span><span><strong>Muted text</strong> #6A6257 (5.2:1)</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:6px;background:#2F5D46;flex:none"></span><span><strong>Primary</strong> #2F5D46</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:6px;background:#9E3B32;flex:none"></span><span><strong>Danger / red suits</strong> #9E3B32</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:6px;background:#A8834A;flex:none"></span><span><strong>Accent brass</strong> #A8834A (rules only)</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:6px;background:#D9CFBD;flex:none"></span><span><strong>Border</strong> #D9CFBD · ruled #E4DACA · input #9C917F</span></div>
+</div>
+<div style="font-size:14px;line-height:1.6"><strong>Type</strong> · h1 Newsreader 500 30/1.15 · h2 Newsreader 600 21 · body Source Sans 3 400 17/1.45 · small 15/1.45 · ratings Newsreader 600 21 tabular</div>
+<div style="font-size:14px;line-height:1.6"><strong>Shape</strong> · radius 6 (buttons, inputs, cards), 4 (stamps), round avatars · spacing 4, 8, 12, 16, 24, 32 · no shadows except a 1px offset under the return card</div>
+<p style="margin:0;font-size:15px;line-height:1.55;border-top:1px solid #A8834A;padding-top:16px">Feels like the pad and pencil someone keeps by the deck: ruled lines, tally marks and stamped statuses make it look recorded by hand rather than computed. Trade-off: it is quiet, so the return-to-table card has to carry urgency through size alone; voting screens translate naturally into a ledger of names to tick.</p>
+</div></div>
+
+</div></div>
+
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a><strong style="color:#1a1a1a">B. Matte felt</strong> — the phone is the table; cream card stock is dealt onto it. Light set, then dark set.</div>
+<div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start;width:2720px;padding:32px;background:#cfd3cc;border-radius:12px">
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#2c3a33">1 · Sign in</div>
+<div style="width:410px;padding:10px;background:#111;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#23463A;display:flex;flex-direction:column;font-family:'Alegreya Sans',system-ui,sans-serif;color:#F2EAD8">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="flex:1;padding:36px 20px 48px;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:0 12px">
+<div style="width:46px;height:64px;border-radius:6px;background:#F2EAD8;color:#2A251F;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:30px;box-shadow:0 1px 0 rgba(0,0,0,.2),0 8px 18px rgba(0,0,0,.22);outline:1px solid #C7A468;outline-offset:-5px">♠</div>
+<h1 style="margin:0;font:700 34px/1.1 'Alegreya',Georgia,serif">Durak Ranked</h1>
+<p style="margin:0;font-size:18px;line-height:1.45;color:#D3DACF">Play Durak with real cards. We'll keep the score, the votes and everyone's rating.</p>
+</div>
+<div style="background:#F2EAD8;color:#2A251F;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:16px;box-shadow:0 1px 0 rgba(0,0,0,.2),0 8px 18px rgba(0,0,0,.22)">
+<div style="display:grid;grid-template-columns:1fr 1fr;background:#E4D9C3;border-radius:10px;padding:4px">
+<div style="height:44px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;background:#F2EAD8;border-radius:7px;box-shadow:0 1px 2px rgba(0,0,0,.15)">Sign in</div>
+<div style="height:44px;display:flex;align-items:center;justify-content:center;font-size:17px;color:#665C4E">Create account</div>
+</div>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:700">Username or email<span style="height:52px;display:flex;align-items:center;padding:0 14px;background:#FBF6EC;border:1px solid #9A8E78;border-radius:10px;font-weight:400;font-size:17px">cookie</span></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:700">Password<span style="height:52px;display:flex;align-items:center;padding:0 14px;background:#FBF6EC;border:1px solid #9A8E78;border-radius:10px;font-weight:400;font-size:17px;letter-spacing:2px">••••••••••••</span></label>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;background:#23463A;color:#F2EAD8;border-radius:10px;font-size:18px;font-weight:700">Sign in</div>
+</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#F2EAD8"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#2c3a33">2 · Create account from invite (error state)</div>
+<div style="width:410px;padding:10px;background:#111;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#23463A;display:flex;flex-direction:column;font-family:'Alegreya Sans',system-ui,sans-serif;color:#F2EAD8">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="flex:1;padding:24px 20px 48px;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;align-items:center;gap:12px;padding:0 4px"><div style="width:24px;height:33px;border-radius:4px;background:#F2EAD8;color:#2A251F;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:16px">♠</div><span style="font:700 22px 'Alegreya',Georgia,serif">Durak Ranked</span></div>
+<div style="padding:14px 16px;border:1.5px dashed #C7A468;border-radius:12px;font-size:17px;line-height:1.5">You've been invited to table <strong style="letter-spacing:.06em;color:#E2C894">K7Q2M9XA</strong>. Sign in or create an account and you'll join it straight away.</div>
+<div style="background:#F2EAD8;color:#2A251F;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:16px;box-shadow:0 1px 0 rgba(0,0,0,.2),0 8px 18px rgba(0,0,0,.22)">
+<div style="display:grid;grid-template-columns:1fr 1fr;background:#E4D9C3;border-radius:10px;padding:4px">
+<div style="height:44px;display:flex;align-items:center;justify-content:center;font-size:17px;color:#665C4E">Sign in</div>
+<div style="height:44px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;background:#F2EAD8;border-radius:7px;box-shadow:0 1px 2px rgba(0,0,0,.15)">Create account</div>
+</div>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:700">Username<span style="height:52px;display:flex;align-items:center;padding:0 14px;background:#FBF6EC;border:2px solid #9A372D;border-radius:10px;font-weight:400;font-size:17px">cookie</span><span style="font-size:15px;color:#9A372D">This username may already be taken.</span></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:700">Email address<span style="height:52px;display:flex;align-items:center;padding:0 14px;background:#FBF6EC;border:1px solid #9A8E78;border-radius:10px;font-weight:400;font-size:17px">cookie@example.com</span></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:700">Password<span style="height:52px;display:flex;align-items:center;padding:0 14px;background:#FBF6EC;border:1px solid #9A8E78;border-radius:10px;font-weight:400;font-size:17px;letter-spacing:2px">••••••••••</span><span style="font-size:15px;color:#665C4E;font-weight:400">At least 10 characters</span></label>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;background:#23463A;color:#F2EAD8;border-radius:10px;font-size:18px;font-weight:700">Create account</div>
+</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#F2EAD8"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#2c3a33">3 · Home with active tables (full scroll)</div>
+<div style="width:410px;padding:10px;background:#111;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#23463A;display:flex;flex-direction:column;font-family:'Alegreya Sans',system-ui,sans-serif;color:#F2EAD8">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="height:56px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 20px">
+<div style="display:flex;align-items:center;gap:10px;min-height:44px"><div style="width:22px;height:30px;border-radius:4px;background:#F2EAD8;color:#2A251F;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:15px">♠</div><span style="font:700 21px 'Alegreya',Georgia,serif">Durak Ranked</span></div>
+<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><span style="width:38px;height:38px;border-radius:50%;background:#F2EAD8;color:#23463A;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">CO</span></div>
+</div>
+<div style="flex:1;padding:16px 20px 36px;display:flex;flex-direction:column;gap:28px">
+<div><h1 style="margin:0;font:700 30px/1.15 'Alegreya',Georgia,serif">Good evening, cookie</h1><p style="margin:6px 0 0;font-size:18px;color:#D3DACF">Your game is still going.</p></div>
+<div style="background:#F2EAD8;color:#2A251F;border-radius:14px;padding:22px 20px 20px;transform:rotate(-1.5deg);box-shadow:0 1px 0 rgba(0,0,0,.2),0 10px 22px rgba(0,0,0,.28);position:relative;display:flex;flex-direction:column;gap:14px">
+<span style="position:absolute;top:10px;left:12px;font:700 18px/1 'Alegreya',serif;color:#9A372D">♥</span><span style="position:absolute;bottom:10px;right:12px;font:700 18px/1 'Alegreya',serif;color:#9A372D;transform:rotate(180deg)">♥</span>
+<div style="padding-left:16px"><div style="font-size:16px;color:#665C4E">Game in progress</div><div style="font:700 28px/1.15 'Alegreya',Georgia,serif;margin-top:2px">Single Double</div><div style="font-size:17px;color:#4A4236;margin-top:2px">Table <strong style="letter-spacing:.08em">PL3VD8ZE</strong></div></div>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;background:#23463A;color:#F2EAD8;border-radius:10px;font-size:18px;font-weight:700">Return to table</div>
+</div>
+<div><h2 style="margin:0 0 12px;font:700 21px 'Alegreya',Georgia,serif">Other tables</h2>
+<div style="background:#E9DFCA;color:#2A251F;border-radius:12px;min-height:64px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 0 rgba(0,0,0,.2),0 6px 14px rgba(0,0,0,.2)"><div><div style="font-size:18px;font-weight:700">Durak</div><div style="font-size:16px;color:#5E5547">Table K7Q2M9XA · Waiting for players</div></div><span style="font-size:24px;color:#5E5547">›</span></div>
+</div>
+<div style="background:#F2EAD8;color:#2A251F;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 0 rgba(0,0,0,.2),0 6px 14px rgba(0,0,0,.2)">
+<h2 style="margin:0;font:700 21px 'Alegreya',Georgia,serif">Start a table</h2>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;background:#FBF6EC;border:1px solid #D8CBB0;border-radius:10px"><div><div style="font-size:18px;font-weight:700">Durak</div><div style="font-size:16px;color:#665C4E">1 deck · 1 game · 3–8 players</div></div><span style="min-height:44px;padding:0 4px;display:flex;align-items:center;color:#23463A;font-weight:700;font-size:17px;text-decoration:underline;text-underline-offset:3px">Change</span></div>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:700">Friend group (optional)<span style="height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:#FBF6EC;border:1px solid #9A8E78;border-radius:10px;font-weight:400;font-size:17px">Thursday regulars<span>▾</span></span></label>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;background:#23463A;color:#F2EAD8;border-radius:10px;font-size:18px;font-weight:700">Create table</div>
+</div>
+<div><h2 style="margin:0 0 12px;font:700 21px 'Alegreya',Georgia,serif">Join a table</h2>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:700">Table code<span style="display:flex;gap:10px;font-weight:400"><span style="flex:1;height:52px;display:flex;align-items:center;padding:0 14px;background:#1B372D;border:1.5px solid #7E978A;border-radius:10px;font-size:17px;color:#C4CDBF;letter-spacing:.12em">8 characters</span><span style="width:84px;height:52px;display:flex;align-items:center;justify-content:center;background:#F2EAD8;color:#23463A;border-radius:10px;font-weight:700;font-size:18px">Join</span></span></label>
+<p style="margin:8px 0 0;font-size:16px;line-height:1.45;color:#C4CDBF">Type the 8-character code from the host, or scan the QR code on their phone.</p></div>
+<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><h2 style="margin:0;font:700 21px 'Alegreya',Georgia,serif">Your ratings</h2><span style="min-height:44px;display:flex;align-items:center;color:#E2C894;font-weight:700;font-size:17px;text-decoration:underline;text-underline-offset:3px">See rankings</span></div>
+<div style="border-top:1px solid #C7A468">
+<div style="display:flex;justify-content:space-between;align-items:center;min-height:56px;border-bottom:1px solid #3A5E50"><div><div style="font-size:18px;font-weight:700">Durak</div><div style="font-size:15px;color:#C4CDBF">17 games</div></div><span style="font:700 22px 'Alegreya',serif">1,243</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;min-height:56px;border-bottom:1px solid #3A5E50"><div><div style="font-size:18px;font-weight:700">Double Single</div><div style="font-size:15px;color:#C4CDBF">4 games</div></div><span style="font:700 22px 'Alegreya',serif">1,188</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;min-height:56px;border-bottom:1px solid #3A5E50"><div><div style="font-size:18px;font-weight:700">Single Double</div><div style="font-size:15px;color:#C4CDBF">No games yet</div></div><span style="font:500 22px 'Alegreya',serif;color:#C4CDBF">1,200</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;min-height:56px;border-bottom:1px solid #3A5E50"><div><div style="font-size:18px;font-weight:700">Double Double</div><div style="font-size:15px;color:#C4CDBF">No games yet</div></div><span style="font:500 22px 'Alegreya',serif;color:#C4CDBF">1,200</span></div>
+</div></div>
+</div>
+<div style="flex:none;display:grid;grid-template-columns:repeat(4,1fr);background:#1B372D;border-top:1px solid #3A5E50;padding-bottom:34px">
+<div style="height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:16px;font-weight:700"><span style="width:5px;height:5px;border-radius:50%;background:#C7A468"></span>Home</div>
+<div style="height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:16px;color:#C4CDBF"><span style="width:5px;height:5px"></span>Rankings</div>
+<div style="height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:16px;color:#C4CDBF"><span style="width:5px;height:5px"></span>Groups</div>
+<div style="height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:16px;color:#C4CDBF"><span style="width:5px;height:5px"></span>Profile</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#F2EAD8"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#2c3a33">4 · Home for a new user, mode picker open</div>
+<div style="width:410px;padding:10px;background:#111;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#23463A;display:flex;flex-direction:column;font-family:'Alegreya Sans',system-ui,sans-serif;color:#F2EAD8">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="height:56px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 20px">
+<div style="display:flex;align-items:center;gap:10px;min-height:44px"><div style="width:22px;height:30px;border-radius:4px;background:#F2EAD8;color:#2A251F;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:15px">♠</div><span style="font:700 21px 'Alegreya',Georgia,serif">Durak Ranked</span></div>
+<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><span style="width:38px;height:38px;border-radius:50%;background:#F2EAD8;color:#23463A;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">CO</span></div>
+</div>
+<div style="flex:1;padding:16px 20px 36px;display:flex;flex-direction:column;gap:28px">
+<div><h1 style="margin:0;font:700 30px/1.15 'Alegreya',Georgia,serif">Good evening, cookie</h1><p style="margin:6px 0 0;font-size:18px;color:#D3DACF">The table's empty. Deal a new one or join a friend's.</p></div>
+<div style="background:#F2EAD8;color:#2A251F;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 0 rgba(0,0,0,.2),0 6px 14px rgba(0,0,0,.2)">
+<h2 style="margin:0;font:700 21px 'Alegreya',Georgia,serif">Start a table</h2>
+<div style="font-size:16px;color:#665C4E;margin-top:-6px">Choose a game mode</div>
+<div style="display:flex;gap:12px;padding:14px;border:2px solid #23463A;background:#FBF6EC;border-radius:10px"><span style="width:22px;height:22px;border-radius:50%;border:2px solid #23463A;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px;box-sizing:border-box"><span style="width:12px;height:12px;border-radius:50%;background:#23463A"></span></span><div><div style="font-size:18px;font-weight:700">Durak <span style="font-weight:400;font-size:15px;color:#665C4E">· default</span></div><div style="font-size:16px;color:#4A4236">1 deck · 1 game · 3–8 players</div></div></div>
+<div style="display:flex;gap:12px;padding:14px;border:1px solid #D8CBB0;border-radius:10px"><span style="width:22px;height:22px;border-radius:50%;border:2px solid #9A8E78;flex:none;margin-top:2px;box-sizing:border-box"></span><div><div style="font-size:18px;font-weight:700">Double Single</div><div style="font-size:16px;color:#4A4236">2 combined decks · 1 game · 3–16 players</div></div></div>
+<div style="display:flex;gap:12px;padding:14px;border:1px solid #D8CBB0;border-radius:10px"><span style="width:22px;height:22px;border-radius:50%;border:2px solid #9A8E78;flex:none;margin-top:2px;box-sizing:border-box"></span><div><div style="font-size:18px;font-weight:700">Single Double</div><div style="font-size:16px;color:#4A4236">2 separate decks · 2 parallel games · 3–8 players</div></div></div>
+<div style="display:flex;gap:12px;padding:14px;border:1px solid #D8CBB0;border-radius:10px"><span style="width:22px;height:22px;border-radius:50%;border:2px solid #9A8E78;flex:none;margin-top:2px;box-sizing:border-box"></span><div><div style="font-size:18px;font-weight:700">Double Double</div><div style="font-size:16px;color:#4A4236">4 decks · 2 parallel games · 3–16 players</div></div></div>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;background:#23463A;color:#F2EAD8;border-radius:10px;font-size:18px;font-weight:700;margin-top:4px">Create table</div>
+</div>
+<div><h2 style="margin:0 0 12px;font:700 21px 'Alegreya',Georgia,serif">Join a table</h2>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:700">Table code<span style="display:flex;gap:10px;font-weight:400"><span style="flex:1;height:52px;display:flex;align-items:center;padding:0 14px;background:#1B372D;border:1.5px solid #7E978A;border-radius:10px;font-size:17px;color:#C4CDBF;letter-spacing:.12em">8 characters</span><span style="width:84px;height:52px;display:flex;align-items:center;justify-content:center;background:#F2EAD8;color:#23463A;border-radius:10px;font-weight:700;font-size:18px">Join</span></span></label>
+<p style="margin:8px 0 0;font-size:16px;line-height:1.45;color:#C4CDBF">Type the 8-character code from the host, or scan the QR code on their phone.</p></div>
+<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #C7A468;border-bottom:1px solid #3A5E50;min-height:60px"><div><div style="font-size:18px;font-weight:700">Your ratings</div><div style="font-size:15px;color:#C4CDBF">Everyone starts at 1,200</div></div><span style="min-height:44px;display:flex;align-items:center;color:#E2C894;font-weight:700;font-size:17px;text-decoration:underline;text-underline-offset:3px">See rankings</span></div>
+</div>
+<div style="flex:none;display:grid;grid-template-columns:repeat(4,1fr);background:#1B372D;border-top:1px solid #3A5E50;padding-bottom:34px">
+<div style="height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:16px;font-weight:700"><span style="width:5px;height:5px;border-radius:50%;background:#C7A468"></span>Home</div>
+<div style="height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:16px;color:#C4CDBF"><span style="width:5px;height:5px"></span>Rankings</div>
+<div style="height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:16px;color:#C4CDBF"><span style="width:5px;height:5px"></span>Groups</div>
+<div style="height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:16px;color:#C4CDBF"><span style="width:5px;height:5px"></span>Profile</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#F2EAD8"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#2c3a33">5 · Header and bottom navigation states</div>
+<div style="width:390px;display:flex;flex-direction:column;gap:20px;font-family:'Alegreya Sans',system-ui,sans-serif;color:#F2EAD8">
+<div style="font:600 13px system-ui;color:#2c3a33">Header</div>
+<div style="height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 20px;background:#23463A;border-radius:10px">
+<div style="display:flex;align-items:center;gap:10px"><div style="width:22px;height:30px;border-radius:4px;background:#F2EAD8;color:#2A251F;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:15px">♠</div><span style="font:700 21px 'Alegreya',Georgia,serif">Durak Ranked</span></div>
+<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;outline:3px solid #E2C894;border-radius:50%"><span style="width:38px;height:38px;border-radius:50%;background:#F2EAD8;color:#23463A;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">CO</span></div>
+</div>
+<div style="font:600 13px system-ui;color:#2c3a33">Bottom nav · Home active</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);background:#1B372D;border-radius:10px">
+<div style="height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:16px;font-weight:700"><span style="width:5px;height:5px;border-radius:50%;background:#C7A468"></span>Home</div><div style="height:58px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#C4CDBF">Rankings</div><div style="height:58px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#C4CDBF">Groups</div><div style="height:58px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#C4CDBF">Profile</div>
+</div>
+<div style="font:600 13px system-ui;color:#2c3a33">Bottom nav · Rankings active, keyboard focus on Groups</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);background:#1B372D;border-radius:10px;padding:4px">
+<div style="height:54px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#C4CDBF">Home</div><div style="height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:16px;font-weight:700"><span style="width:5px;height:5px;border-radius:50%;background:#C7A468"></span>Rankings</div><div style="height:54px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#F2EAD8;outline:3px solid #E2C894;outline-offset:-3px;border-radius:8px">Groups</div><div style="height:54px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#C4CDBF">Profile</div>
+</div>
+<p style="margin:0;font:13px/1.5 system-ui;color:#2c3a33">Active tab: cream bold label with a small brass pip. Focus: 3px light-brass ring (#E2C894, 6.9:1 on felt). Avatar focus shown in the header.</p>
+</div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#2c3a33">6 · Table lobby (preview)</div>
+<div style="width:410px;padding:10px;background:#111;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#23463A;display:flex;flex-direction:column;font-family:'Alegreya Sans',system-ui,sans-serif;color:#F2EAD8">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="height:56px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 20px">
+<div style="display:flex;align-items:center;gap:10px;min-height:44px"><div style="width:22px;height:30px;border-radius:4px;background:#F2EAD8;color:#2A251F;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:15px">♠</div><span style="font:700 21px 'Alegreya',Georgia,serif">Durak Ranked</span></div>
+<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><span style="width:38px;height:38px;border-radius:50%;background:#F2EAD8;color:#23463A;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">CO</span></div>
+</div>
+<div style="flex:1;padding:16px 20px 36px;display:flex;flex-direction:column;gap:22px">
+<div><h1 style="margin:0;font:700 30px/1.15 'Alegreya',Georgia,serif">Single Double</h1><div style="font-size:17px;color:#D3DACF;margin-top:4px">Table <strong style="color:#F2EAD8;letter-spacing:.08em">PL3VD8ZE</strong> · Waiting for players</div></div>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;border:1.5px solid #F2EAD8;border-radius:10px;font-weight:700;font-size:18px">Invite / QR</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="background:#F2EAD8;color:#2A251F;border-radius:12px;min-height:68px;padding:0 16px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 0 rgba(0,0,0,.2),0 6px 14px rgba(0,0,0,.2)"><span style="width:42px;height:42px;border-radius:50%;background:#23463A;color:#F2EAD8;display:flex;align-items:center;justify-content:center;font-weight:700;flex:none">CO</span><div style="flex:1"><div style="display:flex;align-items:center;gap:8px;font-size:18px;font-weight:700">cookie <span style="font-size:14px;background:#E4D9C3;border-radius:6px;padding:1px 7px">you</span></div><div style="font-size:15px;color:#665C4E">♛ Host</div></div><span style="font-size:17px;font-weight:700">★ 5.0</span></div>
+<div style="background:#F2EAD8;color:#2A251F;border-radius:12px;min-height:68px;padding:0 16px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 0 rgba(0,0,0,.2),0 6px 14px rgba(0,0,0,.2)"><span style="width:42px;height:42px;border-radius:50%;background:#9A372D;color:#F2EAD8;display:flex;align-items:center;justify-content:center;font-weight:700;flex:none">MA</span><div style="flex:1;font-size:18px;font-weight:700">Masha</div><span style="font-size:17px;font-weight:700">★ 4.8</span></div>
+<div style="border:1.5px dashed #7E978A;border-radius:12px;min-height:68px;display:flex;align-items:center;justify-content:center;font-size:17px;color:#D3DACF">An empty seat</div>
+</div>
+<p style="margin:0;font-size:18px;text-align:center">Need 1 more player to start</p>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;background:#3A5E50;color:#C4CDBF;border-radius:10px;font-size:18px;font-weight:700">Start new game</div>
+</div>
+<div style="flex:none;display:grid;grid-template-columns:repeat(4,1fr);background:#1B372D;border-top:1px solid #3A5E50;padding-bottom:34px">
+<div style="height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:16px;font-weight:700"><span style="width:5px;height:5px;border-radius:50%;background:#C7A468"></span>Home</div><div style="height:58px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#C4CDBF">Rankings</div><div style="height:58px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#C4CDBF">Groups</div><div style="height:58px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#C4CDBF">Profile</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#F2EAD8"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#2c3a33">Dark · Sign in</div>
+<div style="width:410px;padding:10px;background:#000;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#13221C;display:flex;flex-direction:column;font-family:'Alegreya Sans',system-ui,sans-serif;color:#EEE5D2">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="flex:1;padding:36px 20px 48px;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:0 12px">
+<div style="width:46px;height:64px;border-radius:6px;background:#2A2823;color:#EEE5D2;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:30px;outline:1px solid #C7A468;outline-offset:-5px;box-shadow:0 8px 18px rgba(0,0,0,.4)">♠</div>
+<h1 style="margin:0;font:700 34px/1.1 'Alegreya',Georgia,serif">Durak Ranked</h1>
+<p style="margin:0;font-size:18px;line-height:1.45;color:#B4AA97">Play Durak with real cards. We'll keep the score, the votes and everyone's rating.</p>
+</div>
+<div style="background:#2A2823;border:1px solid #3D3A33;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:16px;box-shadow:0 8px 18px rgba(0,0,0,.35)">
+<div style="display:grid;grid-template-columns:1fr 1fr;background:#1D1C18;border-radius:10px;padding:4px">
+<div style="height:44px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;background:#3A372F;border-radius:7px">Sign in</div>
+<div style="height:44px;display:flex;align-items:center;justify-content:center;font-size:17px;color:#B4AA97">Create account</div>
+</div>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:700">Username or email<span style="height:52px;display:flex;align-items:center;padding:0 14px;background:#1D1C18;border:1px solid #6E675A;border-radius:10px;font-weight:400;font-size:17px">cookie</span></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:700">Password<span style="height:52px;display:flex;align-items:center;padding:0 14px;background:#1D1C18;border:1px solid #6E675A;border-radius:10px;font-weight:400;font-size:17px;letter-spacing:2px">••••••••••••</span></label>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;background:#E3D6BA;color:#13221C;border-radius:10px;font-size:18px;font-weight:700">Sign in</div>
+</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#EEE5D2"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#2c3a33">Dark · Home with active tables</div>
+<div style="width:410px;padding:10px;background:#000;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#13221C;display:flex;flex-direction:column;font-family:'Alegreya Sans',system-ui,sans-serif;color:#EEE5D2">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="height:56px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 20px">
+<div style="display:flex;align-items:center;gap:10px"><div style="width:22px;height:30px;border-radius:4px;background:#2A2823;outline:1px solid #C7A468;outline-offset:-3px;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:15px">♠</div><span style="font:700 21px 'Alegreya',Georgia,serif">Durak Ranked</span></div>
+<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><span style="width:38px;height:38px;border-radius:50%;background:#2A2823;border:1px solid #6E675A;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">CO</span></div>
+</div>
+<div style="flex:1;padding:16px 20px 36px;display:flex;flex-direction:column;gap:28px">
+<div><h1 style="margin:0;font:700 30px/1.15 'Alegreya',Georgia,serif">Good evening, cookie</h1><p style="margin:6px 0 0;font-size:18px;color:#B4AA97">Your game is still going.</p></div>
+<div style="background:#2A2823;border:1px solid #3D3A33;border-radius:14px;padding:22px 20px 20px;transform:rotate(-1.5deg);box-shadow:0 10px 22px rgba(0,0,0,.45);position:relative;display:flex;flex-direction:column;gap:14px">
+<span style="position:absolute;top:10px;left:12px;font:700 18px/1 'Alegreya',serif;color:#E28B7F">♥</span><span style="position:absolute;bottom:10px;right:12px;font:700 18px/1 'Alegreya',serif;color:#E28B7F;transform:rotate(180deg)">♥</span>
+<div style="padding-left:16px"><div style="font-size:16px;color:#B4AA97">Game in progress</div><div style="font:700 28px/1.15 'Alegreya',Georgia,serif;margin-top:2px">Single Double</div><div style="font-size:17px;color:#D2C8B4;margin-top:2px">Table <strong style="letter-spacing:.08em;color:#EEE5D2">PL3VD8ZE</strong></div></div>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;background:#E3D6BA;color:#13221C;border-radius:10px;font-size:18px;font-weight:700">Return to table</div>
+</div>
+<div><h2 style="margin:0 0 12px;font:700 21px 'Alegreya',Georgia,serif">Other tables</h2>
+<div style="background:#22211D;border:1px solid #3D3A33;border-radius:12px;min-height:64px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:18px;font-weight:700">Durak</div><div style="font-size:16px;color:#B4AA97">Table K7Q2M9XA · Waiting for players</div></div><span style="font-size:24px;color:#B4AA97">›</span></div></div>
+<div style="background:#2A2823;border:1px solid #3D3A33;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px">
+<h2 style="margin:0;font:700 21px 'Alegreya',Georgia,serif">Start a table</h2>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#1D1C18;border:1px solid #3D3A33;border-radius:10px"><div><div style="font-size:18px;font-weight:700">Durak</div><div style="font-size:16px;color:#B4AA97">1 deck · 1 game · 3–8 players</div></div><span style="min-height:44px;display:flex;align-items:center;color:#E2C894;font-weight:700;font-size:17px;text-decoration:underline;text-underline-offset:3px">Change</span></div>
+<span style="height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:#1D1C18;border:1px solid #6E675A;border-radius:10px;font-size:17px">Thursday regulars<span>▾</span></span>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;background:#E3D6BA;color:#13221C;border-radius:10px;font-size:18px;font-weight:700">Create table</div>
+</div>
+<div><h2 style="margin:0 0 12px;font:700 21px 'Alegreya',Georgia,serif">Join a table</h2><div style="display:flex;gap:10px"><span style="flex:1;height:52px;display:flex;align-items:center;padding:0 14px;background:#0E1A15;border:1.5px solid #6E675A;border-radius:10px;font-size:17px;color:#B4AA97;letter-spacing:.12em">Table code</span><span style="width:84px;height:52px;display:flex;align-items:center;justify-content:center;border:1.5px solid #E3D6BA;border-radius:10px;font-weight:700;font-size:18px">Join</span></div><p style="margin:8px 0 0;font-size:16px;color:#B4AA97">Type the 8-character code from the host, or scan the QR code on their phone.</p></div>
+<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><h2 style="margin:0;font:700 21px 'Alegreya',Georgia,serif">Your ratings</h2><span style="min-height:44px;display:flex;align-items:center;color:#E2C894;font-weight:700;font-size:17px;text-decoration:underline;text-underline-offset:3px">See rankings</span></div>
+<div style="border-top:1px solid #C7A468">
+<div style="display:flex;justify-content:space-between;align-items:center;min-height:56px;border-bottom:1px solid #26362F"><div><div style="font-size:18px;font-weight:700">Durak</div><div style="font-size:15px;color:#B4AA97">17 games</div></div><span style="font:700 22px 'Alegreya',serif">1,243</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;min-height:56px;border-bottom:1px solid #26362F"><div><div style="font-size:18px;font-weight:700">Double Single</div><div style="font-size:15px;color:#B4AA97">4 games</div></div><span style="font:700 22px 'Alegreya',serif">1,188</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;min-height:56px;border-bottom:1px solid #26362F"><div><div style="font-size:18px;font-weight:700">Single Double</div><div style="font-size:15px;color:#B4AA97">No games yet</div></div><span style="font:500 22px 'Alegreya',serif;color:#B4AA97">1,200</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;min-height:56px;border-bottom:1px solid #26362F"><div><div style="font-size:18px;font-weight:700">Double Double</div><div style="font-size:15px;color:#B4AA97">No games yet</div></div><span style="font:500 22px 'Alegreya',serif;color:#B4AA97">1,200</span></div>
+</div></div>
+</div>
+<div style="flex:none;display:grid;grid-template-columns:repeat(4,1fr);background:#0E1A15;border-top:1px solid #26362F;padding-bottom:34px">
+<div style="height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:16px;font-weight:700"><span style="width:5px;height:5px;border-radius:50%;background:#C7A468"></span>Home</div><div style="height:58px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#B4AA97">Rankings</div><div style="height:58px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#B4AA97">Groups</div><div style="height:58px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#B4AA97">Profile</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#EEE5D2"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#2c3a33">Desktop · home, 1280 wide</div>
+<div style="width:1280px;background:#23463A;border-radius:10px;overflow:hidden;font-family:'Alegreya Sans',system-ui,sans-serif;color:#F2EAD8">
+<div style="height:68px;display:flex;align-items:center;gap:40px;padding:0 48px;background:#1B372D">
+<div style="display:flex;align-items:center;gap:10px"><div style="width:22px;height:30px;border-radius:4px;background:#F2EAD8;color:#2A251F;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:15px">♠</div><span style="font:700 22px 'Alegreya',Georgia,serif">Durak Ranked</span></div>
+<div style="display:flex;gap:28px;flex:1;font-size:17px"><span style="font-weight:700;display:flex;flex-direction:column;align-items:center;gap:3px"><span style="width:5px;height:5px;border-radius:50%;background:#C7A468"></span>Home</span><span style="color:#C4CDBF;padding-top:8px">Rankings</span><span style="color:#C4CDBF;padding-top:8px">Groups</span><span style="color:#C4CDBF;padding-top:8px">Profile</span></div>
+<span style="width:38px;height:38px;border-radius:50%;background:#F2EAD8;color:#23463A;display:flex;align-items:center;justify-content:center;font-weight:700">CO</span>
+</div>
+<div style="max-width:1080px;margin:0 auto;padding:44px 0 60px;display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:56px">
+<div style="display:flex;flex-direction:column;gap:32px">
+<div><h1 style="margin:0;font:700 40px/1.1 'Alegreya',Georgia,serif">Good evening, cookie</h1><p style="margin:6px 0 0;font-size:19px;color:#D3DACF">Your game is still going.</p></div>
+<div style="display:flex;align-items:flex-start">
+<div style="width:300px;height:420px;background:#F2EAD8;color:#2A251F;border-radius:16px;transform:rotate(-2deg);box-shadow:0 12px 26px rgba(0,0,0,.3);padding:28px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;position:relative;z-index:1"><span style="font:700 22px 'Alegreya',serif;color:#9A372D">♥</span><div><div style="font-size:16px;color:#665C4E">Game in progress</div><div style="font:700 30px/1.1 'Alegreya',serif">Single Double</div><div style="font-size:17px;margin-top:4px">Table <strong style="letter-spacing:.08em">PL3VD8ZE</strong></div></div><div style="height:52px;display:flex;align-items:center;justify-content:center;background:#23463A;color:#F2EAD8;border-radius:10px;font-size:18px;font-weight:700">Return to table</div></div>
+<div style="width:260px;height:364px;background:#E9DFCA;color:#2A251F;border-radius:16px;transform:rotate(3deg) translate(-24px,30px);box-shadow:0 8px 18px rgba(0,0,0,.25);padding:24px 24px 24px 48px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between"><span style="font:700 22px 'Alegreya',serif">♠</span><div><div style="font-size:16px;color:#5E5547">Waiting for players</div><div style="font:700 26px 'Alegreya',serif">Durak</div><div style="font-size:16px">Table K7Q2M9XA</div></div><span style="font-weight:700;text-decoration:underline">Open table</span></div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:28px">
+<div style="background:#F2EAD8;color:#2A251F;border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:14px"><h2 style="margin:0;font:700 22px 'Alegreya',serif">Start a table</h2><div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#FBF6EC;border:1px solid #D8CBB0;border-radius:10px"><div><strong style="font-size:18px">Durak</strong><div style="color:#665C4E">1 deck · 1 game · 3–8 players</div></div><span style="color:#23463A;font-weight:700;text-decoration:underline">Change</span></div><span style="height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border:1px solid #9A8E78;border-radius:10px;background:#FBF6EC">Thursday regulars<span>▾</span></span><div style="height:52px;display:flex;align-items:center;justify-content:center;background:#23463A;color:#F2EAD8;border-radius:10px;font-size:18px;font-weight:700">Create table</div></div>
+<div><h2 style="margin:0 0 10px;font:700 22px 'Alegreya',serif">Join a table</h2><div style="display:flex;gap:10px"><span style="flex:1;height:50px;display:flex;align-items:center;padding:0 14px;background:#1B372D;border:1.5px solid #7E978A;border-radius:10px;color:#C4CDBF;letter-spacing:.12em">Table code</span><span style="width:84px;height:50px;display:flex;align-items:center;justify-content:center;background:#F2EAD8;color:#23463A;border-radius:10px;font-weight:700">Join</span></div></div>
+<div><div style="display:flex;justify-content:space-between;margin-bottom:6px"><h2 style="margin:0;font:700 22px 'Alegreya',serif">Your ratings</h2><span style="color:#E2C894;font-weight:700;text-decoration:underline">See rankings</span></div><div style="border-top:1px solid #C7A468;display:grid;grid-template-columns:1fr auto;row-gap:0;font-size:17px"><span style="padding:10px 0;border-bottom:1px solid #3A5E50">Durak · 17 games</span><strong style="padding:10px 0;border-bottom:1px solid #3A5E50">1,243</strong><span style="padding:10px 0;border-bottom:1px solid #3A5E50">Double Single · 4 games</span><strong style="padding:10px 0;border-bottom:1px solid #3A5E50">1,188</strong><span style="padding:10px 0;border-bottom:1px solid #3A5E50;color:#C4CDBF">Single Double · no games</span><span style="padding:10px 0;border-bottom:1px solid #3A5E50;color:#C4CDBF">1,200</span><span style="padding:10px 0;color:#C4CDBF">Double Double · no games</span><span style="padding:10px 0;color:#C4CDBF">1,200</span></div></div>
+</div></div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#2c3a33">Style sheet</div>
+<div style="width:560px;background:#F2EAD8;border-radius:12px;padding:28px;box-sizing:border-box;font-family:'Alegreya Sans',system-ui,sans-serif;color:#2A251F;display:flex;flex-direction:column;gap:20px">
+<div style="font:700 15px system-ui">Light (felt)</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;font-size:14px;margin-top:-8px">
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:6px;background:#23463A;flex:none"></span><span><strong>Background felt</strong> #23463A · nav #1B372D</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:6px;background:#F2EAD8;border:1px solid #D8CBB0;flex:none"></span><span><strong>Surface card</strong> #F2EAD8 · input #FBF6EC</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:6px;background:#2A251F;flex:none"></span><span><strong>Text on card</strong> #2A251F · on felt #F2EAD8</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:6px;background:#665C4E;flex:none"></span><span><strong>Muted</strong> on card #665C4E · on felt #C4CDBF</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:6px;background:#23463A;outline:2px solid #F2EAD8;outline-offset:-6px;flex:none"></span><span><strong>Primary</strong> felt on card, cream on felt</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:6px;background:#9A372D;flex:none"></span><span><strong>Danger / hearts</strong> #9A372D</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:6px;background:#C7A468;flex:none"></span><span><strong>Brass</strong> #C7A468 · link/focus #E2C894</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:6px;background:#3A5E50;flex:none"></span><span><strong>Borders</strong> felt #3A5E50 · card #D8CBB0</span></div>
+</div>
+<div style="font:700 15px system-ui">Dark</div>
+<div style="display:flex;gap:8px;margin-top:-8px;flex-wrap:wrap;font-size:13px">
+<span style="display:flex;flex-direction:column;gap:4px"><span style="width:56px;height:32px;border-radius:6px;background:#13221C"></span>#13221C</span>
+<span style="display:flex;flex-direction:column;gap:4px"><span style="width:56px;height:32px;border-radius:6px;background:#2A2823"></span>#2A2823</span>
+<span style="display:flex;flex-direction:column;gap:4px"><span style="width:56px;height:32px;border-radius:6px;background:#EEE5D2;border:1px solid #ccc"></span>#EEE5D2</span>
+<span style="display:flex;flex-direction:column;gap:4px"><span style="width:56px;height:32px;border-radius:6px;background:#B4AA97"></span>#B4AA97</span>
+<span style="display:flex;flex-direction:column;gap:4px"><span style="width:56px;height:32px;border-radius:6px;background:#E3D6BA"></span>#E3D6BA</span>
+<span style="display:flex;flex-direction:column;gap:4px"><span style="width:56px;height:32px;border-radius:6px;background:#E28B7F"></span>#E28B7F</span>
+<span style="display:flex;flex-direction:column;gap:4px"><span style="width:56px;height:32px;border-radius:6px;background:#3D3A33"></span>#3D3A33</span>
+</div>
+<div style="font-size:14px;line-height:1.6"><strong>Type</strong> · h1 Alegreya 700 30/1.15 · h2 Alegreya 700 21 · body Alegreya Sans 400 18/1.45 (runs small, so one size up) · small 15–16</div>
+<div style="font-size:14px;line-height:1.6"><strong>Shape</strong> · radius 14 cards, 10 buttons/inputs · spacing 4, 8, 12, 16, 20, 28 · card shadow 0 1px 0 rgba(0,0,0,.2), 0 8px 18px rgba(0,0,0,.22); the return card is rotated −1.5°</div>
+<p style="margin:0;font-size:15px;line-height:1.55;border-top:1px solid #C7A468;padding-top:16px">The whole screen is the table and the things you can act on are cards dealt onto it, so hierarchy reads physically: the face-up card is your game. Trade-off: two text colour sets (on felt, on card) to maintain, and voting screens need care to keep large cream areas from glaring in a dark room.</p>
+</div></div>
+
+</div></div>
+<div class="dv-opt" id="1c">
+<div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a><strong style="color:#1a1a1a">C. Friends around the table</strong> — people first, sentences instead of labels</div>
+<div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start;width:2720px;padding:32px;background:#e0d9cf;border-radius:12px">
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">1 · Sign in</div>
+<div style="width:410px;padding:10px;background:#1d1b19;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#F8F4EE;display:flex;flex-direction:column;font-family:'Figtree',system-ui,sans-serif;color:#2D2926">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="flex:1;padding:32px 24px 48px;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:center"><span style="width:48px;height:48px;border-radius:50%;background:#F3D9C6;border:3px solid #F8F4EE;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px">MA</span><span style="width:48px;height:64px;border-radius:8px;background:#FFFDFA;border:2px solid #2D2926;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 -4px;position:relative;z-index:1">♠</span><span style="width:48px;height:48px;border-radius:50%;background:#D5E4D3;border:3px solid #F8F4EE;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px">GR</span></div>
+<h1 style="margin:0;font:700 32px/1.15 'Figtree',sans-serif;letter-spacing:-.01em">Durak Ranked</h1>
+<p style="margin:0;font-size:18px;line-height:1.5;color:#5E564F">Keep track of your Durak nights with friends. Everyone plays with real cards; the app remembers who lost.</p>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;background:#EFE8DE;border-radius:999px;padding:4px">
+<div style="height:44px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;background:#FFFDFA;border-radius:999px;box-shadow:0 1px 3px rgba(45,41,38,.12)">Sign in</div>
+<div style="height:44px;display:flex;align-items:center;justify-content:center;font-size:17px;color:#6B625A">Create account</div>
+</div>
+<label style="display:flex;flex-direction:column;gap:8px;font-size:16px;font-weight:600">Username or email<span style="height:54px;display:flex;align-items:center;padding:0 16px;background:#FFFDFA;border:1.5px solid #A79C8F;border-radius:14px;font-weight:400;font-size:17px">cookie</span></label>
+<label style="display:flex;flex-direction:column;gap:8px;font-size:16px;font-weight:600">Password<span style="height:54px;display:flex;align-items:center;padding:0 16px;background:#FFFDFA;border:1.5px solid #A79C8F;border-radius:14px;font-weight:400;font-size:17px;letter-spacing:2px">••••••••••••</span></label>
+<div style="height:54px;display:flex;align-items:center;justify-content:center;background:#2E6B4F;color:#FFFDFA;border-radius:999px;font-size:18px;font-weight:600">Sign in</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#2D2926"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">2 · Create account from invite (error state)</div>
+<div style="width:410px;padding:10px;background:#1d1b19;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#F8F4EE;display:flex;flex-direction:column;font-family:'Figtree',system-ui,sans-serif;color:#2D2926">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="flex:1;padding:24px 24px 48px;display:flex;flex-direction:column;gap:22px">
+<div style="display:flex;align-items:center;gap:10px"><span style="width:24px;height:33px;border-radius:5px;background:#FFFDFA;border:1.5px solid #2D2926;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:15px">♠</span><span style="font:700 21px 'Figtree',sans-serif">Durak Ranked</span></div>
+<div style="padding:16px;background:#E2EDE5;border-radius:20px;display:flex;gap:12px;align-items:flex-start"><span style="width:40px;height:40px;border-radius:50%;background:#F0E3BC;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex:none">LE</span><p style="margin:0;font-size:17px;line-height:1.5">You've been invited to table <strong>K7Q2M9XA</strong>. Sign in or create an account and you'll join it straight away.</p></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;background:#EFE8DE;border-radius:999px;padding:4px">
+<div style="height:44px;display:flex;align-items:center;justify-content:center;font-size:17px;color:#6B625A">Sign in</div>
+<div style="height:44px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;background:#FFFDFA;border-radius:999px;box-shadow:0 1px 3px rgba(45,41,38,.12)">Create account</div>
+</div>
+<label style="display:flex;flex-direction:column;gap:8px;font-size:16px;font-weight:600">Username<span style="height:54px;display:flex;align-items:center;padding:0 16px;background:#FFFDFA;border:2px solid #A63D32;border-radius:14px;font-weight:400;font-size:17px">cookie</span><span style="font-size:15px;color:#A63D32;font-weight:500">This username may already be taken. How about cookie_2?</span></label>
+<label style="display:flex;flex-direction:column;gap:8px;font-size:16px;font-weight:600">Email address<span style="height:54px;display:flex;align-items:center;padding:0 16px;background:#FFFDFA;border:1.5px solid #A79C8F;border-radius:14px;font-weight:400;font-size:17px">cookie@example.com</span></label>
+<label style="display:flex;flex-direction:column;gap:8px;font-size:16px;font-weight:600">Password<span style="height:54px;display:flex;align-items:center;padding:0 16px;background:#FFFDFA;border:1.5px solid #A79C8F;border-radius:14px;font-weight:400;font-size:17px;letter-spacing:2px">••••••••••</span><span style="font-size:15px;color:#6B625A;font-weight:400">At least 10 characters</span></label>
+<div style="height:54px;display:flex;align-items:center;justify-content:center;background:#2E6B4F;color:#FFFDFA;border-radius:999px;font-size:18px;font-weight:600">Create account</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#2D2926"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">3 · Home with active tables (full scroll)</div>
+<div style="width:410px;padding:10px;background:#1d1b19;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#F8F4EE;display:flex;flex-direction:column;font-family:'Figtree',system-ui,sans-serif;color:#2D2926">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="height:56px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 20px">
+<div style="display:flex;align-items:center;gap:10px;min-height:44px"><span style="width:22px;height:30px;border-radius:5px;background:#FFFDFA;border:1.5px solid #2D2926;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:14px">♠</span><span style="font:700 20px 'Figtree',sans-serif">Durak Ranked</span></div>
+<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><span style="width:38px;height:38px;border-radius:50%;background:#DEDDEC;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">CO</span></div>
+</div>
+<div style="flex:1;padding:16px 20px 36px;display:flex;flex-direction:column;gap:28px">
+<div><h1 style="margin:0;font:700 30px/1.15 'Figtree',sans-serif;letter-spacing:-.01em">Good evening, cookie</h1><p style="margin:6px 0 0;font-size:18px;color:#5E564F">Your game is still going.</p></div>
+<div style="background:#FFFDFA;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:16px;box-shadow:0 1px 2px rgba(45,41,38,.06),0 6px 20px rgba(45,41,38,.07)">
+<div style="display:flex;align-items:center"><span style="width:44px;height:44px;border-radius:50%;background:#DEDDEC;border:3px solid #FFFDFA;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px">CO</span><span style="width:44px;height:44px;border-radius:50%;background:#F3D9C6;border:3px solid #FFFDFA;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;margin-left:-10px">MA</span><span style="width:44px;height:44px;border-radius:50%;background:#D5E4D3;border:3px solid #FFFDFA;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;margin-left:-10px">GR</span><span style="margin-left:auto;font-size:15px;font-weight:600;color:#2E6B4F;background:#E2EDE5;padding:6px 12px;border-radius:999px">Game in progress</span></div>
+<div><div style="font-size:21px;font-weight:700;line-height:1.3">You, Masha and Grisha are playing Single Double</div><div style="font-size:16px;color:#6B625A;margin-top:4px">Table PL3VD8ZE</div></div>
+<div style="height:54px;display:flex;align-items:center;justify-content:center;background:#2E6B4F;color:#FFFDFA;border-radius:999px;font-size:18px;font-weight:600">Return to table</div>
+</div>
+<div><h2 style="margin:0 0 10px;font:700 20px 'Figtree',sans-serif">Also open</h2>
+<div style="background:#FFFDFA;border-radius:20px;min-height:72px;padding:12px 16px;display:flex;align-items:center;gap:12px;border:1px solid #E8DFD3"><span style="width:44px;height:44px;border-radius:50%;background:#F0E3BC;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex:none">LE</span><div style="flex:1"><div style="font-size:17px;font-weight:600">Lena is waiting for players</div><div style="font-size:15px;color:#6B625A">Durak · Table K7Q2M9XA</div></div><span style="font-size:24px;color:#6B625A">›</span></div></div>
+<div style="background:#FFFDFA;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:14px;border:1px solid #E8DFD3">
+<h2 style="margin:0;font:700 20px 'Figtree',sans-serif">Start a new table</h2>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><div style="font-size:17px">We'll play <strong>Durak</strong></div><div style="font-size:15px;color:#6B625A">1 deck · 1 game · 3–8 players</div></div><span style="height:44px;padding:0 16px;display:flex;align-items:center;border-radius:999px;background:#EFE8DE;font-weight:600;font-size:16px">Change</span></div>
+<label style="display:flex;flex-direction:column;gap:8px;font-size:16px;font-weight:600">With a friend group (optional)<span style="height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:#F8F4EE;border:1.5px solid #A79C8F;border-radius:14px;font-weight:400;font-size:17px">Thursday regulars<span>▾</span></span></label>
+<div style="height:54px;display:flex;align-items:center;justify-content:center;background:#2E6B4F;color:#FFFDFA;border-radius:999px;font-size:18px;font-weight:600">Create table</div>
+</div>
+<div style="background:#FFFDFA;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:10px;border:1px solid #E8DFD3">
+<h2 style="margin:0;font:700 20px 'Figtree',sans-serif">Join a friend's table</h2>
+<label style="display:flex;flex-direction:column;gap:8px;font-size:16px;font-weight:600">Table code<span style="display:flex;gap:10px;font-weight:400"><span style="flex:1;height:54px;display:flex;align-items:center;padding:0 16px;background:#F8F4EE;border:1.5px solid #A79C8F;border-radius:14px;font-size:17px;color:#6B625A;letter-spacing:.1em">8 characters</span><span style="width:84px;height:54px;display:flex;align-items:center;justify-content:center;border:1.5px solid #2E6B4F;color:#2E6B4F;border-radius:999px;font-weight:700;font-size:17px">Join</span></span></label>
+<p style="margin:0;font-size:15px;line-height:1.45;color:#6B625A">Type the 8-character code from the host, or scan the QR code on their phone.</p></div>
+<div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h2 style="margin:0;font:700 20px 'Figtree',sans-serif">How you're doing</h2><span style="min-height:44px;display:flex;align-items:center;color:#2E6B4F;font-weight:600;font-size:16px">See rankings ›</span></div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="background:#FFFDFA;border-radius:18px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;border:1px solid #E8DFD3"><div><div style="font-size:17px;font-weight:600">Durak</div><div style="font-size:15px;color:#2E6B4F;font-weight:500">You're up 43 since last week</div></div><div style="text-align:right"><div style="font-size:21px;font-weight:700">1,243</div><div style="font-size:14px;color:#6B625A">17 games</div></div></div>
+<div style="background:#FFFDFA;border-radius:18px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;border:1px solid #E8DFD3"><div><div style="font-size:17px;font-weight:600">Double Single</div><div style="font-size:15px;color:#6B625A">4 games in. Early days.</div></div><div style="text-align:right"><div style="font-size:21px;font-weight:700">1,188</div><div style="font-size:14px;color:#6B625A">4 games</div></div></div>
+<div style="background:#FFFDFA;border-radius:18px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;border:1px solid #E8DFD3"><div><div style="font-size:17px;font-weight:600">Single Double</div><div style="font-size:15px;color:#6B625A">Not played yet</div></div><div style="font-size:21px;font-weight:600;color:#6B625A">1,200</div></div>
+<div style="background:#FFFDFA;border-radius:18px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;border:1px solid #E8DFD3"><div><div style="font-size:17px;font-weight:600">Double Double</div><div style="font-size:15px;color:#6B625A">Not played yet</div></div><div style="font-size:21px;font-weight:600;color:#6B625A">1,200</div></div>
+</div></div>
+</div>
+<div style="flex:none;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:#FFFDFA;border-top:1px solid #E8DFD3;padding:6px 8px 34px">
+<div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;background:#E2EDE5;color:#24583F;border-radius:999px">Home</div>
+<div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5E564F">Rankings</div>
+<div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5E564F">Groups</div>
+<div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5E564F">Profile</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#2D2926"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">4 · Home for a new user, mode picker open</div>
+<div style="width:410px;padding:10px;background:#1d1b19;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#F8F4EE;display:flex;flex-direction:column;font-family:'Figtree',system-ui,sans-serif;color:#2D2926">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="height:56px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 20px">
+<div style="display:flex;align-items:center;gap:10px;min-height:44px"><span style="width:22px;height:30px;border-radius:5px;background:#FFFDFA;border:1.5px solid #2D2926;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:14px">♠</span><span style="font:700 20px 'Figtree',sans-serif">Durak Ranked</span></div>
+<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><span style="width:38px;height:38px;border-radius:50%;background:#DEDDEC;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">CO</span></div>
+</div>
+<div style="flex:1;padding:16px 20px 36px;display:flex;flex-direction:column;gap:24px">
+<div><h1 style="margin:0;font:700 30px/1.15 'Figtree',sans-serif;letter-spacing:-.01em">Good evening, cookie</h1><p style="margin:6px 0 0;font-size:18px;color:#5E564F">Ready for a game? Start a table and invite your friends, or join theirs.</p></div>
+<div style="background:#FFFDFA;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 2px rgba(45,41,38,.06),0 6px 20px rgba(45,41,38,.07)">
+<h2 style="margin:0;font:700 20px 'Figtree',sans-serif">What are you playing?</h2>
+<div style="padding:14px 16px;border-radius:18px;background:#E2EDE5;border:2px solid #2E6B4F;display:flex;justify-content:space-between;gap:10px"><div><div style="font-size:17px;font-weight:700">Durak</div><div style="font-size:15px;color:#3F4A43">1 deck · 1 game · 3–8 players</div></div><span style="font-size:14px;font-weight:700;color:#24583F;align-self:center">Usual</span></div>
+<div style="padding:14px 16px;border-radius:18px;border:1.5px solid #E8DFD3"><div style="font-size:17px;font-weight:600">Double Single</div><div style="font-size:15px;color:#6B625A">2 combined decks · 1 game · 3–16 players</div></div>
+<div style="padding:14px 16px;border-radius:18px;border:1.5px solid #E8DFD3"><div style="font-size:17px;font-weight:600">Single Double</div><div style="font-size:15px;color:#6B625A">2 separate decks · 2 parallel games · 3–8 players</div></div>
+<div style="padding:14px 16px;border-radius:18px;border:1.5px solid #E8DFD3"><div style="font-size:17px;font-weight:600">Double Double</div><div style="font-size:15px;color:#6B625A">4 decks · 2 parallel games · 3–16 players</div></div>
+<div style="height:54px;display:flex;align-items:center;justify-content:center;background:#2E6B4F;color:#FFFDFA;border-radius:999px;font-size:18px;font-weight:600;margin-top:4px">Create table</div>
+</div>
+<div style="background:#FFFDFA;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:10px;border:1px solid #E8DFD3">
+<h2 style="margin:0;font:700 20px 'Figtree',sans-serif">Join a friend's table</h2>
+<div style="display:flex;gap:10px"><span style="flex:1;height:54px;display:flex;align-items:center;padding:0 16px;background:#F8F4EE;border:1.5px solid #A79C8F;border-radius:14px;font-size:17px;color:#6B625A;letter-spacing:.1em">Table code</span><span style="width:84px;height:54px;display:flex;align-items:center;justify-content:center;border:1.5px solid #2E6B4F;color:#2E6B4F;border-radius:999px;font-weight:700;font-size:17px">Join</span></div>
+<p style="margin:0;font-size:15px;line-height:1.45;color:#6B625A">Type the 8-character code from the host, or scan the QR code on their phone.</p></div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 4px"><div style="font-size:16px;color:#5E564F">Everyone starts at 1,200.</div><span style="min-height:44px;display:flex;align-items:center;color:#2E6B4F;font-weight:600;font-size:16px">See rankings ›</span></div>
+</div>
+<div style="flex:none;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:#FFFDFA;border-top:1px solid #E8DFD3;padding:6px 8px 34px">
+<div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;background:#E2EDE5;color:#24583F;border-radius:999px">Home</div><div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5E564F">Rankings</div><div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5E564F">Groups</div><div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5E564F">Profile</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#2D2926"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">5 · Header and bottom navigation states</div>
+<div style="width:390px;display:flex;flex-direction:column;gap:20px;font-family:'Figtree',system-ui,sans-serif;color:#2D2926">
+<div style="font:600 13px system-ui;color:#5a544b">Header · avatar focused</div>
+<div style="height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 20px;background:#F8F4EE;border-radius:14px">
+<div style="display:flex;align-items:center;gap:10px"><span style="width:22px;height:30px;border-radius:5px;background:#FFFDFA;border:1.5px solid #2D2926;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:14px">♠</span><span style="font:700 20px 'Figtree',sans-serif">Durak Ranked</span></div>
+<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:50%;box-shadow:0 0 0 3px #F8F4EE,0 0 0 6px #2E6B4F"><span style="width:38px;height:38px;border-radius:50%;background:#DEDDEC;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">CO</span></div>
+</div>
+<div style="font:600 13px system-ui;color:#5a544b">Bottom nav · Home active</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:#FFFDFA;border-radius:14px;padding:6px 8px">
+<div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;background:#E2EDE5;color:#24583F;border-radius:999px">Home</div><div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5E564F">Rankings</div><div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5E564F">Groups</div><div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5E564F">Profile</div>
+</div>
+<div style="font:600 13px system-ui;color:#5a544b">Bottom nav · Rankings active, keyboard focus on Groups</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:#FFFDFA;border-radius:14px;padding:6px 8px">
+<div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5E564F">Home</div><div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;background:#E2EDE5;color:#24583F;border-radius:999px">Rankings</div><div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#2D2926;border-radius:999px;box-shadow:inset 0 0 0 3px #2E6B4F">Groups</div><div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5E564F">Profile</div>
+</div>
+<p style="margin:0;font:13px/1.5 system-ui;color:#5a544b">Active tab is a soft green pill. Focus is a 3px green ring that follows each control's own shape (pill, circle).</p>
+</div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">6 · Table lobby (preview)</div>
+<div style="width:410px;padding:10px;background:#1d1b19;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#F8F4EE;display:flex;flex-direction:column;font-family:'Figtree',system-ui,sans-serif;color:#2D2926">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="height:56px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 20px">
+<div style="display:flex;align-items:center;gap:10px;min-height:44px"><span style="width:22px;height:30px;border-radius:5px;background:#FFFDFA;border:1.5px solid #2D2926;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:14px">♠</span><span style="font:700 20px 'Figtree',sans-serif">Durak Ranked</span></div>
+<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><span style="width:38px;height:38px;border-radius:50%;background:#DEDDEC;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">CO</span></div>
+</div>
+<div style="flex:1;padding:16px 20px 36px;display:flex;flex-direction:column;gap:22px">
+<div><h1 style="margin:0;font:700 28px/1.2 'Figtree',sans-serif">Single Double</h1><div style="font-size:16px;color:#6B625A;margin-top:4px">Table PL3VD8ZE</div></div>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;border:1.5px solid #2E6B4F;color:#2E6B4F;border-radius:999px;font-weight:700;font-size:17px">Invite / QR</div>
+<div style="background:#FFFDFA;border-radius:24px;padding:8px 16px;border:1px solid #E8DFD3">
+<div style="font-size:16px;font-weight:600;padding:10px 0 6px">Who's here</div>
+<div style="display:flex;align-items:center;gap:12px;min-height:64px;border-top:1px solid #EFE8DE"><span style="width:44px;height:44px;border-radius:50%;background:#DEDDEC;display:flex;align-items:center;justify-content:center;font-weight:700;flex:none">CO</span><div style="flex:1"><div style="display:flex;align-items:center;gap:8px;font-size:17px;font-weight:600">cookie <span style="font-size:14px;background:#EFE8DE;border-radius:999px;padding:2px 9px;font-weight:500">you</span></div><div style="font-size:15px;color:#6B625A">♛ Hosting</div></div><span style="font-size:16px;font-weight:600">★ 5.0</span></div>
+<div style="display:flex;align-items:center;gap:12px;min-height:64px;border-top:1px solid #EFE8DE"><span style="width:44px;height:44px;border-radius:50%;background:#F3D9C6;display:flex;align-items:center;justify-content:center;font-weight:700;flex:none">MA</span><div style="flex:1;font-size:17px;font-weight:600">Masha</div><span style="font-size:16px;font-weight:600">★ 4.8</span></div>
+<div style="display:flex;align-items:center;gap:12px;min-height:64px;border-top:1px solid #EFE8DE;color:#6B625A"><span style="width:44px;height:44px;border-radius:50%;border:2px dashed #A79C8F;box-sizing:border-box;flex:none"></span><div style="font-size:16px">Waiting for one more friend</div></div>
+</div>
+<p style="margin:0;font-size:17px;text-align:center;color:#5E564F">Need 1 more player to start</p>
+<div style="height:54px;display:flex;align-items:center;justify-content:center;background:#E3DCD1;color:#5E564F;border-radius:999px;font-size:18px;font-weight:600">Start new game</div>
+</div>
+<div style="flex:none;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:#FFFDFA;border-top:1px solid #E8DFD3;padding:6px 8px 34px">
+<div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;background:#E2EDE5;color:#24583F;border-radius:999px">Home</div><div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5E564F">Rankings</div><div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5E564F">Groups</div><div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5E564F">Profile</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#2D2926"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">Desktop · home, 1280 wide</div>
+<div style="width:1280px;background:#F8F4EE;border-radius:10px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.1);font-family:'Figtree',system-ui,sans-serif;color:#2D2926">
+<div style="height:68px;display:flex;align-items:center;gap:32px;padding:0 48px">
+<div style="display:flex;align-items:center;gap:10px"><span style="width:22px;height:30px;border-radius:5px;background:#FFFDFA;border:1.5px solid #2D2926;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:14px">♠</span><span style="font:700 21px 'Figtree',sans-serif">Durak Ranked</span></div>
+<div style="display:flex;gap:4px;flex:1"><span style="height:44px;display:flex;align-items:center;padding:0 18px;background:#E2EDE5;color:#24583F;border-radius:999px;font-weight:700">Home</span><span style="height:44px;display:flex;align-items:center;padding:0 18px;color:#5E564F">Rankings</span><span style="height:44px;display:flex;align-items:center;padding:0 18px;color:#5E564F">Groups</span><span style="height:44px;display:flex;align-items:center;padding:0 18px;color:#5E564F">Profile</span></div>
+<span style="width:40px;height:40px;border-radius:50%;background:#DEDDEC;display:flex;align-items:center;justify-content:center;font-weight:700">CO</span>
+</div>
+<div style="max-width:1080px;margin:0 auto;padding:28px 0 56px;display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:40px">
+<div style="display:flex;flex-direction:column;gap:24px">
+<div><h1 style="margin:0;font:700 38px/1.15 'Figtree',sans-serif;letter-spacing:-.01em">Good evening, cookie</h1><p style="margin:6px 0 0;font-size:19px;color:#5E564F">Your game is still going.</p></div>
+<div style="background:#FFFDFA;border-radius:28px;padding:28px;display:flex;flex-direction:column;gap:18px;box-shadow:0 1px 2px rgba(45,41,38,.06),0 6px 20px rgba(45,41,38,.07)"><div style="display:flex;align-items:center"><span style="width:48px;height:48px;border-radius:50%;background:#DEDDEC;border:3px solid #FFFDFA;display:flex;align-items:center;justify-content:center;font-weight:700">CO</span><span style="width:48px;height:48px;border-radius:50%;background:#F3D9C6;border:3px solid #FFFDFA;display:flex;align-items:center;justify-content:center;font-weight:700;margin-left:-10px">MA</span><span style="width:48px;height:48px;border-radius:50%;background:#D5E4D3;border:3px solid #FFFDFA;display:flex;align-items:center;justify-content:center;font-weight:700;margin-left:-10px">GR</span><span style="margin-left:auto;font-weight:600;color:#2E6B4F;background:#E2EDE5;padding:6px 14px;border-radius:999px">Game in progress</span></div><div style="font-size:26px;font-weight:700">You, Masha and Grisha are playing Single Double</div><div style="display:flex;justify-content:space-between;align-items:center"><span style="color:#6B625A">Table PL3VD8ZE</span><span style="height:54px;padding:0 32px;display:flex;align-items:center;background:#2E6B4F;color:#FFFDFA;border-radius:999px;font-size:18px;font-weight:600">Return to table</span></div></div>
+<div style="background:#FFFDFA;border-radius:20px;min-height:72px;padding:12px 20px;display:flex;align-items:center;gap:12px;border:1px solid #E8DFD3"><span style="width:44px;height:44px;border-radius:50%;background:#F0E3BC;display:flex;align-items:center;justify-content:center;font-weight:700">LE</span><div style="flex:1"><div style="font-weight:600;font-size:17px">Lena is waiting for players</div><div style="color:#6B625A;font-size:15px">Durak · Table K7Q2M9XA</div></div><span style="font-size:22px;color:#6B625A">›</span></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:20px;padding-top:8px">
+<div style="background:#FFFDFA;border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:12px;border:1px solid #E8DFD3"><h2 style="margin:0;font:700 20px 'Figtree',sans-serif">Start a new table</h2><div style="display:flex;justify-content:space-between;align-items:center"><span>We'll play <strong>Durak</strong></span><span style="height:40px;padding:0 14px;display:flex;align-items:center;border-radius:999px;background:#EFE8DE;font-weight:600">Change</span></div><div style="height:52px;display:flex;align-items:center;justify-content:center;background:#2E6B4F;color:#FFFDFA;border-radius:999px;font-weight:600;font-size:17px">Create table</div></div>
+<div style="background:#FFFDFA;border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:12px;border:1px solid #E8DFD3"><h2 style="margin:0;font:700 20px 'Figtree',sans-serif">Join a friend's table</h2><div style="display:flex;gap:10px"><span style="flex:1;height:50px;display:flex;align-items:center;padding:0 16px;background:#F8F4EE;border:1.5px solid #A79C8F;border-radius:14px;color:#6B625A">Table code</span><span style="width:80px;height:50px;display:flex;align-items:center;justify-content:center;border:1.5px solid #2E6B4F;color:#2E6B4F;border-radius:999px;font-weight:700">Join</span></div></div>
+<div style="background:#FFFDFA;border-radius:24px;padding:22px;border:1px solid #E8DFD3"><div style="display:flex;justify-content:space-between"><h2 style="margin:0;font:700 20px 'Figtree',sans-serif">How you're doing</h2><span style="color:#2E6B4F;font-weight:600">See rankings ›</span></div><p style="margin:10px 0 0;font-size:17px;line-height:1.5">Durak <strong>1,243</strong>, up 43 since last week. Double Single <strong>1,188</strong> after 4 games. Single Double and Double Double not played yet.</p></div>
+</div></div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">Style sheet</div>
+<div style="width:560px;background:#FFFDFA;border-radius:24px;padding:28px;box-sizing:border-box;font-family:'Figtree',system-ui,sans-serif;color:#2D2926;display:flex;flex-direction:column;gap:20px">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;font-size:14px">
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:50%;background:#F8F4EE;border:1px solid #E8DFD3;flex:none"></span><span><strong>Background</strong> #F8F4EE</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:50%;background:#FFFDFA;border:1px solid #E8DFD3;flex:none"></span><span><strong>Surface</strong> #FFFDFA</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:50%;background:#2D2926;flex:none"></span><span><strong>Text</strong> #2D2926</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:50%;background:#6B625A;flex:none"></span><span><strong>Muted</strong> #6B625A (5.4:1)</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:50%;background:#2E6B4F;flex:none"></span><span><strong>Primary</strong> #2E6B4F · tint #E2EDE5</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:50%;background:#A63D32;flex:none"></span><span><strong>Danger</strong> #A63D32</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="display:flex;flex:none"><span style="width:18px;height:36px;border-radius:18px 0 0 18px;background:#F3D9C6"></span><span style="width:18px;height:36px;background:#D5E4D3"></span><span style="width:18px;height:36px;background:#DEDDEC"></span><span style="width:18px;height:36px;border-radius:0 18px 18px 0;background:#F0E3BC"></span></span><span><strong>Avatar tints</strong> #F3D9C6 #D5E4D3 #DEDDEC #F0E3BC</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:36px;height:36px;border-radius:50%;background:#E8DFD3;flex:none"></span><span><strong>Border</strong> #E8DFD3 · input #A79C8F</span></div>
+</div>
+<div style="font-size:14px;line-height:1.6"><strong>Type</strong> · Figtree only · h1 700 30/1.15 −0.01em · h2 700 20 · body 400 17/1.5 · small 15/1.45 · rating numbers 700 21</div>
+<div style="font-size:14px;line-height:1.6"><strong>Shape</strong> · radius 24 cards, 18 list items, 14 inputs, pill buttons · spacing 4, 8, 12, 16, 20, 24 · soft shadow on the return card only: 0 1px 2px rgba(45,41,38,.06), 0 6px 20px rgba(45,41,38,.07)</div>
+<p style="margin:0;font-size:15px;line-height:1.55;border-top:1px solid #E8DFD3;padding-top:16px">The app talks about who's at the table, not about codes and states, so a home screen reads like a message from your group. Trade-off: no brass and little paper texture; and sentences need real data (names, last-week deltas), which may mean extra queries for the "up 43 since last week" lines.</p>
+</div></div>
+
+</div></div>
+<div class="dv-opt" id="1d">
+<div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a><strong style="color:#1a1a1a">D. Built from cards</strong> — 5:7 cards, corner indices, one suit per game mode</div>
+<div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start;width:2720px;padding:32px;background:#d9d2c4;border-radius:12px">
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">1 · Sign in</div>
+<div style="width:410px;padding:10px;background:#1d1b19;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#ECE6DA;display:flex;flex-direction:column;font-family:'Karla',system-ui,sans-serif;color:#1F1C19">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="flex:1;padding:28px 24px 48px;display:flex;flex-direction:column;gap:22px">
+<div style="display:flex;align-items:flex-end;gap:18px">
+<div style="position:relative;width:60px;height:84px;flex:none"><span style="position:absolute;left:0;top:4px;width:60px;height:84px;border:1px solid #CDC3AF;border-radius:7px;background:#FFFDF7;transform:rotate(-14deg)"></span><span style="position:absolute;left:6px;top:0;width:60px;height:84px;border:1.5px solid #1F1C19;border-radius:7px;background:#FFFDF7;transform:rotate(-4deg);display:flex;align-items:center;justify-content:center;font-size:30px"><span style="position:absolute;top:4px;left:6px;font:700 13px/1 'Libre Caslon Text',serif">D</span>♠</span></div>
+<h1 style="margin:0;font:700 32px/1.1 'Libre Caslon Text',Georgia,serif">Durak<br>Ranked</h1>
+</div>
+<p style="margin:0;font-size:18px;line-height:1.5;color:#4A443C">Keep score for the games you play with a real deck. Vote on who's left holding cards, and see your rating per mode.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;background:#FFFDF7;border:1.5px solid #1F1C19;border-radius:8px">Sign in</div>
+<div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:17px;color:#5F574D;border:1px solid #CDC3AF;border-radius:8px">Create account</div>
+</div>
+<div style="background:#FFFDF7;border:1px solid #CDC3AF;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:16px;position:relative">
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:700">Username or email<span style="height:52px;display:flex;align-items:center;padding:0 14px;background:#F7F3EA;border:1px solid #978C79;border-radius:8px;font-weight:400;font-size:17px">cookie</span></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:700">Password<span style="height:52px;display:flex;align-items:center;padding:0 14px;background:#F7F3EA;border:1px solid #978C79;border-radius:8px;font-weight:400;font-size:17px;letter-spacing:2px">••••••••••••</span></label>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;background:#2A5540;color:#FFFDF7;border-radius:8px;font-size:18px;font-weight:700">Sign in</div>
+</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#1F1C19"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">2 · Create account from invite (error state)</div>
+<div style="width:410px;padding:10px;background:#1d1b19;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#ECE6DA;display:flex;flex-direction:column;font-family:'Karla',system-ui,sans-serif;color:#1F1C19">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="flex:1;padding:24px 24px 48px;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;align-items:center;gap:10px"><span style="width:24px;height:34px;border:1.5px solid #1F1C19;border-radius:4px;background:#FFFDF7;transform:rotate(-6deg);display:flex;align-items:center;justify-content:center;font-size:15px">♠</span><span style="font:700 21px 'Libre Caslon Text',serif">Durak Ranked</span></div>
+<div style="display:flex;gap:14px;align-items:center;padding:14px;background:#FFFDF7;border:1px dashed #A3854C;border-radius:12px"><span style="width:44px;height:62px;flex:none;border:1px solid #CDC3AF;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;font:700 12px 'Libre Caslon Text',serif;transform:rotate(-4deg)">K7Q2<br>M9XA</span><p style="margin:0;font-size:16px;line-height:1.5">You've been invited to table <strong>K7Q2M9XA</strong>. Sign in or create an account and you'll join it straight away.</p></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:17px;color:#5F574D;border:1px solid #CDC3AF;border-radius:8px">Sign in</div>
+<div style="height:48px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;background:#FFFDF7;border:1.5px solid #1F1C19;border-radius:8px">Create account</div>
+</div>
+<div style="background:#FFFDF7;border:1px solid #CDC3AF;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:16px">
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:700">Username<span style="height:52px;display:flex;align-items:center;padding:0 14px;background:#F7F3EA;border:2px solid #A4302A;border-radius:8px;font-weight:400;font-size:17px">cookie</span><span style="font-size:15px;color:#A4302A;display:flex;gap:6px"><span>♦</span>This username may already be taken.</span></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:700">Email address<span style="height:52px;display:flex;align-items:center;padding:0 14px;background:#F7F3EA;border:1px solid #978C79;border-radius:8px;font-weight:400;font-size:17px">cookie@example.com</span></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:700">Password<span style="height:52px;display:flex;align-items:center;padding:0 14px;background:#F7F3EA;border:1px solid #978C79;border-radius:8px;font-weight:400;font-size:17px;letter-spacing:2px">••••••••••</span><span style="font-size:15px;color:#5F574D;font-weight:400">At least 10 characters</span></label>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;background:#2A5540;color:#FFFDF7;border-radius:8px;font-size:18px;font-weight:700">Create account</div>
+</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#1F1C19"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">3 · Home with active tables (full scroll)</div>
+<div style="width:410px;padding:10px;background:#1d1b19;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#ECE6DA;display:flex;flex-direction:column;font-family:'Karla',system-ui,sans-serif;color:#1F1C19">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="height:56px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 20px">
+<div style="display:flex;align-items:center;gap:10px;min-height:44px"><span style="width:22px;height:31px;border:1.5px solid #1F1C19;border-radius:4px;background:#FFFDF7;transform:rotate(-6deg);display:flex;align-items:center;justify-content:center;font-size:14px">♠</span><span style="font:700 20px 'Libre Caslon Text',serif">Durak Ranked</span></div>
+<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><span style="width:36px;height:36px;border-radius:50%;background:#FFFDF7;border:1.5px solid #1F1C19;display:flex;align-items:center;justify-content:center;font:700 14px 'Libre Caslon Text',serif">CO</span></div>
+</div>
+<div style="flex:1;padding:16px 20px 36px;display:flex;flex-direction:column;gap:28px">
+<div><h1 style="margin:0;font:700 28px/1.2 'Libre Caslon Text',Georgia,serif">Good evening, cookie</h1><p style="margin:6px 0 0;font-size:18px;color:#4A443C">Your game is still going.</p></div>
+<div>
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px"><h2 style="margin:0;font:700 19px 'Libre Caslon Text',serif">Your tables</h2><span style="font-size:15px;color:#5F574D">Swipe · 1 of 2</span></div>
+<div style="position:relative;height:320px">
+<div style="position:absolute;left:150px;top:18px;width:196px;height:274px;background:#F7F3EA;border:1px solid #CDC3AF;border-radius:12px;transform:rotate(6deg);box-shadow:0 2px 6px rgba(31,28,25,.1);padding:14px 14px 14px 60px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;gap:4px">
+<span style="position:absolute;top:10px;right:12px;font:700 15px/1.05 'Libre Caslon Text',serif;text-align:center">D<br>♠</span>
+<div style="font:700 19px 'Libre Caslon Text',serif">Durak</div><div style="font-size:15px;color:#5F574D">K7Q2M9XA</div><div style="font-size:15px;color:#5F574D">Waiting for players</div></div>
+<div style="position:absolute;left:0;top:0;width:220px;height:308px;background:#FFFDF7;border:1.5px solid #1F1C19;border-radius:12px;transform:rotate(-3deg);box-shadow:0 4px 14px rgba(31,28,25,.16);padding:18px;box-sizing:border-box;display:flex;flex-direction:column;z-index:1">
+<span style="position:absolute;top:10px;left:12px;font:700 16px/1.05 'Libre Caslon Text',serif;color:#A4302A;text-align:center">SD<br>♥</span>
+<span style="position:absolute;bottom:10px;right:12px;font:700 16px/1.05 'Libre Caslon Text',serif;color:#A4302A;text-align:center;transform:rotate(180deg)">SD<br>♥</span>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:16px 4px 0;gap:4px">
+<div style="font-size:15px;font-weight:700;color:#2A5540">Game in progress</div>
+<div style="font:700 24px/1.15 'Libre Caslon Text',serif">Single Double</div>
+<div style="font-size:16px;color:#5F574D">Table PL3VD8ZE</div></div>
+<div style="height:50px;display:flex;align-items:center;justify-content:center;background:#2A5540;color:#FFFDF7;border-radius:8px;font-size:17px;font-weight:700;margin:0 18px 14px 0">Return to table</div>
+</div>
+</div>
+<div style="display:flex;gap:6px;justify-content:center"><span style="width:18px;height:6px;border-radius:3px;background:#1F1C19"></span><span style="width:6px;height:6px;border-radius:3px;background:#978C79"></span></div>
+</div>
+<div><h2 style="margin:0 0 12px;font:700 19px 'Libre Caslon Text',serif">Start a table</h2>
+<div style="background:#FFFDF7;border:1px solid #CDC3AF;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;gap:14px;align-items:center"><span style="width:56px;height:78px;flex:none;border:1.5px solid #1F1C19;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:26px;position:relative"><span style="position:absolute;top:4px;left:5px;font:700 11px/1 'Libre Caslon Text',serif">D</span>♠</span><div style="flex:1"><div style="font:700 18px 'Libre Caslon Text',serif">Durak</div><div style="font-size:15px;color:#5F574D">1 deck · 1 game · 3–8 players</div></div><span style="min-height:44px;display:flex;align-items:center;color:#2A5540;font-weight:700;font-size:17px;text-decoration:underline;text-underline-offset:3px">Change</span></div>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:700">Friend group (optional)<span style="height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:#F7F3EA;border:1px solid #978C79;border-radius:8px;font-weight:400;font-size:17px">Thursday regulars<span>▾</span></span></label>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;background:#2A5540;color:#FFFDF7;border-radius:8px;font-size:18px;font-weight:700">Create table</div>
+</div></div>
+<div><h2 style="margin:0 0 12px;font:700 19px 'Libre Caslon Text',serif">Join a table</h2>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:700">Table code<span style="display:flex;gap:10px;font-weight:400"><span style="flex:1;height:52px;display:flex;align-items:center;padding:0 14px;background:#FFFDF7;border:1px solid #978C79;border-radius:8px;font-size:17px;color:#5F574D;letter-spacing:.12em">8 characters</span><span style="width:84px;height:52px;display:flex;align-items:center;justify-content:center;border:1.5px solid #2A5540;color:#2A5540;border-radius:8px;font-weight:700;font-size:17px;background:#FFFDF7">Join</span></span></label>
+<p style="margin:8px 0 0;font-size:15px;line-height:1.45;color:#5F574D">Type the 8-character code from the host, or scan the QR code on their phone.</p></div>
+<div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"><h2 style="margin:0;font:700 19px 'Libre Caslon Text',serif">Your ratings</h2><span style="min-height:44px;display:flex;align-items:center;color:#2A5540;font-weight:700;font-size:16px;text-decoration:underline;text-underline-offset:3px">See rankings</span></div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+<div style="aspect-ratio:5/7;background:#FFFDF7;border:1px solid #CDC3AF;border-radius:8px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px"><span style="position:absolute;top:5px;left:6px;font:700 13px/1 'Libre Caslon Text',serif">♠</span><span style="font:700 19px 'Libre Caslon Text',serif">1,243</span><span style="font-size:14px;color:#5F574D">17 games</span></div>
+<div style="aspect-ratio:5/7;background:#FFFDF7;border:1px solid #CDC3AF;border-radius:8px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px"><span style="position:absolute;top:5px;left:6px;font:700 13px/1 'Libre Caslon Text',serif">♣</span><span style="font:700 19px 'Libre Caslon Text',serif">1,188</span><span style="font-size:14px;color:#5F574D">4 games</span></div>
+<div style="aspect-ratio:5/7;background:#FFFDF7;border:1px solid #CDC3AF;border-radius:8px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px"><span style="position:absolute;top:5px;left:6px;font:700 13px/1 'Libre Caslon Text',serif;color:#A4302A">♥</span><span style="font:400 19px 'Libre Caslon Text',serif;color:#5F574D">1,200</span><span style="font-size:14px;color:#5F574D">0 games</span></div>
+<div style="aspect-ratio:5/7;background:#FFFDF7;border:1px solid #CDC3AF;border-radius:8px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px"><span style="position:absolute;top:5px;left:6px;font:700 13px/1 'Libre Caslon Text',serif;color:#A4302A">♦</span><span style="font:400 19px 'Libre Caslon Text',serif;color:#5F574D">1,200</span><span style="font-size:14px;color:#5F574D">0 games</span></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px;font-size:14px;text-align:center;color:#4A443C;line-height:1.25"><span>Durak</span><span>Double Single</span><span>Single Double</span><span>Double Double</span></div>
+</div>
+</div>
+<div style="flex:none;display:grid;grid-template-columns:repeat(4,1fr);background:#FFFDF7;border-top:1px solid #CDC3AF;padding-bottom:34px">
+<div style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:15px;font-weight:700;box-shadow:inset 0 -3px 0 #2A5540"><span style="font-size:19px;line-height:1">♠</span>Home</div>
+<div style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:15px;color:#5F574D"><span style="font-size:19px;line-height:1">♣</span>Rankings</div>
+<div style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:15px;color:#5F574D"><span style="font-size:19px;line-height:1">♥</span>Groups</div>
+<div style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:15px;color:#5F574D"><span style="font-size:19px;line-height:1">♦</span>Profile</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#1F1C19"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">4 · Home for a new user, mode picker open</div>
+<div style="width:410px;padding:10px;background:#1d1b19;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#ECE6DA;display:flex;flex-direction:column;font-family:'Karla',system-ui,sans-serif;color:#1F1C19">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="height:56px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 20px">
+<div style="display:flex;align-items:center;gap:10px;min-height:44px"><span style="width:22px;height:31px;border:1.5px solid #1F1C19;border-radius:4px;background:#FFFDF7;transform:rotate(-6deg);display:flex;align-items:center;justify-content:center;font-size:14px">♠</span><span style="font:700 20px 'Libre Caslon Text',serif">Durak Ranked</span></div>
+<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><span style="width:36px;height:36px;border-radius:50%;background:#FFFDF7;border:1.5px solid #1F1C19;display:flex;align-items:center;justify-content:center;font:700 14px 'Libre Caslon Text',serif">CO</span></div>
+</div>
+<div style="flex:1;padding:16px 20px 36px;display:flex;flex-direction:column;gap:26px">
+<div><h1 style="margin:0;font:700 28px/1.2 'Libre Caslon Text',Georgia,serif">Good evening, cookie</h1><p style="margin:6px 0 0;font-size:18px;color:#4A443C">No tables yet. Pick a game to start one, or join a friend's.</p></div>
+<div><h2 style="margin:0 0 12px;font:700 19px 'Libre Caslon Text',serif">Start a table</h2>
+<div role="radiogroup" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+<div style="aspect-ratio:5/7;background:#FFFDF7;border:2.5px solid #2A5540;border-radius:12px;position:relative;padding:14px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end;box-shadow:0 4px 12px rgba(31,28,25,.12);transform:translateY(-4px)"><span style="position:absolute;top:10px;left:12px;font:700 17px/1.05 'Libre Caslon Text',serif;text-align:center">D<br>♠</span><span style="position:absolute;top:10px;right:10px;font-size:13px;font-weight:700;color:#FFFDF7;background:#2A5540;border-radius:999px;padding:3px 9px">✓ Default</span><span style="position:absolute;top:66px;left:0;right:0;text-align:center;font-size:44px;line-height:1">♠</span><div style="font:700 19px 'Libre Caslon Text',serif">Durak</div><div style="font-size:15px;color:#4A443C;line-height:1.35">1 deck · 1 game<br>3–8 players</div></div>
+<div style="aspect-ratio:5/7;background:#FFFDF7;border:1px solid #CDC3AF;border-radius:12px;position:relative;padding:14px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end"><span style="position:absolute;top:10px;left:12px;font:700 17px/1.05 'Libre Caslon Text',serif;text-align:center">DS<br>♣</span><span style="position:absolute;top:66px;left:0;right:0;text-align:center;font-size:44px;line-height:1">♣</span><div style="font:700 19px 'Libre Caslon Text',serif">Double Single</div><div style="font-size:15px;color:#4A443C;line-height:1.35">2 combined decks · 1 game<br>3–16 players</div></div>
+<div style="aspect-ratio:5/7;background:#FFFDF7;border:1px solid #CDC3AF;border-radius:12px;position:relative;padding:14px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end"><span style="position:absolute;top:10px;left:12px;font:700 17px/1.05 'Libre Caslon Text',serif;text-align:center;color:#A4302A">SD<br>♥</span><span style="position:absolute;top:66px;left:0;right:0;text-align:center;font-size:44px;line-height:1;color:#A4302A">♥</span><div style="font:700 19px 'Libre Caslon Text',serif">Single Double</div><div style="font-size:15px;color:#4A443C;line-height:1.35">2 separate decks · 2 parallel games · 3–8 players</div></div>
+<div style="aspect-ratio:5/7;background:#FFFDF7;border:1px solid #CDC3AF;border-radius:12px;position:relative;padding:14px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end"><span style="position:absolute;top:10px;left:12px;font:700 17px/1.05 'Libre Caslon Text',serif;text-align:center;color:#A4302A">DD<br>♦</span><span style="position:absolute;top:66px;left:0;right:0;text-align:center;font-size:44px;line-height:1;color:#A4302A">♦</span><div style="font:700 19px 'Libre Caslon Text',serif">Double Double</div><div style="font-size:15px;color:#4A443C;line-height:1.35">4 decks · 2 parallel games · 3–16 players</div></div>
+</div>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;background:#2A5540;color:#FFFDF7;border-radius:8px;font-size:18px;font-weight:700;margin-top:16px">Create Durak table</div>
+</div>
+<div><h2 style="margin:0 0 12px;font:700 19px 'Libre Caslon Text',serif">Join a table</h2>
+<div style="display:flex;gap:10px"><span style="flex:1;height:52px;display:flex;align-items:center;padding:0 14px;background:#FFFDF7;border:1px solid #978C79;border-radius:8px;font-size:17px;color:#5F574D;letter-spacing:.12em">Table code</span><span style="width:84px;height:52px;display:flex;align-items:center;justify-content:center;border:1.5px solid #2A5540;color:#2A5540;border-radius:8px;font-weight:700;font-size:17px;background:#FFFDF7">Join</span></div>
+<p style="margin:8px 0 0;font-size:15px;line-height:1.45;color:#5F574D">Type the 8-character code from the host, or scan the QR code on their phone.</p></div>
+<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #CDC3AF;padding-top:6px"><span style="font-size:16px;color:#4A443C">Everyone starts at 1,200 in each mode.</span><span style="min-height:44px;display:flex;align-items:center;color:#2A5540;font-weight:700;font-size:16px;text-decoration:underline;text-underline-offset:3px">Rankings</span></div>
+</div>
+<div style="flex:none;display:grid;grid-template-columns:repeat(4,1fr);background:#FFFDF7;border-top:1px solid #CDC3AF;padding-bottom:34px">
+<div style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:15px;font-weight:700;box-shadow:inset 0 -3px 0 #2A5540"><span style="font-size:19px;line-height:1">♠</span>Home</div><div style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:15px;color:#5F574D"><span style="font-size:19px;line-height:1">♣</span>Rankings</div><div style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:15px;color:#5F574D"><span style="font-size:19px;line-height:1">♥</span>Groups</div><div style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:15px;color:#5F574D"><span style="font-size:19px;line-height:1">♦</span>Profile</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#1F1C19"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">5 · Header and bottom navigation states</div>
+<div style="width:390px;display:flex;flex-direction:column;gap:20px;font-family:'Karla',system-ui,sans-serif;color:#1F1C19">
+<div style="font:600 13px system-ui;color:#5a544b">Header</div>
+<div style="height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 20px;background:#ECE6DA;border-radius:10px">
+<div style="display:flex;align-items:center;gap:10px"><span style="width:22px;height:31px;border:1.5px solid #1F1C19;border-radius:4px;background:#FFFDF7;transform:rotate(-6deg);display:flex;align-items:center;justify-content:center;font-size:14px">♠</span><span style="font:700 20px 'Libre Caslon Text',serif">Durak Ranked</span></div>
+<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><span style="width:36px;height:36px;border-radius:50%;background:#FFFDF7;border:1.5px solid #1F1C19;display:flex;align-items:center;justify-content:center;font:700 14px 'Libre Caslon Text',serif">CO</span></div>
+</div>
+<div style="font:600 13px system-ui;color:#5a544b">Bottom nav · Home active</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);background:#FFFDF7;border:1px solid #CDC3AF;border-radius:10px;overflow:hidden">
+<div style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:15px;font-weight:700;box-shadow:inset 0 -3px 0 #2A5540"><span style="font-size:19px;line-height:1">♠</span>Home</div><div style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:15px;color:#5F574D"><span style="font-size:19px;line-height:1">♣</span>Rankings</div><div style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:15px;color:#5F574D"><span style="font-size:19px;line-height:1">♥</span>Groups</div><div style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:15px;color:#5F574D"><span style="font-size:19px;line-height:1">♦</span>Profile</div>
+</div>
+<div style="font:600 13px system-ui;color:#5a544b">Bottom nav · Rankings active, keyboard focus on Groups</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);background:#FFFDF7;border:1px solid #CDC3AF;border-radius:10px;padding:4px">
+<div style="height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:15px;color:#5F574D"><span style="font-size:19px;line-height:1">♠</span>Home</div><div style="height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:15px;font-weight:700;box-shadow:inset 0 -3px 0 #2A5540"><span style="font-size:19px;line-height:1">♣</span>Rankings</div><div style="height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:15px;color:#1F1C19;outline:3px solid #2A5540;outline-offset:-3px;border-radius:8px"><span style="font-size:19px;line-height:1;color:#A4302A">♥</span>Groups</div><div style="height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:15px;color:#5F574D"><span style="font-size:19px;line-height:1">♦</span>Profile</div>
+</div>
+<p style="margin:0;font:13px/1.5 system-ui;color:#5a544b">Suits double as tab icons. Inactive suits are muted ink; the active tab gets a forest underline and bold label. Focused tab shows its suit in its true colour plus a 3px forest ring.</p>
+</div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">6 · Table lobby (preview)</div>
+<div style="width:410px;padding:10px;background:#1d1b19;border-radius:58px;box-sizing:border-box"><div style="position:relative;width:390px;min-height:844px;border-radius:48px;overflow:hidden;background:#ECE6DA;display:flex;flex-direction:column;font-family:'Karla',system-ui,sans-serif;color:#1F1C19">
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px"></div>
+<div style="height:47px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="height:56px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 20px">
+<div style="display:flex;align-items:center;gap:10px;min-height:44px"><span style="width:22px;height:31px;border:1.5px solid #1F1C19;border-radius:4px;background:#FFFDF7;transform:rotate(-6deg);display:flex;align-items:center;justify-content:center;font-size:14px">♠</span><span style="font:700 20px 'Libre Caslon Text',serif">Durak Ranked</span></div>
+<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><span style="width:36px;height:36px;border-radius:50%;background:#FFFDF7;border:1.5px solid #1F1C19;display:flex;align-items:center;justify-content:center;font:700 14px 'Libre Caslon Text',serif">CO</span></div>
+</div>
+<div style="flex:1;padding:16px 20px 36px;display:flex;flex-direction:column;gap:22px">
+<div style="display:flex;gap:16px;align-items:center"><span style="width:64px;height:90px;flex:none;background:#FFFDF7;border:1.5px solid #1F1C19;border-radius:8px;position:relative;display:flex;align-items:center;justify-content:center;font-size:30px;color:#A4302A"><span style="position:absolute;top:5px;left:6px;font:700 12px/1.05 'Libre Caslon Text',serif;text-align:center">SD<br>♥</span>♥</span><div><h1 style="margin:0;font:700 26px/1.2 'Libre Caslon Text',serif">Single Double</h1><div style="font-size:16px;color:#5F574D;margin-top:4px">Table PL3VD8ZE · Waiting for players</div></div></div>
+<div style="height:50px;display:flex;align-items:center;justify-content:center;border:1.5px solid #2A5540;color:#2A5540;border-radius:8px;font-weight:700;font-size:17px;background:#FFFDF7">Invite / QR</div>
+<div><h2 style="margin:0 0 10px;font:700 19px 'Libre Caslon Text',serif">Players · 2 of 8</h2>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+<div style="aspect-ratio:5/7;background:#FFFDF7;border:1.5px solid #1F1C19;border-radius:10px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px"><span style="position:absolute;top:6px;left:8px;font-size:15px;color:#A3854C">♛</span><span style="position:absolute;top:6px;right:8px;font-size:13px;font-weight:700;background:#ECE6DA;border-radius:4px;padding:1px 5px">you</span><span style="font:700 26px 'Libre Caslon Text',serif">CO</span><span style="font-size:16px;font-weight:700">cookie</span><span style="font-size:14px;color:#5F574D">★ 5.0 · host</span></div>
+<div style="aspect-ratio:5/7;background:#FFFDF7;border:1px solid #CDC3AF;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><span style="font:700 26px 'Libre Caslon Text',serif">MA</span><span style="font-size:16px;font-weight:700">Masha</span><span style="font-size:14px;color:#5F574D">★ 4.8</span></div>
+<div style="aspect-ratio:5/7;border:1.5px dashed #978C79;border-radius:10px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:15px;color:#5F574D;padding:8px">Empty seat</div>
+</div></div>
+<p style="margin:0;font-size:17px;text-align:center;color:#4A443C">Need 1 more player to start</p>
+<div style="height:52px;display:flex;align-items:center;justify-content:center;background:#D9D1C2;color:#4F483F;border-radius:8px;font-size:18px;font-weight:700">Start new game</div>
+</div>
+<div style="flex:none;display:grid;grid-template-columns:repeat(4,1fr);background:#FFFDF7;border-top:1px solid #CDC3AF;padding-bottom:34px">
+<div style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:15px;font-weight:700;box-shadow:inset 0 -3px 0 #2A5540"><span style="font-size:19px;line-height:1">♠</span>Home</div><div style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:15px;color:#5F574D"><span style="font-size:19px;line-height:1">♣</span>Rankings</div><div style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:15px;color:#5F574D"><span style="font-size:19px;line-height:1">♥</span>Groups</div><div style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:15px;color:#5F574D"><span style="font-size:19px;line-height:1">♦</span>Profile</div>
+</div>
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#1F1C19"></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">Desktop · home, 1280 wide</div>
+<div style="width:1280px;background:#ECE6DA;border-radius:10px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.1);font-family:'Karla',system-ui,sans-serif;color:#1F1C19">
+<div style="height:68px;display:flex;align-items:center;gap:40px;padding:0 48px;background:#FFFDF7;border-bottom:1px solid #CDC3AF">
+<div style="display:flex;align-items:center;gap:10px"><span style="width:22px;height:31px;border:1.5px solid #1F1C19;border-radius:4px;transform:rotate(-6deg);display:flex;align-items:center;justify-content:center;font-size:14px">♠</span><span style="font:700 21px 'Libre Caslon Text',serif">Durak Ranked</span></div>
+<div style="display:flex;gap:8px;flex:1;font-size:17px"><span style="height:68px;display:flex;align-items:center;gap:6px;padding:0 12px;font-weight:700;box-shadow:inset 0 -3px 0 #2A5540">♠ Home</span><span style="height:68px;display:flex;align-items:center;gap:6px;padding:0 12px;color:#5F574D">♣ Rankings</span><span style="height:68px;display:flex;align-items:center;gap:6px;padding:0 12px;color:#5F574D">♥ Groups</span><span style="height:68px;display:flex;align-items:center;gap:6px;padding:0 12px;color:#5F574D">♦ Profile</span></div>
+<span style="width:38px;height:38px;border-radius:50%;border:1.5px solid #1F1C19;display:flex;align-items:center;justify-content:center;font:700 14px 'Libre Caslon Text',serif">CO</span>
+</div>
+<div style="max-width:1080px;margin:0 auto;padding:40px 0 56px;display:flex;flex-direction:column;gap:36px">
+<div><h1 style="margin:0;font:700 36px/1.15 'Libre Caslon Text',serif">Good evening, cookie</h1><p style="margin:6px 0 0;font-size:19px;color:#4A443C">Your game is still going.</p></div>
+<div style="display:flex;gap:40px;align-items:flex-start">
+<div style="display:flex;gap:20px;align-items:flex-start">
+<div style="width:240px;height:336px;background:#FFFDF7;border:1.5px solid #1F1C19;border-radius:14px;position:relative;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;box-shadow:0 4px 14px rgba(31,28,25,.14)"><span style="position:absolute;top:12px;left:14px;font:700 17px/1.05 'Libre Caslon Text',serif;color:#A4302A;text-align:center">SD<br>♥</span><span style="position:absolute;bottom:12px;right:14px;font:700 17px/1.05 'Libre Caslon Text',serif;color:#A4302A;text-align:center;transform:rotate(180deg)">SD<br>♥</span><div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:4px;padding-top:20px"><span style="font-weight:700;color:#2A5540">Game in progress</span><span style="font:700 26px 'Libre Caslon Text',serif">Single Double</span><span style="color:#5F574D">Table PL3VD8ZE</span></div><div style="height:50px;display:flex;align-items:center;justify-content:center;background:#2A5540;color:#FFFDF7;border-radius:8px;font-weight:700;margin-right:24px">Return to table</div></div>
+<div style="width:200px;height:280px;background:#F7F3EA;border:1px solid #CDC3AF;border-radius:12px;position:relative;padding:18px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;gap:4px;margin-top:28px"><span style="position:absolute;top:10px;left:12px;font:700 15px/1.05 'Libre Caslon Text',serif;text-align:center">D<br>♠</span><span style="font:700 21px 'Libre Caslon Text',serif">Durak</span><span style="color:#5F574D">K7Q2M9XA</span><span style="color:#5F574D">Waiting for players</span></div>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:20px">
+<div style="background:#FFFDF7;border:1px solid #CDC3AF;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px"><h2 style="margin:0;font:700 19px 'Libre Caslon Text',serif">Start a table</h2><div style="display:flex;gap:12px;align-items:center"><span style="width:44px;height:62px;border:1.5px solid #1F1C19;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:22px">♠</span><div style="flex:1"><strong style="font-family:'Libre Caslon Text',serif">Durak</strong><div style="color:#5F574D;font-size:15px">1 deck · 1 game · 3–8 players</div></div><span style="color:#2A5540;font-weight:700;text-decoration:underline">Change</span></div><div style="height:50px;display:flex;align-items:center;justify-content:center;background:#2A5540;color:#FFFDF7;border-radius:8px;font-weight:700">Create table</div></div>
+<div style="display:flex;gap:10px"><span style="flex:1;height:50px;display:flex;align-items:center;padding:0 14px;background:#FFFDF7;border:1px solid #978C79;border-radius:8px;color:#5F574D">Table code</span><span style="width:84px;height:50px;display:flex;align-items:center;justify-content:center;border:1.5px solid #2A5540;color:#2A5540;border-radius:8px;font-weight:700;background:#FFFDF7">Join</span></div>
+</div></div>
+<div><div style="display:flex;justify-content:space-between;margin-bottom:12px"><h2 style="margin:0;font:700 19px 'Libre Caslon Text',serif">Your ratings</h2><span style="color:#2A5540;font-weight:700;text-decoration:underline">See rankings</span></div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
+<div style="background:#FFFDF7;border:1px solid #CDC3AF;border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center"><span><strong>♠ Durak</strong><br><span style="color:#5F574D;font-size:15px">17 games</span></span><span style="font:700 22px 'Libre Caslon Text',serif">1,243</span></div>
+<div style="background:#FFFDF7;border:1px solid #CDC3AF;border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center"><span><strong>♣ Double Single</strong><br><span style="color:#5F574D;font-size:15px">4 games</span></span><span style="font:700 22px 'Libre Caslon Text',serif">1,188</span></div>
+<div style="background:#FFFDF7;border:1px solid #CDC3AF;border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center"><span><strong><span style="color:#A4302A">♥</span> Single Double</strong><br><span style="color:#5F574D;font-size:15px">0 games</span></span><span style="font:400 22px 'Libre Caslon Text',serif;color:#5F574D">1,200</span></div>
+<div style="background:#FFFDF7;border:1px solid #CDC3AF;border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center"><span><strong><span style="color:#A4302A">♦</span> Double Double</strong><br><span style="color:#5F574D;font-size:15px">0 games</span></span><span style="font:400 22px 'Libre Caslon Text',serif;color:#5F574D">1,200</span></div>
+</div></div>
+</div></div></div>
+
+<div style="display:flex;flex-direction:column;gap:10px"><div style="font:600 13px system-ui;color:#3a352e">Style sheet</div>
+<div style="width:560px;background:#FFFDF7;border:1px solid #CDC3AF;border-radius:14px;padding:28px;box-sizing:border-box;font-family:'Karla',system-ui,sans-serif;color:#1F1C19;display:flex;flex-direction:column;gap:20px">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;font-size:14px">
+<div style="display:flex;gap:10px;align-items:center"><span style="width:28px;height:39px;border-radius:4px;background:#ECE6DA;border:1px solid #CDC3AF;flex:none"></span><span><strong>Background</strong> #ECE6DA</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:28px;height:39px;border-radius:4px;background:#FFFDF7;border:1px solid #CDC3AF;flex:none"></span><span><strong>Card surface</strong> #FFFDF7 · back card #F7F3EA</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:28px;height:39px;border-radius:4px;background:#1F1C19;flex:none"></span><span><strong>Text / black suits</strong> #1F1C19</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:28px;height:39px;border-radius:4px;background:#5F574D;flex:none"></span><span><strong>Muted</strong> #5F574D (5.6:1 on bg)</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:28px;height:39px;border-radius:4px;background:#2A5540;flex:none"></span><span><strong>Primary</strong> #2A5540</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:28px;height:39px;border-radius:4px;background:#A4302A;flex:none"></span><span><strong>Red suits / danger</strong> #A4302A</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:28px;height:39px;border-radius:4px;background:#A3854C;flex:none"></span><span><strong>Brass</strong> #A3854C (crown, invite border)</span></div>
+<div style="display:flex;gap:10px;align-items:center"><span style="width:28px;height:39px;border-radius:4px;background:#CDC3AF;flex:none"></span><span><strong>Card edge</strong> #CDC3AF · input #978C79</span></div>
+</div>
+<div style="font-size:14px;line-height:1.6"><strong>Type</strong> · h1 Libre Caslon Text 700 28/1.2 · h2 Libre Caslon 700 19 · corner indices Libre Caslon 700 13–17/1.05 · body Karla 400 17/1.5 · small Karla 15</div>
+<div style="font-size:14px;line-height:1.6"><strong>Shape</strong> · cards aspect-ratio 5/7, radius 12 (8 for mini cards), buttons/inputs 8 · spacing 4, 8, 12, 16, 22, 28 · shadow only on the front card: 0 4px 14px rgba(31,28,25,.16); selected mode lifts 4px · mode suits: Durak ♠, Double Single ♣, Single Double ♥, Double Double ♦</div>
+<p style="margin:0;font-size:15px;line-height:1.55;border-top:1px solid #CDC3AF;padding-top:16px">Everything is a card you could pick up, and each mode has a suit you'll start to recognise at a glance across tables, ratings and rankings. Trade-off: 5:7 cards are tall, so the home screen scrolls further, and the fan needs a swipe affordance and a list fallback for screen readers. Voting maps nicely to one player card per person.</p>
+</div></div>
+
+</div></div>
+
+</div>
+<p class="dv-next">Try next: "go with <a class="dv-oid" href="#1b">1b</a> but the ledger rows from <a class="dv-oid" href="#1a">1a</a>" · "push <a class="dv-oid" href="#1d">1d</a> further" · "dark mode for <a class="dv-oid" href="#1a">1a</a>"</p>
+</section>
+</x-dc>
+</body>
+</html>

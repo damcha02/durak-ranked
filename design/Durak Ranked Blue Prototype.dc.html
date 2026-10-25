@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"><style>body{margin:0;background:#DCE7EF}a{color:#23557C}a:hover{color:#1B4565}button{font:inherit;color:inherit}input,select{font:inherit}</style></helmet>
+<div style="min-height:100vh;display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:48px;padding:40px 24px;box-sizing:border-box;font-family:'Hanken Grotesk',system-ui,sans-serif;color:#1B2A37">
+
+<div style="width:410px;height:864px;padding:10px;background:#15202A;border-radius:58px;box-sizing:border-box;flex:none">
+<div style="position:relative;width:390px;height:844px;border-radius:48px;overflow:hidden;background:#E8F1F8;isolation:isolate">
+
+<div style="position:absolute;top:0;left:0;right:0;height:47px;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 36px;font:600 16px -apple-system,system-ui,sans-serif;z-index:20;background:#E8F1F8"><span>9:41</span><span style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;padding:1.5px;display:flex"><span style="width:70%;background:currentColor;border-radius:1px"></span></span></div>
+<div style="position:absolute;top:11px;left:133px;width:124px;height:36px;background:#000;border-radius:20px;z-index:21"></div>
+
+<div style="position:absolute;top:47px;left:0;right:0;height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 14px;z-index:10;background:#E8F1F8;opacity:{{ chromeO }};pointer-events:{{ chromePE }};transition:opacity .3s ease">
+<button onClick="{{ goHome }}" aria-label="Durak Ranked, home" style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 6px;background:none;border:none;cursor:pointer;border-radius:10px"><span style="width:22px;height:30px;border:1.5px solid #1B2A37;border-radius:4px;background:#FFFFFF;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:14px">♠</span><span style="font-size:20px;font-weight:700;letter-spacing:-.01em">Durak Ranked</span></button>
+<button onClick="{{ goProfile }}" aria-label="Your profile" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;border-radius:50%"><span style="width:36px;height:36px;border-radius:50%;background:#D6E6F2;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">CO</span></button>
+</div>
+
+<div style="position:absolute;top:47px;left:0;right:0;bottom:0;overflow-y:auto;transform:{{ L.signin.t }};opacity:{{ L.signin.o }};pointer-events:{{ L.signin.pe }};visibility:{{ L.signin.v }};transition:{{ L.signin.tr }}">
+<div style="padding:44px 24px 48px;display:flex;flex-direction:column;gap:26px">
+<div style="display:flex;flex-direction:column;gap:14px">
+<span style="width:46px;height:64px;border:2px solid #1B2A37;border-radius:6px;background:#FFFFFF;transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 6px 16px rgba(35,85,124,.14)">♠</span>
+<h1 style="margin:6px 0 0;font-size:34px;line-height:1.1;font-weight:700;letter-spacing:-.02em">Durak Ranked</h1>
+<p style="margin:0;font-size:18px;line-height:1.5;color:#51606E;text-wrap:pretty">A scorebook for your Durak nights. Play with real cards, vote on who lost, and keep a rating for each game mode.</p>
+</div>
+<div role="tablist" style="position:relative;display:grid;grid-template-columns:1fr 1fr;background:#D6E6F2;border-radius:14px;padding:4px">
+<span style="position:absolute;top:4px;bottom:4px;left:4px;width:calc(50% - 4px);background:#FFFFFF;border-radius:10px;box-shadow:0 1px 3px rgba(27,42,55,.12);transform:{{ authX }};transition:transform .35s cubic-bezier(.2,.8,.2,1)"></span>
+<button role="tab" aria-selected="{{ isSignin }}" onClick="{{ setSignin }}" style="position:relative;height:44px;border:none;background:none;cursor:pointer;font-size:17px;font-weight:{{ signinW }};border-radius:10px">Sign in</button>
+<button role="tab" aria-selected="{{ isSignup }}" onClick="{{ setSignup }}" style="position:relative;height:44px;border:none;background:none;cursor:pointer;font-size:17px;font-weight:{{ signupW }};border-radius:10px">Create account</button>
+</div>
+<form onSubmit="{{ signIn }}" style="display:flex;flex-direction:column;gap:16px">
+<sc-if value="{{ isSignin }}" hint-placeholder-val="{{ true }}">
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:600">Username or email<input defaultValue="cookie" autoComplete="username" style="height:52px;padding:0 14px;background:#FFFFFF;border:1.5px solid #7E93A5;border-radius:12px;font-size:17px;color:#1B2A37;box-sizing:border-box" style-focus="outline:3px solid #23557C;outline-offset:1px"></label>
+</sc-if>
+<sc-if value="{{ isSignup }}" hint-placeholder-val="{{ false }}">
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:600">Username<input defaultValue="cookie" autoComplete="username" style="height:52px;padding:0 14px;background:#FFFFFF;border:1.5px solid #7E93A5;border-radius:12px;font-size:17px;color:#1B2A37;box-sizing:border-box" style-focus="outline:3px solid #23557C;outline-offset:1px"></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:600">Email address<input type="email" placeholder="you@example.com" autoComplete="email" style="height:52px;padding:0 14px;background:#FFFFFF;border:1.5px solid #7E93A5;border-radius:12px;font-size:17px;color:#1B2A37;box-sizing:border-box" style-focus="outline:3px solid #23557C;outline-offset:1px"></label>
+</sc-if>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:600">Password<input type="password" defaultValue="cardtable42" autoComplete="current-password" style="height:52px;padding:0 14px;background:#FFFFFF;border:1.5px solid #7E93A5;border-radius:12px;font-size:17px;color:#1B2A37;box-sizing:border-box" style-focus="outline:3px solid #23557C;outline-offset:1px"><sc-if value="{{ isSignup }}" hint-placeholder-val="{{ false }}"><span style="font-size:15px;font-weight:400;color:#51606E">At least 10 characters</span></sc-if></label>
+<button type="submit" style="height:54px;border:none;border-radius:14px;background:#23557C;color:#FFFFFF;font-size:18px;font-weight:600;cursor:pointer;margin-top:4px" style-hover="background:#1B4565">{{ authCta }}</button>
+</form>
+</div>
+</div>
+
+<div style="position:absolute;top:103px;left:0;right:0;bottom:90px;overflow-y:auto;transform:{{ L.home.t }};opacity:{{ L.home.o }};pointer-events:{{ L.home.pe }};visibility:{{ L.home.v }};transition:{{ L.home.tr }}">
+<div style="padding:16px 20px 32px;display:flex;flex-direction:column;gap:30px">
+<div><h1 style="margin:0;font-size:30px;line-height:1.15;font-weight:700;letter-spacing:-.02em">Good evening, cookie</h1><p style="margin:6px 0 0;font-size:18px;color:#51606E">{{ statusLine }}</p></div>
+
+<sc-if value="{{ hasPrimary }}" hint-placeholder-val="{{ true }}">
+<div style="background:#FFFFFF;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:16px;box-shadow:0 1px 2px rgba(27,42,55,.06),0 10px 28px rgba(35,85,124,.10)">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><span style="font-size:15px;font-weight:600;padding:5px 11px;border-radius:999px;background:{{ primary.chipBg }};color:{{ primary.chipFg }}">{{ primary.label }}</span><span style="display:flex"><sc-for list="{{ primary.avatars }}" as="a" hint-placeholder-count="3"><span style="width:34px;height:34px;border-radius:50%;background:{{ a.bg }};border:2.5px solid #FFFFFF;margin-left:-8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">{{ a.initials }}</span></sc-for></span></div>
+<div><div style="font-size:26px;font-weight:700;letter-spacing:-.01em;line-height:1.15">{{ primary.mode }}</div><div style="font-size:16px;color:#51606E;margin-top:4px">Table <span style="font-family:'JetBrains Mono',monospace;font-size:15px;color:#1B2A37">{{ primary.id }}</span> · {{ primary.withText }}</div></div>
+<button onClick="{{ primary.open }}" style="height:54px;border:none;border-radius:14px;background:#23557C;color:#FFFFFF;font-size:18px;font-weight:600;cursor:pointer" style-hover="background:#1B4565">Return to table</button>
+</div>
+<sc-if value="{{ hasOthers }}" hint-placeholder-val="{{ true }}">
+<div><div style="font-size:16px;font-weight:600;color:#51606E;margin-bottom:4px">Other tables</div>
+<sc-for list="{{ others }}" as="t" hint-placeholder-count="1"><button onClick="{{ t.open }}" style="width:100%;min-height:64px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:none;border:none;border-bottom:1px solid #CCDCE8;padding:8px 2px;text-align:left;cursor:pointer"><span><span style="display:block;font-size:18px;font-weight:600">{{ t.mode }}</span><span style="display:block;font-size:16px;color:#51606E">Table {{ t.id }} · {{ t.label }}</span></span><span style="font-size:24px;color:#51606E">›</span></button></sc-for>
+</div>
+</sc-if>
+</sc-if>
+
+<div style="display:flex;flex-direction:column;gap:14px">
+<h2 style="margin:0;font-size:21px;font-weight:700">Start a table</h2>
+<button onClick="{{ openModes }}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;background:#FFFFFF;border:1.5px solid #CCDCE8;border-radius:16px;text-align:left;cursor:pointer;min-height:64px"><span style="display:flex;align-items:center;gap:12px"><span style="width:34px;height:46px;border:1.5px solid #1B2A37;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:18px;color:{{ selMode.suitColor }};flex:none">{{ selMode.suit }}</span><span><span style="display:block;font-size:18px;font-weight:600">{{ selMode.name }}</span><span style="display:block;font-size:15px;color:#51606E">{{ selMode.detail }}</span></span></span><span style="font-size:16px;font-weight:700;color:#23557C">Change</span></button>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:16px;font-weight:600">Friend group <span style="display:contents;font-weight:400;color:#51606E">(optional)</span><span style="position:relative;display:block"><select value="{{ group }}" onChange="{{ onGroup }}" style="width:100%;height:52px;padding:0 40px 0 14px;appearance:none;-webkit-appearance:none;background:#FFFFFF;border:1.5px solid #7E93A5;border-radius:12px;font-size:17px;color:#1B2A37;cursor:pointer" style-focus="outline:3px solid #23557C;outline-offset:1px"><option value="">No group</option><option value="Thursday regulars">Thursday regulars</option><option value="Uni friends">Uni friends</option></select><span style="position:absolute;right:14px;top:14px;pointer-events:none;font-size:15px">▾</span></span></label>
+<button onClick="{{ createTable }}" style="height:54px;border:none;border-radius:14px;background:#23557C;color:#FFFFFF;font-size:18px;font-weight:600;cursor:pointer" style-hover="background:#1B4565">Create table</button>
+</div>
+
+<form onSubmit="{{ join }}" style="display:flex;flex-direction:column;gap:8px">
+<h2 style="margin:0 0 6px;font-size:21px;font-weight:700">Join a table</h2>
+<label for="join-code" style="font-size:16px;font-weight:600">Table code</label>
+<div style="display:flex;gap:10px"><input id="join-code" value="{{ joinCode }}" onChange="{{ onJoinChange }}" placeholder="8 characters" autoCapitalize="characters" autoComplete="off" spellCheck="false" aria-describedby="join-help" style="flex:1;min-width:0;height:52px;padding:0 14px;background:#FFFFFF;border:1.5px solid {{ joinBorder }};border-radius:12px;font-family:'JetBrains Mono',monospace;font-size:17px;letter-spacing:.14em;color:#1B2A37;box-sizing:border-box" style-focus="outline:3px solid #23557C;outline-offset:1px"><button type="submit" style="width:86px;height:52px;border:1.5px solid #23557C;background:#FFFFFF;color:#23557C;border-radius:12px;font-size:17px;font-weight:700;cursor:pointer" style-hover="background:#D6E6F2">Join</button></div>
+<p id="join-help" style="margin:0;font-size:15px;line-height:1.45;color:{{ joinHelpColor }};font-weight:{{ joinHelpW }}">{{ joinHelp }}</p>
+</form>
+
+<div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px"><h2 style="margin:0;font-size:21px;font-weight:700">Your ratings</h2><button onClick="{{ goRankings }}" style="min-height:44px;padding:0 4px;background:none;border:none;color:#23557C;font-size:16px;font-weight:700;cursor:pointer">See rankings ›</button></div>
+<sc-for list="{{ ratings }}" as="r" hint-placeholder-count="4"><div style="display:flex;justify-content:space-between;align-items:center;min-height:56px;border-bottom:1px solid #CCDCE8"><span style="display:flex;align-items:center;gap:10px"><span style="width:20px;text-align:center;font-size:17px;color:{{ r.suitColor }}">{{ r.suit }}</span><span><span style="display:block;font-size:17px;font-weight:600">{{ r.name }}</span><span style="display:block;font-size:15px;color:#51606E">{{ r.games }}</span></span></span><span style="font-size:21px;font-weight:700;font-variant-numeric:tabular-nums;color:{{ r.color }}">{{ r.rating }}</span></div></sc-for>
+</div>
+</div>
+</div>
+
+<div style="position:absolute;top:103px;left:0;right:0;bottom:90px;overflow-y:auto;transform:{{ L.rankings.t }};opacity:{{ L.rankings.o }};pointer-events:{{ L.rankings.pe }};visibility:{{ L.rankings.v }};transition:{{ L.rankings.tr }}">
+<div style="padding:16px 20px 32px;display:flex;flex-direction:column;gap:20px">
+<h1 style="margin:0;font-size:30px;font-weight:700;letter-spacing:-.02em">Rankings</h1>
+<div style="display:flex;gap:8px;overflow-x:auto;margin:0 -20px;padding:0 20px 2px"><sc-for list="{{ rankChips }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.pick }}" aria-pressed="{{ c.on }}" style="flex:none;height:44px;padding:0 16px;border-radius:999px;border:1.5px solid {{ c.border }};background:{{ c.bg }};color:{{ c.fg }};font-size:16px;font-weight:600;cursor:pointer;transition:background .2s,color .2s">{{ c.suit }} {{ c.name }}</button></sc-for></div>
+<div style="background:#FFFFFF;border-radius:20px;padding:4px 16px">
+<sc-for list="{{ rankRows }}" as="p" hint-placeholder-count="5"><div style="display:flex;align-items:center;gap:12px;min-height:60px;border-bottom:1px solid {{ p.line }};margin:0 -16px;padding:0 16px;background:{{ p.bg }}"><span style="width:22px;font-size:16px;font-weight:700;color:#51606E;font-variant-numeric:tabular-nums">{{ p.rank }}</span><span style="width:38px;height:38px;border-radius:50%;background:{{ p.avatar }};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:none">{{ p.initials }}</span><span style="flex:1;font-size:17px;font-weight:600">{{ p.name }}</span><span style="font-size:19px;font-weight:700;font-variant-numeric:tabular-nums">{{ p.rating }}</span></div></sc-for>
+</div>
+</div>
+</div>
+
+<div style="position:absolute;top:103px;left:0;right:0;bottom:90px;overflow-y:auto;transform:{{ L.groups.t }};opacity:{{ L.groups.o }};pointer-events:{{ L.groups.pe }};visibility:{{ L.groups.v }};transition:{{ L.groups.tr }}">
+<div style="padding:16px 20px 32px;display:flex;flex-direction:column;gap:16px">
+<h1 style="margin:0;font-size:30px;font-weight:700;letter-spacing:-.02em">Groups</h1>
+<div style="background:#FFFFFF;border-radius:20px;padding:4px 16px">
+<div style="min-height:68px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #E1EAF1"><span><span style="display:block;font-size:18px;font-weight:600">Thursday regulars</span><span style="display:block;font-size:15px;color:#51606E">You, Masha, Grisha, Lena and Dima</span></span><span style="font-size:24px;color:#51606E">›</span></div>
+<div style="min-height:68px;display:flex;align-items:center;justify-content:space-between"><span><span style="display:block;font-size:18px;font-weight:600">Uni friends</span><span style="display:block;font-size:15px;color:#51606E">You, Grisha and Dima</span></span><span style="font-size:24px;color:#51606E">›</span></div>
+</div>
+</div>
+</div>
+
+<div style="position:absolute;top:103px;left:0;right:0;bottom:90px;overflow-y:auto;transform:{{ L.profile.t }};opacity:{{ L.profile.o }};pointer-events:{{ L.profile.pe }};visibility:{{ L.profile.v }};transition:{{ L.profile.tr }}">
+<div style="padding:24px 20px 32px;display:flex;flex-direction:column;gap:20px;align-items:flex-start">
+<span style="width:72px;height:72px;border-radius:50%;background:#D6E6F2;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">CO</span>
+<div><h1 style="margin:0;font-size:28px;font-weight:700">cookie</h1><p style="margin:4px 0 0;font-size:16px;color:#51606E">cookie@example.com · ★ 5.0 reputation</p></div>
+<button onClick="{{ signOut }}" style="height:50px;padding:0 22px;border:1.5px solid #A03C33;background:none;color:#A03C33;border-radius:12px;font-size:17px;font-weight:600;cursor:pointer">Sign out</button>
+</div>
+</div>
+
+<div style="position:absolute;top:103px;left:0;right:0;bottom:90px;overflow-y:auto;transform:{{ L.lobby.t }};opacity:{{ L.lobby.o }};pointer-events:{{ L.lobby.pe }};visibility:{{ L.lobby.v }};transition:{{ L.lobby.tr }}">
+<div style="padding:4px 20px 32px;display:flex;flex-direction:column;gap:20px">
+<button onClick="{{ goHome }}" style="align-self:flex-start;min-height:44px;padding:0 4px;margin-left:-4px;background:none;border:none;color:#23557C;font-size:17px;font-weight:600;cursor:pointer">‹ Home</button>
+<div style="background:#FFFFFF;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 2px rgba(27,42,55,.06),0 10px 28px rgba(35,85,124,.10)">
+<span style="align-self:flex-start;font-size:15px;font-weight:600;padding:5px 11px;border-radius:999px;background:{{ lobby.chipBg }};color:{{ lobby.chipFg }}">{{ lobby.label }}</span>
+<div><h1 style="margin:0;font-size:28px;font-weight:700;letter-spacing:-.01em">{{ lobby.mode }}</h1><div style="font-size:16px;color:#51606E;margin-top:4px">Table <span style="font-family:'JetBrains Mono',monospace;font-size:15px;color:#1B2A37">{{ lobby.id }}</span> · {{ lobby.detail }}</div></div>
+<button onClick="{{ openInvite }}" style="height:50px;border:1.5px solid #23557C;background:#FFFFFF;color:#23557C;border-radius:12px;font-size:17px;font-weight:700;cursor:pointer" style-hover="background:#D6E6F2">Invite / QR</button>
+</div>
+<div>
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><h2 style="margin:0;font-size:21px;font-weight:700">Players</h2><span style="font-size:16px;color:#51606E">{{ lobby.countText }}</span></div>
+<sc-for list="{{ lobby.players }}" as="p" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:12px;min-height:64px;border-bottom:1px solid #CCDCE8"><span style="width:42px;height:42px;border-radius:50%;background:{{ p.bg }};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex:none">{{ p.id }}</span><span style="flex:1"><span style="display:flex;align-items:center;gap:8px;font-size:17px;font-weight:600">{{ p.name }}<sc-if value="{{ p.you }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;font-weight:600;background:#D6E6F2;border-radius:999px;padding:2px 9px">you</span></sc-if></span><sc-if value="{{ p.host }}" hint-placeholder-val="{{ false }}"><span style="display:block;font-size:15px;color:#51606E"><span style="color:#9A7B45">♛</span> Host</span></sc-if></span><span style="font-size:16px;font-weight:600">★ {{ p.rep }}</span></div></sc-for>
+<sc-if value="{{ lobby.needsMore }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;gap:12px;min-height:64px;border-bottom:1px solid #CCDCE8;color:#51606E"><span style="width:42px;height:42px;border-radius:50%;border:2px dashed #7E93A5;box-sizing:border-box;flex:none"></span><span style="font-size:16px">Waiting for someone to join…</span></div></sc-if>
+</div>
+<p style="margin:0;font-size:17px;text-align:center;color:#51606E">{{ lobby.needText }}</p>
+<button onClick="{{ startGame }}" disabled="{{ lobby.startDisabled }}" style="height:54px;border:none;border-radius:14px;background:{{ lobby.startBg }};color:{{ lobby.startFg }};font-size:18px;font-weight:600;cursor:{{ lobby.startCursor }};transition:background .25s">{{ lobby.startText }}</button>
+</div>
+</div>
+
+<nav aria-label="Main" style="position:absolute;left:0;right:0;bottom:0;height:90px;box-sizing:border-box;padding:6px 8px 34px;background:#F6FAFD;border-top:1px solid #CCDCE8;z-index:10;opacity:{{ chromeO }};pointer-events:{{ chromePE }};transition:opacity .3s ease">
+<div style="position:relative;display:grid;grid-template-columns:repeat(4,1fr);height:48px">
+<span style="position:absolute;top:0;bottom:0;left:0;width:25%;transform:{{ navX }};transition:transform .4s cubic-bezier(.2,.8,.2,1);display:flex;padding:0 4px;box-sizing:border-box"><span style="flex:1;background:#D6E6F2;border-radius:999px"></span></span>
+<sc-for list="{{ tabs }}" as="tab" hint-placeholder-count="4"><button onClick="{{ tab.go }}" aria-current="{{ tab.current }}" style="position:relative;border:none;background:none;cursor:pointer;font-size:16px;font-weight:{{ tab.weight }};color:{{ tab.color }};border-radius:999px;transition:color .25s">{{ tab.name }}</button></sc-for>
+</div>
+</nav>
+
+<div role="status" aria-live="polite" style="position:absolute;left:20px;right:20px;bottom:104px;z-index:15;background:#1B2A37;color:#FFFFFF;border-radius:14px;padding:14px 16px;font-size:16px;font-weight:500;opacity:{{ toastO }};transform:{{ toastT }};transition:opacity .25s ease,transform .3s cubic-bezier(.2,.8,.2,1);pointer-events:none">{{ toast }}</div>
+
+<div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(27,42,55,.38);z-index:30;opacity:{{ scrimO }};pointer-events:{{ scrimPE }};transition:opacity .3s ease"></div>
+<div role="dialog" aria-modal="true" aria-label="{{ sheetTitle }}" style="position:absolute;left:0;right:0;bottom:0;z-index:31;background:#F6FAFD;border-radius:26px 26px 0 0;padding:10px 20px 44px;transform:{{ sheetT }};transition:transform .42s cubic-bezier(.2,.8,.2,1);visibility:{{ sheetV }}">
+<span style="display:block;width:40px;height:5px;border-radius:3px;background:#B5C6D3;margin:0 auto 14px"></span>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2 style="margin:0;font-size:21px;font-weight:700">{{ sheetTitle }}</h2><button onClick="{{ closeSheet }}" style="min-height:44px;padding:0 6px;background:none;border:none;color:#23557C;font-size:16px;font-weight:700;cursor:pointer">Done</button></div>
+<sc-if value="{{ sheetIsModes }}" hint-placeholder-val="{{ false }}">
+<div role="radiogroup" style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ modeOptions }}" as="m" hint-placeholder-count="4"><button role="radio" aria-checked="{{ m.on }}" onClick="{{ m.pick }}" style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:{{ m.bg }};border:2px solid {{ m.border }};border-radius:16px;text-align:left;cursor:pointer;transition:background .2s,border-color .2s"><span style="width:34px;height:46px;border:1.5px solid #1B2A37;border-radius:5px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:18px;color:{{ m.suitColor }};flex:none">{{ m.suit }}</span><span style="flex:1"><span style="display:block;font-size:18px;font-weight:700">{{ m.name }}<sc-if value="{{ m.isDefault }}" hint-placeholder-val="{{ false }}"><span style="font-weight:400;font-size:15px;color:#51606E"> · default</span></sc-if></span><span style="display:block;font-size:15px;color:#3E4C59">{{ m.detail }}</span></span><span style="width:22px;height:22px;border-radius:50%;border:2px solid {{ m.ring }};display:flex;align-items:center;justify-content:center;box-sizing:border-box;flex:none"><span style="width:12px;height:12px;border-radius:50%;background:#23557C;opacity:{{ m.dot }};transition:opacity .2s"></span></span></button></sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ sheetIsInvite }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;align-items:center;gap:16px">
+<div style="width:200px;height:200px;border-radius:16px;border:1.5px solid #CCDCE8;background:repeating-linear-gradient(135deg,#FFFFFF 0 10px,#EEF4F9 10px 20px);display:flex;align-items:center;justify-content:center;font:500 13px 'JetBrains Mono',monospace;color:#51606E">QR code</div>
+<div style="font-family:'JetBrains Mono',monospace;font-size:28px;letter-spacing:.18em;font-weight:500">{{ lobby.id }}</div>
+<p style="margin:0;font-size:16px;color:#51606E;text-align:center">Friends can scan this, type the code, or open the link.</p>
+<button onClick="{{ copyLink }}" style="width:100%;height:54px;border:none;border-radius:14px;background:#23557C;color:#FFFFFF;font-size:18px;font-weight:600;cursor:pointer" style-hover="background:#1B4565">Copy invite link</button>
+</div>
+</sc-if>
+</div>
+
+<div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:#1B2A37;z-index:40"></div>
+</div></div>
+
+<div style="max-width:340px;display:flex;flex-direction:column;gap:22px;padding-top:12px">
+<div><div style="font-size:13px;font-weight:600;color:#51606E">Clickable prototype</div><h2 style="margin:4px 0 0;font-size:26px;font-weight:700;letter-spacing:-.01em">Durak Ranked, light blue</h2></div>
+<p style="margin:0;font-size:16px;line-height:1.55;color:#3E4C59">One phone, one continuous app. The header and tab bar stay put while screens slide underneath; going deeper (a table) moves right, going back moves left, and switching tabs crossfades. Pickers and the invite open as sheets over the page so you never lose your place.</p>
+<div style="display:flex;flex-direction:column;gap:8px;font-size:15px;line-height:1.45;color:#3E4C59"><strong style="color:#1B2A37">Try</strong><span>Sign in, then Return to table</span><span>Change the game mode, then Create table and watch friends join</span><span>Type any 8-character code into Join</span><span>Tap See rankings and switch modes</span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;font-size:13px;color:#3E4C59">
+<span style="display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;border-radius:6px;background:#E8F1F8;border:1px solid #CCDCE8"></span>Wash #E8F1F8</span>
+<span style="display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;border-radius:6px;background:#FFFFFF;border:1px solid #CCDCE8"></span>Surface #FFFFFF</span>
+<span style="display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;border-radius:6px;background:#23557C"></span>Action #23557C</span>
+<span style="display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;border-radius:6px;background:#D6E6F2"></span>Tint #D6E6F2</span>
+<span style="display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;border-radius:6px;background:#1B2A37"></span>Text #1B2A37</span>
+<span style="display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;border-radius:6px;background:#51606E"></span>Muted #51606E</span>
+<span style="display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;border-radius:6px;background:#A03C33"></span>Loss / red suits #A03C33</span>
+<span style="display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;border-radius:6px;background:#CCDCE8"></span>Line #CCDCE8</span>
+</div>
+<p style="margin:0;font-size:13px;line-height:1.55;color:#51606E">Hanken Grotesk throughout (h1 700 30, h2 700 21, body 17–18, small 15); table codes in JetBrains Mono. Radius 22 cards, 14 buttons, 12 inputs. Motion 0.46s cubic-bezier(.2,.8,.2,1); the Motion tweak switches to fades only.</p>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;startScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;signin&quot;,&quot;home&quot;,&quot;lobby&quot;],&quot;default&quot;:&quot;signin&quot;,&quot;tsType&quot;:&quot;'signin'|'home'|'lobby'&quot;},&quot;newUser&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;motion&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;full&quot;,&quot;reduced&quot;],&quot;default&quot;:&quot;full&quot;,&quot;tsType&quot;:&quot;'full'|'reduced'&quot;}}">
+const MODES=[
+{name:'Durak',suit:'♠',red:false,detail:'1 deck · 1 game · 3–8 players',min:3,max:8},
+{name:'Double Single',suit:'♣',red:false,detail:'2 combined decks · 1 game · 3–16 players',min:3,max:16},
+{name:'Single Double',suit:'♥',red:true,detail:'2 separate decks · 2 parallel games · 3–8 players',min:3,max:8},
+{name:'Double Double',suit:'♦',red:true,detail:'4 decks · 2 parallel games · 3–16 players',min:3,max:16}];
+const TINT={CO:'#D6E6F2',MA:'#F1DCCF',GR:'#D9E8DC',LE:'#ECE3C8',DI:'#E2DDEE'};
+const FRIENDS=[{id:'MA',name:'Masha',rep:'4.8'},{id:'GR',name:'Grisha',rep:'5.0'},{id:'LE',name:'Lena',rep:'4.9'},{id:'DI',name:'Dima',rep:'4.7'}];
+const ME={id:'CO',name:'cookie',rep:'5.0',you:true};
+const STATUS={waiting:['Waiting for players','#E3E9EE','#3E4C59'],progress:['Game in progress','#D6E6F2','#1B4565'],results:['Recording results','#F3DEDA','#8A2F27']};
+const RANK={'Durak':[['MA','Masha',1301],['CO','cookie',1243],['GR','Grisha',1226],['LE','Lena',1190],['DI','Dima',1152]],'Double Single':[['GR','Grisha',1240],['LE','Lena',1212],['MA','Masha',1203],['CO','cookie',1188]],'Single Double':[['MA','Masha',1219],['DI','Dima',1207],['CO','cookie',1200]],'Double Double':[['LE','Lena',1231],['CO','cookie',1200]]};
+const initTables=()=>[
+{id:'PL3VD8ZE',mode:'Single Double',status:'progress',players:[{id:'MA',name:'Masha',rep:'4.8',host:true},{...ME},{id:'GR',name:'Grisha',rep:'5.0'},{id:'LE',name:'Lena',rep:'4.9'}]},
+{id:'K7Q2M9XA',mode:'Durak',status:'waiting',players:[{id:'LE',name:'Lena',rep:'4.9',host:true},{...ME}]}];
+const code=()=>{const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<8;i++)s+=c[Math.floor(Math.random()*c.length)];return s;};
+const listNames=a=>a.length<=1?(a[0]||''):a.slice(0,-1).join(', ')+' and '+a[a.length-1];
+
+class Component extends DCLogic {
+  state={screen:'signin',authMode:'signin',tables:initTables(),current:null,mode:'Durak',group:'Thursday regulars',sheetOpen:false,sheetKind:'modes',joinCode:'',joinError:'',toast:'',toastOn:false,rankMode:'Durak'};
+  componentDidMount(){this.apply();}
+  componentDidUpdate(p){if(p.startScreen!==this.props.startScreen||p.newUser!==this.props.newUser)this.apply();}
+  componentWillUnmount(){clearTimeout(this.jt);clearTimeout(this.tt);}
+  apply(){
+    const st=this.props.startScreen??'signin';const tables=this.props.newUser?[]:initTables();
+    let current=null;if(st==='lobby'){if(!tables.length)tables.push({id:'K7Q2M9XA',mode:'Durak',status:'waiting',players:[{...ME,host:true}]});current=tables[tables.length-1].id;}
+    this.setState({screen:st,tables,current,sheetOpen:false},()=>{if(st==='lobby')this.scheduleJoin();});
+  }
+  go(screen,extra={}){clearTimeout(this.jt);this.setState({screen,sheetOpen:false,...extra},()=>{if(screen==='lobby')this.scheduleJoin();});}
+  say(msg){clearTimeout(this.tt);this.setState({toast:msg,toastOn:true});this.tt=setTimeout(()=>this.setState({toastOn:false}),2400);}
+  table(){return this.state.tables.find(t=>t.id===this.state.current);}
+  updateTable(id,fn){this.setState(s=>({tables:s.tables.map(t=>t.id===id?fn(t):t)}));}
+  scheduleJoin(){
+    clearTimeout(this.jt);
+    this.jt=setTimeout(()=>{
+      const t=this.table();if(!t||this.state.screen!=='lobby'||t.status!=='waiting')return;
+      const min=MODES.find(m=>m.name===t.mode).min;if(t.players.length>=min)return;
+      const f=FRIENDS.find(f=>!t.players.some(p=>p.id===f.id));if(!f)return;
+      this.updateTable(t.id,x=>({...x,players:[...x.players,{...f}]}));this.say(f.name+' joined the table');this.scheduleJoin();
+    },2600);
+  }
+  openTable(id){this.go('lobby',{current:id});}
+  renderVals(){
+    const s=this.state;const motion=this.props.motion??'full';
+    const base=motion==='reduced'?'opacity .2s ease':'transform .46s cubic-bezier(.2,.8,.2,1), opacity .3s ease';
+    const D={signin:0,home:1,rankings:1,groups:1,profile:1,lobby:2};const L={};
+    for(const k of Object.keys(D)){const on=k===s.screen;let t='translate3d(0,0,0)';
+      if(!on){const d=D[k]-D[s.screen];t=d<0?'translate3d(-32px,0,0)':d>0?'translate3d(56px,0,0)':'translate3d(0,12px,0)';}
+      if(motion==='reduced')t='none';
+      L[k]={t,o:on?1:0,pe:on?'auto':'none',v:on?'visible':'hidden',tr:on?base+', visibility 0s':base+', visibility 0s linear .46s'};}
+    const order={results:0,progress:1,waiting:2};
+    const vm=t=>{const st=STATUS[t.status];const others=t.players.filter(p=>!p.you).map(p=>p.name);
+      return {...t,label:st[0],chipBg:st[1],chipFg:st[2],withText:others.length?'With '+listNames(others):'Just you so far',avatars:t.players.slice(0,4).map(p=>({initials:p.id,bg:TINT[p.id]||'#E3E9EE'})),open:()=>this.openTable(t.id)};};
+    const sorted=[...s.tables].sort((a,b)=>order[a.status]-order[b.status]).map(vm);
+    const primary=sorted[0]||{avatars:[]};
+    const statusLine=!sorted.length?"No tables yet. Start one, or join a friend's.":primary.status==='results'?'Your table is waiting for your vote.':primary.status==='progress'?'Your game is still going.':'Your table is waiting for players.';
+    const sm=MODES.find(m=>m.name===s.mode);
+    const t=this.table();let lobby={players:[],needsMore:false};
+    if(t){const v=vm(t);const m=MODES.find(m=>m.name===t.mode);const need=Math.max(0,m.min-t.players.length);const prog=t.status!=='waiting';
+      lobby={...v,detail:m.detail.split(' · ').slice(0,2).join(' · '),countText:t.players.length+' of '+m.max,
+        players:t.players.map(p=>({...p,you:!!p.you,host:!!p.host,bg:TINT[p.id]||'#E3E9EE'})),
+        needsMore:!prog&&need>0,needText:prog?'The game is under way. Voting opens when the hand ends.':need>0?`Need ${need} more player${need>1?'s':''} to start`:"Everyone's here. Start when you're ready.",
+        startDisabled:prog||need>0,startText:prog?'Game in progress':'Start new game',startBg:prog||need>0?'#D3DEE7':'#23557C',startFg:prog||need>0?'#3E4C59':'#FFFFFF',startCursor:prog||need>0?'default':'pointer'};}
+    const tabKeys=[['Home','home'],['Rankings','rankings'],['Groups','groups'],['Profile','profile']];
+    const activeTab=s.screen==='lobby'?'home':s.screen;const idx=Math.max(0,tabKeys.findIndex(x=>x[1]===activeTab));
+    const rat=[[1243,17],[1188,4],[1200,0],[1200,0]];
+    const jl=s.joinCode.length;
+    return {
+      L,chromeO:s.screen==='signin'?0:1,chromePE:s.screen==='signin'?'none':'auto',
+      isSignin:s.authMode==='signin',isSignup:s.authMode==='signup',authX:s.authMode==='signin'?'translateX(0)':'translateX(100%)',
+      signinW:s.authMode==='signin'?700:500,signupW:s.authMode==='signup'?700:500,authCta:s.authMode==='signin'?'Sign in':'Create account',
+      setSignin:()=>this.setState({authMode:'signin'}),setSignup:()=>this.setState({authMode:'signup'}),
+      signIn:e=>{e.preventDefault();const up=s.authMode==='signup';this.go('home');this.say(up?'Account created. Welcome to the table.':'Welcome back, cookie');},
+      goHome:()=>this.go('home'),goProfile:()=>this.go('profile'),goRankings:()=>this.go('rankings'),signOut:()=>this.go('signin'),
+      statusLine,hasPrimary:sorted.length>0,primary,hasOthers:sorted.length>1,others:sorted.slice(1),
+      selMode:{...sm,suitColor:sm.red?'#A03C33':'#1B2A37'},group:s.group,onGroup:e=>this.setState({group:e.target.value}),
+      openModes:()=>this.setState({sheetOpen:true,sheetKind:'modes'}),openInvite:()=>this.setState({sheetOpen:true,sheetKind:'invite'}),closeSheet:()=>this.setState({sheetOpen:false}),
+      createTable:()=>{const id=code();this.setState(x=>({tables:[...x.tables,{id,mode:x.mode,status:'waiting',group:x.group,players:[{...ME,host:true}]}]}),()=>{this.go('lobby',{current:id});this.say('Table '+id+' is ready. Invite your friends.');});},
+      joinCode:s.joinCode,onJoinChange:e=>this.setState({joinCode:e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8),joinError:''}),
+      join:e=>{e.preventDefault();const c=s.joinCode;if(c.length!==8){this.setState({joinError:c.length?`That's ${c.length} characters. Codes have 8.`:'Type the table code first.'});return;}
+        const ex=s.tables.find(t=>t.id===c);if(ex){this.setState({joinCode:''});this.openTable(c);return;}
+        this.setState(x=>({joinCode:'',tables:[...x.tables,{id:c,mode:'Durak',status:'waiting',players:[{id:'DI',name:'Dima',rep:'4.7',host:true},{...ME}]}]}),()=>{this.openTable(c);this.say("You joined Dima's table");});},
+      joinBorder:s.joinError?'#A03C33':'#7E93A5',joinHelp:s.joinError||(jl>0&&jl<8?`${jl} of 8 characters`:'Type the 8-character code from the host, or scan the QR code on their phone.'),
+      joinHelpColor:s.joinError?'#A03C33':'#51606E',joinHelpW:s.joinError?600:400,
+      ratings:MODES.map((m,i)=>({name:m.name,suit:m.suit,suitColor:m.red?'#A03C33':'#1B2A37',rating:rat[i][0].toLocaleString('en-US'),games:rat[i][1]?rat[i][1]+' games':'No games yet',color:rat[i][1]?'#1B2A37':'#51606E'})),
+      rankChips:MODES.map(m=>{const on=m.name===s.rankMode;return {name:m.name,suit:m.suit,on,bg:on?'#23557C':'#FFFFFF',fg:on?'#FFFFFF':'#1B2A37',border:on?'#23557C':'#CCDCE8',pick:()=>this.setState({rankMode:m.name})};}),
+      rankRows:RANK[s.rankMode].map((r,i,a)=>({rank:i+1,initials:r[0],name:r[0]==='CO'?'cookie (you)':r[1],rating:r[2].toLocaleString('en-US'),avatar:TINT[r[0]],bg:r[0]==='CO'?'#EEF4F9':'transparent',line:i===a.length-1?'transparent':'#E1EAF1'})),
+      lobby,startGame:()=>{if(!t||lobby.startDisabled)return;this.updateTable(t.id,x=>({...x,status:'progress'}));this.say('Game started. Play your hand.');},
+      copyLink:()=>{this.setState({sheetOpen:false});this.say('Invite link copied');},
+      tabs:tabKeys.map(([name,key])=>({name,current:key===activeTab?'page':undefined,weight:key===activeTab?700:500,color:key===activeTab?'#1B4565':'#3E4C59',go:()=>this.go(key)})),
+      navX:`translateX(${idx*100}%)`,
+      toast:s.toast,toastO:s.toastOn?1:0,toastT:s.toastOn?'translateY(0)':'translateY(12px)',
+      scrimO:s.sheetOpen?1:0,scrimPE:s.sheetOpen?'auto':'none',sheetT:s.sheetOpen?'translateY(0)':'translateY(105%)',sheetV:s.sheetOpen?'visible':'hidden',
+      sheetIsModes:s.sheetKind==='modes',sheetIsInvite:s.sheetKind==='invite',sheetTitle:s.sheetKind==='modes'?'Game mode':'Invite friends',
+      modeOptions:MODES.map(m=>{const on=m.name===s.mode;return {...m,on,isDefault:m.name==='Durak',suitColor:m.red?'#A03C33':'#1B2A37',bg:on?'#FFFFFF':'transparent',border:on?'#23557C':'#CCDCE8',ring:on?'#23557C':'#7E93A5',dot:on?1:0,pick:()=>{this.setState({mode:m.name});setTimeout(()=>this.setState({sheetOpen:false}),200);}};})
+    };
+  }
+}
+</script>
+</body>
+</html>
