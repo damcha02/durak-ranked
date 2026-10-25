@@ -1,10 +1,12 @@
-import {useCallback,useEffect,useMemo,useRef,useState} from 'react'
+import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState} from 'react'
 import type {Session} from '@supabase/supabase-js'
 import {QRCodeSVG} from 'qrcode.react'
 import {ArrowRight,ChevronDown,Clock3,Copy,Crown,LogOut,RefreshCw,ShieldCheck,Star,X} from 'lucide-react'
 import {configured,date,errorMessage,MODES,modeInfo,rpc,supabase} from './lib'
 import {isEmailIdentifier,isUsername} from './authValidation'
 import {signInByUsername} from './usernameSignIn'
+import {applyTheme,readTheme,saveTheme,THEMES} from './theme'
+import type {Theme} from './theme'
 import type {Game,Group,Member,Mode,Profile,Rating,TableRow,VoteTotal} from './lib'
 
 type Page='home'|'leaderboard'|'groups'|'profile'
@@ -26,13 +28,59 @@ const greeting=()=>{const h=new Date().getHours();return h>=5&&h<12?'Good mornin
 function Button({children,onClick,kind='primary',disabled=false,className='',type='button'}:{children:React.ReactNode;onClick?:()=>void;kind?:'primary'|'secondary'|'outline'|'ghost'|'danger';disabled?:boolean;className?:string;type?:'button'|'submit'}){
  return <button type={type} className={`button ${kind} ${className}`} onClick={onClick} disabled={disabled}>{children}</button>
 }
-// Suits double as tab icons. Rendered twice (bottom bar on phones, header on desktop); CSS shows one.
+// Two looks share every screen: "cards" (card stock, corner indices) and "blue" (the light-blue prototype).
+// Where the layouts differ, components branch on useBlue(); data loading and actions are shared.
+const ThemeContext=createContext<{theme:Theme;setTheme:(t:Theme)=>void}>({theme:'cards',setTheme:()=>{}})
+const useBlue=()=>useContext(ThemeContext).theme==='blue'
+// Soft avatar tints for the blue theme, picked from the user id so each player keeps one colour; you are always the action tint.
+const TINTS=['#F1DCCF','#D9E8DC','#ECE3C8','#E2DDEE','#F3E1E8']
+const tint=(id:string,me?:string)=>id===me?'#D6E6F2':TINTS[[...id].reduce((s,c)=>s+c.charCodeAt(0),0)%TINTS.length]
+const Avatar=({id,name,me,size=''}:{id:string;name:string;me?:string;size?:string})=><span className={`tintAvatar ${size}`} style={{background:tint(id,me)}} aria-hidden="true">{name.slice(0,2).toUpperCase()}</span>
+const listNames=(names:string[])=>names.length<=1?(names[0]||''):`${names.slice(0,-1).join(', ')} and ${names[names.length-1]}`
+const SuitBox=({mode}:{mode:Mode})=><span className={`suitBox ${MODE_CARD[mode].red?'red':''}`} aria-hidden="true">{MODE_CARD[mode].suit}</span>
+
+// Bottom sheet (blue theme): pickers and the invite open over the page so you keep your place.
+function Sheet({open,title,onClose,children}:{open:boolean;title:string;onClose:()=>void;children:React.ReactNode}){
+ const panel=useRef<HTMLDivElement>(null),close=useRef(onClose)
+ close.current=onClose
+ useEffect(()=>{
+  if(!open)return
+  const back=document.activeElement as HTMLElement|null
+  const focusable=()=>[...(panel.current?.querySelectorAll<HTMLElement>('button,a[href],input,select')||[])].filter(el=>!el.hasAttribute('disabled'))
+  ;(panel.current?.querySelector<HTMLElement>('[aria-pressed="true"]')||focusable()[0])?.focus()
+  const key=(e:KeyboardEvent)=>{
+   if(e.key==='Escape'){e.preventDefault();close.current();return}
+   if(e.key!=='Tab')return
+   const items=focusable();if(!items.length)return
+   const first=items[0],last=items[items.length-1]
+   if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}
+  }
+  document.addEventListener('keydown',key)
+  return()=>{document.removeEventListener('keydown',key);back?.focus()}
+ },[open])
+ return <>
+  <div className={`scrim ${open?'open':''}`} onClick={onClose} aria-hidden="true"/>
+  <div ref={panel} role="dialog" aria-modal="true" aria-label={title} className={`sheet ${open?'open':''}`} inert={!open}>
+   <span className="sheetGrip" aria-hidden="true"/>
+   <div className="sheetHead"><h2>{title}</h2><button className="linkButton plain" onClick={onClose}>Done</button></div>
+   {children}
+  </div>
+ </>
+}
+
+// Suits double as tab icons in the cards theme; the blue theme shows labels on a sliding pill.
+// Rendered twice (bottom bar on phones, header on desktop); CSS shows one.
 function NavTabs({page,go,className}:{page:Page|null;go:(p:Page)=>void;className:string}){
- return <nav className={className} aria-label="Main">{NAV.map(n=><button key={n.id} className={`${page===n.id?'on':''} ${n.red?'red':''}`} aria-current={page===n.id?'page':undefined} onClick={()=>go(n.id)}><span className="navSuit" aria-hidden="true">{n.suit}</span><span>{n.label}</span></button>)}</nav>
+ const index=NAV.findIndex(n=>n.id===page)
+ return <nav className={className} aria-label="Main">
+  {index>=0&&<span className="navPill" aria-hidden="true" style={{transform:`translateX(${index*100}%)`}}/>}
+  {NAV.map(n=><button key={n.id} className={`${page===n.id?'on':''} ${n.red?'red':''}`} aria-current={page===n.id?'page':undefined} onClick={()=>go(n.id)}><span className="navSuit" aria-hidden="true">{n.suit}</span><span>{n.label}</span></button>)}
+ </nav>
 }
 function AuthScreen({joinCode}:{joinCode:string}){
  const [identifier,setIdentifier]=useState(''),[email,setEmail]=useState(''),[username,setUsername]=useState(''),[password,setPassword]=useState('')
  const [tab,setTab]=useState<'sign-in'|'register'>('sign-in'),[notice,setNotice]=useState(''),[working,setWorking]=useState(false)
+ const blue=useBlue()
  const act=async(fn:()=>Promise<void>)=>{setWorking(true);setNotice('');try{await fn()}catch(e){setNotice(errorMessage(e))}finally{setWorking(false)}}
  const submit=()=>void act(async()=>{
   if(tab==='register'){
@@ -63,11 +111,16 @@ function AuthScreen({joinCode}:{joinCode:string}){
   {joinCode?<>
    <h1 className="brandHeading"><Brand/></h1>
    <div className="authInvite" role="status"><span className="inviteCard" aria-hidden="true">{joinCode.slice(0,4)}<br/>{joinCode.slice(4)}</span><p>You've been invited to table <strong>{joinCode}</strong>. Sign in or create an account and you'll join it straight away.</p></div>
-  </>:<header className="authIntro">
+  </>:blue?<header className="authIntro">
+   <span className="authMark" aria-hidden="true">{'\u2660\uFE0E'}</span>
+   <h1>{APP_NAME}</h1>
+   <p>A scorebook for your Durak nights. Play with real cards, vote on who lost, and keep a rating for each game mode.</p>
+  </header>:<header className="authIntro">
    <div className="brandLarge"><span className="brandFan" aria-hidden="true"><span className="fanBack"/><span className="fanFront"><span className="miniIndex">D</span>{'\u2660\uFE0E'}</span></span><h1>Durak<br/>Ranked</h1></div>
    <p>Keep score for the games you play with a real deck. Vote on who's left holding cards, and see your rating per mode.</p>
   </header>}
   <div className="authTabs" role="group" aria-label="Account">
+   <span className={`authThumb ${tab==='register'?'right':''}`} aria-hidden="true"/>
    <button type="button" aria-pressed={tab==='sign-in'} className={tab==='sign-in'?'selected':''} onClick={()=>setTab('sign-in')}>Sign in</button>
    <button type="button" aria-pressed={tab==='register'} className={tab==='register'?'selected':''} onClick={()=>setTab('register')}>Create account</button>
   </div>
@@ -88,6 +141,8 @@ export default function App(){
  const [session,setSession]=useState<Session|null>(null),[loading,setLoading]=useState(true),[profile,setProfile]=useState<Profile|null>(null)
  const [page,setPage]=useState<Page>('home'),[tableId,setTableId]=useState<string|null>(null),[message,setMessage]=useState<string|null>(null),[busy,setBusy]=useState(false)
  const [joinCode,setJoinCode]=useState(getJoinCode())
+ const [theme,setThemeState]=useState<Theme>(readTheme)
+ const themeValue=useMemo(()=>({theme,setTheme:(t:Theme)=>{setThemeState(t);saveTheme(t);applyTheme(t)}}),[theme])
  const user=session?.user
  const reloadProfile=useCallback(async()=>{if(!user)return;const {data,error}=await supabase.from('profiles').select('*').eq('id',user.id).single();if(error)throw error;setProfile(data as Profile)},[user?.id])
  useEffect(()=>{let valid=true;void supabase.auth.getSession().then(({data})=>{if(valid){setSession(data.session);setLoading(false)}});const{subscription}=supabase.auth.onAuthStateChange((_event,s)=>{setSession(s);setLoading(false)}).data;return()=>{valid=false;subscription.unsubscribe()}},[])
@@ -95,38 +150,55 @@ export default function App(){
  useEffect(()=>{if(!joinCode||!user)return;const c=joinCode;setJoinCode('');void (async()=>{try{setBusy(true);const id=await rpc<string>('join_table',{p_code:c});setTableId(id);history.replaceState(null,'',location.pathname)}catch(e){setMessage(errorMessage(e))}finally{setBusy(false)}})()},[user?.id,joinCode])
  useEffect(()=>{window.scrollTo(0,0)},[page,tableId])
  const action:Action=async fn=>{if(busy)return;setBusy(true);setMessage(null);try{await fn()}catch(e){setMessage(errorMessage(e))}finally{setBusy(false)}}
- if(!configured)return <div className="setup"><Brand/><h1>Connect your backend</h1><p>Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> to a <code>.env</code> file, then restart Vite.</p><p className="muted">See README.md for the complete Supabase setup.</p></div>
- if(loading)return <div className="loading" role="status"><Brand/><p>Loading {APP_NAME}…</p></div>
- if(!session)return <AuthScreen joinCode={joinCode}/>
+ // Screen transitions: opening a table moves forward, leaving it moves back, switching tabs crossfades (CSS decides how each theme animates).
+ const screenKey=tableId?`table-${tableId}`:page,depth=tableId?2:1
+ const nav=useRef({key:screenKey,depth,dir:'fade'})
+ if(nav.current.key!==screenKey)nav.current={key:screenKey,depth,dir:depth>nav.current.depth?'forward':depth<nav.current.depth?'back':'fade'}
+ const themed=(content:React.ReactNode)=><ThemeContext.Provider value={themeValue}>{content}</ThemeContext.Provider>
+ if(!configured)return themed(<div className="setup"><Brand/><h1>Connect your backend</h1><p>Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> to a <code>.env</code> file, then restart Vite.</p><p className="muted">See README.md for the complete Supabase setup.</p></div>)
+ if(loading)return themed(<div className="loading" role="status"><Brand/><p>Loading {APP_NAME}…</p></div>)
+ if(!session)return themed(<AuthScreen joinCode={joinCode}/>)
  const initials=(profile?.username||'U').slice(0,2).toUpperCase()
  const go=(p:Page)=>{setTableId(null);setPage(p)}
- return <div className="appShell">
+ return themed(<div className="appShell">
   <header className="topbar"><div className="topbarInner">
    <button className="brandButton" aria-label={`${APP_NAME}, home`} onClick={()=>go('home')}><Brand/></button>
    <NavTabs className="headerNav" page={tableId?'home':page} go={go}/>
-   <button className="avatar" aria-label="Your profile" title="Your profile" onClick={()=>go('profile')}><span>{initials}</span></button>
+   <button className="avatar" aria-label="Your profile" title="Your profile" onClick={()=>go('profile')}><span style={theme==='blue'?{background:tint(user!.id,user!.id)}:undefined}>{initials}</span></button>
   </div></header>
   <main className="main withNav">
+   <div key={screenKey} className={`screen enter-${nav.current.dir}`}>
    {tableId?<TableScreen key={tableId} tableId={tableId} me={user!.id} action={action} busy={busy} onLeave={()=>{setTableId(null);setPage('home')}}/>:
    page==='home'?<HomeScreen me={user!.id} profile={profile} openTable={setTableId} openRankings={()=>setPage('leaderboard')} action={action} busy={busy}/>:
    page==='leaderboard'?<LeaderboardScreen me={user!.id}/>:
    page==='groups'?<GroupsScreen me={user!.id} action={action} busy={busy}/>:
    <ProfileScreen me={user!.id} profile={profile} action={action} reload={reloadProfile}/>}
+   </div>
   </main>
   <NavTabs className="bottomNav" page={tableId?'home':page} go={go}/>
   {message&&<div className="toast" role="alert">{message}<button aria-label="Dismiss message" onClick={()=>setMessage(null)}><X size={16}/></button></div>}
- </div>
+ </div>)
 }
 
 function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;profile:Profile|null;openTable:(id:string)=>void;openRankings:()=>void;action:Action;busy:boolean}){
  const[mode,setMode]=useState<Mode>('natural'),[expanded,setExpanded]=useState(false),[join,setJoin]=useState(''),[tables,setTables]=useState<TableRow[]>([]),[ratings,setRatings]=useState<Rating[]>([]),[groups,setGroups]=useState<Group[]>([]),[group,setGroup]=useState('')
  const [loaded,setLoaded]=useState(false),[front,setFront]=useState(0)
+ const blue=useBlue(),[people,setPeople]=useState<Record<string,{id:string;name:string}[]>>({}),[modeSheet,setModeSheet]=useState(false)
  const load=useCallback(async()=>{const {data:members}=await supabase.from('table_members').select('table_id').eq('user_id',me).eq('is_active',true);const ids=(members||[]).map(m=>m.table_id);const [{data:tt},{data:rr},{data:gm}]=await Promise.all([
   ids.length?supabase.from('tables').select('*').in('id',ids).order('created_at',{ascending:false}):Promise.resolve({data:[]}),
   supabase.from('ratings').select('*').eq('user_id',me),supabase.from('group_members').select('group_id').eq('user_id',me)])
  setTables((tt||[]) as TableRow[]);setRatings((rr||[]) as Rating[]);setLoaded(true)
  const groupIds=(gm||[]).map(x=>x.group_id);if(groupIds.length){const{data}=await supabase.from('friend_groups').select('*').in('id',groupIds);setGroups((data||[]) as Group[])}else setGroups([])
- },[me])
+ // The blue theme's table summary names the players ("With Masha and Grisha"), so it also loads who sits at each table.
+ if(blue&&ids.length){
+  const{data:seated}=await supabase.from('table_members').select('table_id,user_id').in('table_id',ids).eq('is_active',true).order('joined_at')
+  const userIds=[...new Set((seated||[]).map(s=>s.user_id))]
+  const{data:pp}=userIds.length?await supabase.from('profiles').select('id,username').in('id',userIds):{data:[]}
+  const names=Object.fromEntries(((pp||[]) as {id:string;username:string}[]).map(p=>[p.id,p.username]))
+  const byTable:Record<string,{id:string;name:string}[]>={};for(const s of seated||[])(byTable[s.table_id]||=[]).push({id:s.user_id,name:names[s.user_id]||'Player'})
+  setPeople(byTable)
+ }
+ },[me,blue])
  useEffect(()=>{void load();const id=setInterval(()=>void load(),12000);return()=>clearInterval(id)},[load])
  const create=()=>void action(async()=>{const id=await rpc<string>('create_table',{p_mode:mode,p_group:group||null});openTable(id)})
  const joinRoom=()=>void action(async()=>{if(!join.trim())throw new Error('Enter a table code');const id=await rpc<string>('join_table',{p_code:join});openTable(id)})
@@ -150,9 +222,47 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
   window.addEventListener('pointerup',up);window.addEventListener('pointercancel',cancel)
  }
  const describe=(t:TableRow)=>`${modeInfo(t.mode).name}, table ${t.code}, ${STATUS_TEXT[t.status].toLowerCase()}`
- const status=current?current.status==='lobby'?'Your table is still open.':'Your game is still going.':!loaded?'':played?'No open tables right now. Start one, or join a friend\'s.':'No tables yet. Pick a game to start one, or join a friend\'s.'
+ const lead=blue?sorted[0]:current
+ const status=lead?lead.status==='results'?'Your table is waiting for your vote.':lead.status==='playing'?'Your game is still going.':'Your table is waiting for players.':!loaded?'':played?'No open tables right now. Start one, or join a friend\'s.':'No tables yet. Pick a game to start one, or join a friend\'s.'
+ const withText=(t:TableRow)=>{const others=(people[t.id]||[]).filter(p=>p.id!==me).map(p=>p.name);return people[t.id]?others.length?`With ${listNames(others)}`:'Just you so far':STATUS_TEXT[t.status]}
+ const groupField=groups.length>0&&<label className="field">Friend group (optional)<select value={group} onChange={e=>setGroup(e.target.value)}><option value="">No group</option>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
+ const joinSection=<section aria-labelledby="join-title">
+  <h2 id="join-title" className="sectionTitle">Join a table</h2>
+  <form onSubmit={e=>{e.preventDefault();joinRoom()}}>
+   <label className="field" htmlFor="join-code">Table code</label>
+   <div className="joinRow"><input id="join-code" className="codeInput" placeholder="8 characters" maxLength={8} autoComplete="off" autoCapitalize="characters" autoCorrect="off" spellCheck={false} enterKeyHint="go" aria-describedby="join-hint" value={join} onChange={e=>setJoin(e.target.value.toUpperCase())}/><Button type="submit" kind="outline" disabled={busy||!join.trim()}>Join</Button></div>
+   <p id="join-hint" className="fieldHint">Type the 8-character code from the host, or scan the QR code on their phone.</p>
+  </form>
+ </section>
+ const greetingBlock=<section className="greeting"><h1>{greeting()}, {profile?.username||'friend'}</h1>{status&&<p>{status}</p>}</section>
+ if(blue)return <div className="stack home pageEntry">
+  {greetingBlock}
+  {lead&&<section className="stack sm" aria-labelledby="tables-title">
+   <div className="sectionHeading"><h2 id="tables-title" className="listLabel">Your tables</h2><button className="iconButton" aria-label="Refresh tables" title="Refresh tables" onClick={()=>void load()}><RefreshCw size={18}/></button></div>
+   <div className="summaryCard">
+    <div className="summaryTop"><span className={`statusChip status-${lead.status}`}>{STATUS_TEXT[lead.status]}</span>{people[lead.id]&&<span className="avatarStack" aria-hidden="true">{people[lead.id].slice(0,4).map(p=><Avatar key={p.id} id={p.id} name={p.name} me={me} size="sm"/>)}</span>}</div>
+    <div><h3 className="summaryTitle">{modeInfo(lead.mode).name}</h3><p className="summaryMeta">Table <span className="mono">{lead.code}</span> · {withText(lead)}</p></div>
+    <Button className="wide" onClick={()=>openTable(lead.id)}>Return to table</Button>
+   </div>
+   {sorted.length>1&&<div><h3 className="listLabel">Other tables</h3><ul className="rowList">{sorted.slice(1).map(t=><li key={t.id}><button className="listRow" onClick={()=>openTable(t.id)}><span className="rowText"><b>{modeInfo(t.mode).name}</b><small>Table <span className="mono">{t.code}</span> · {STATUS_TEXT[t.status]}</small></span><span className="chevron" aria-hidden="true">›</span></button></li>)}</ul></div>}
+  </section>}
+  <section className="stack sm" aria-labelledby="create-title">
+   <h2 id="create-title">Start a table</h2>
+   <button className="modeButton" aria-haspopup="dialog" aria-label={`Game mode: ${picked.name}. Change`} onClick={()=>setModeSheet(true)}><span className="modeButtonMain"><SuitBox mode={mode}/><span className="rowText"><b>{picked.name}</b><small>{picked.detail} · <span className="nowrap">{picked.min}–{picked.max} players</span></small></span></span><span className="modeButtonAction" aria-hidden="true">Change</span></button>
+   {groupField}
+   <Button onClick={create} disabled={busy} className="wide">Create table</Button>
+  </section>
+  {joinSection}
+  <section aria-labelledby="ratings-title">
+   <div className="sectionHeading"><h2 id="ratings-title">Your ratings</h2><button className="linkButton plain" onClick={openRankings}>See rankings <span aria-hidden="true">›</span></button></div>
+   <ul className="rowList">{MODES.map(m=>{const r=ratings.find(r=>r.mode===m.id),games=r?.games||0;return <li key={m.id} className="rateRow"><span className={`rowSuit ${MODE_CARD[m.id].red?'red':''}`} aria-hidden="true">{MODE_CARD[m.id].suit}</span><span className="rowText"><b>{m.name}</b><small>{games?`${games} ${games===1?'game':'games'}`:'No games yet'}</small></span><strong className={`rowValue ${games?'':'quiet'}`}>{formatRating(r?.rating??1200)}</strong></li>})}</ul>
+  </section>
+  <Sheet open={modeSheet} title="Game mode" onClose={()=>setModeSheet(false)}>
+   <div className="sheetOptions" role="group" aria-label="Game mode">{MODES.map(m=><button key={m.id} aria-pressed={mode===m.id} className={`sheetOption ${mode===m.id?'on':''}`} onClick={()=>{setMode(m.id);setTimeout(()=>setModeSheet(false),200)}}><SuitBox mode={m.id}/><span className="rowText"><b>{m.name}{m.id==='natural'&&<span className="optionNote"> · default</span>}</b><small>{m.detail} · {m.min}–{m.max} players</small></span><span className="radioDot" aria-hidden="true"/></button>)}</div>
+  </Sheet>
+ </div>
  return <div className="stack home pageEntry">
-  <section className="greeting"><h1>{greeting()}, {profile?.username||'friend'}</h1>{status&&<p>{status}</p>}</section>
+  {greetingBlock}
   <div className={`homeGrid ${current?'withHand':''}`}>
    {current&&<section aria-labelledby="tables-title">
     <div className="sectionHeading"><h2 id="tables-title">Your tables</h2><span className="handMeta">{hand>1&&<span>Swipe · {idx+1} of {hand}</span>}<button className="iconButton" aria-label="Refresh tables" title="Refresh tables" onClick={()=>void load()}><RefreshCw size={18}/></button></span></div>
@@ -160,7 +270,7 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
      {next&&<button className="tableCard back" aria-label={`Show ${describe(next)}`} onClick={()=>setFront((idx+1)%hand)}><CornerIndex mode={next.mode}/><span className="tableName">{modeInfo(next.mode).name}</span><span>{next.code}</span><span>{STATUS_TEXT[next.status]}</span></button>}
      <div className="tableCard front" key={current.id}>
       <CornerIndex mode={current.mode}/><CornerIndex mode={current.mode} flip/>
-      <div className="tableCardBody"><span className={`tableStatus ${current.status}`}>{STATUS_TEXT[current.status]}</span><h3>{modeInfo(current.mode).name}</h3><span className="tableCode">Table {current.code}</span></div>
+      <div className="tableCardBody"><span className={`tableStatus status-${current.status}`}>{STATUS_TEXT[current.status]}</span><h3>{modeInfo(current.mode).name}</h3><span className="tableCode">Table {current.code}</span></div>
       <Button onClick={()=>openTable(current.id)}>Return to table</Button>
      </div>
     </div>
@@ -172,18 +282,11 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
      <div className={`startPanel ${showModes?'open':''}`}>
       {showModes?<div className="modeGrid" role="group" aria-label="Game mode" ref={modeGrid}>{MODES.map(m=><button key={m.id} aria-pressed={mode===m.id} className={`modeCard ${mode===m.id?'on':''} ${MODE_CARD[m.id].red?'red':''}`} onClick={()=>pickMode(m.id)}><CornerIndex mode={m.id}/>{mode===m.id&&<span className="chosen" aria-hidden="true">✓ Selected</span>}<span className="modeSuit" aria-hidden="true">{MODE_CARD[m.id].suit}</span><span className="modeName">{m.name}</span><span className="modeDetail">{m.detail}<br/><span className="nowrap">{m.min}–{m.max} players</span></span></button>)}</div>
       :<div className="modeSummary"><MiniModeCard mode={mode}/><div className="modeText"><b>{picked.name}</b><small>{picked.detail} · <span className="nowrap">{picked.min}–{picked.max} players</span></small></div><button ref={changeButton} className="linkButton" aria-label={`Change game mode, currently ${picked.name}`} onClick={()=>setExpanded(true)}>Change</button></div>}
-      {groups.length>0&&<label className="field">Friend group (optional)<select value={group} onChange={e=>setGroup(e.target.value)}><option value="">No group</option>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>}
+      {groupField}
       <Button onClick={create} disabled={busy} className="wide">Create {picked.name} table</Button>
      </div>
     </section>
-    <section aria-labelledby="join-title">
-     <h2 id="join-title" className="sectionTitle">Join a table</h2>
-     <form onSubmit={e=>{e.preventDefault();joinRoom()}}>
-      <label className="field" htmlFor="join-code">Table code</label>
-      <div className="joinRow"><input id="join-code" className="codeInput" placeholder="8 characters" maxLength={8} autoComplete="off" autoCapitalize="characters" autoCorrect="off" spellCheck={false} enterKeyHint="go" aria-describedby="join-hint" value={join} onChange={e=>setJoin(e.target.value.toUpperCase())}/><Button type="submit" kind="outline" disabled={busy||!join.trim()}>Join</Button></div>
-      <p id="join-hint" className="fieldHint">Type the 8-character code from the host, or scan the QR code on their phone.</p>
-     </form>
-    </section>
+    {joinSection}
    </div>
   </div>
   {played?<section aria-labelledby="ratings-title">
@@ -196,6 +299,7 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
 function TableScreen({tableId,me,action,busy,onLeave}:{tableId:string;me:string;action:Action;busy:boolean;onLeave:()=>void}){
  const [table,setTable]=useState<TableRow|null>(null),[members,setMembers]=useState<Member[]>([]),[profiles,setProfiles]=useState<Record<string,Profile>>({}),[players,setPlayers]=useState<string[]>([]),[games,setGames]=useState<Game[]>([]),[totals,setTotals]=useState<VoteTotal[]>([]),[historyGames,setHistoryGames]=useState<Game[]>([]),[cases,setCases]=useState<{id:string;game_id:string;state:string;created_at:string}[]>([]),[yesCounts,setYesCounts]=useState<Record<string,number>>({}),[now,setNow]=useState(Date.now()),[showQR,setShowQR]=useState(false),[mySelections,setMySelections]=useState<Record<string,string>>({}),[showHistory,setShowHistory]=useState(false),[ballots,setBallots]=useState<Record<string,{voter_id:string;nominee_id:string}[]>>({})
  const [displayNow, setDisplayNow] = useState(Date.now())
+ const blue=useBlue(),[shareNote,setShareNote]=useState('')
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -241,7 +345,8 @@ function TableScreen({tableId,me,action,busy,onLeave}:{tableId:string;me:string;
  },[activeGame?.id,activeGame?.deadline,activeGame?.state,now,load])
  const name=(id:string)=>profiles[id]?.username||`Player ${id.slice(0,4)}`
  const invite=table?`${location.origin}${location.pathname}?join=${table.code}`:''
- const share=async()=>{if(navigator.share){try{await navigator.share({title:`Join my table on ${APP_NAME}`,text:`Join my Durak table on ${APP_NAME} with code ${table?.code}.`,url:invite});return}catch{/* copy fallback */}}await navigator.clipboard.writeText(invite)}
+ const share=async()=>{if(navigator.share){try{await navigator.share({title:`Join my table on ${APP_NAME}`,text:`Join my Durak table on ${APP_NAME} with code ${table?.code}.`,url:invite});return}catch{/* copy fallback */}}
+  try{await navigator.clipboard.writeText(invite);setShareNote('Link copied')}catch{setShareNote('Could not copy. Share the code instead.')}}
  const play=()=>void action(async()=>{await rpc('start_round',{p_table:tableId});await load()})
  const finishPlay=()=>void action(async()=>{await rpc('begin_results',{p_table:tableId});await load()})
  const cast=(game:string,nominee:string)=>void action(async()=>{await rpc('cast_vote',{p_game:game,p_nominee:nominee});setMySelections(s=>({...s,[game]:nominee}));await load()})
@@ -256,13 +361,36 @@ function TableScreen({tableId,me,action,busy,onLeave}:{tableId:string;me:string;
  const seats=table.status==='lobby'?Math.max(0,info.min-members.length):0,card=MODE_CARD[table.mode]
  const secondsLeft=activeGame?.deadline?Math.max(0,Math.ceil((new Date(activeGame.deadline).getTime()-displayNow)/1000)):30
  const tiedNames=activeGame?activeGame.loser_ids.map(name).join(' and '):''
+ const nominees=activeGame?players.filter(id=>!activeGame.allowed_nominees||activeGame.allowed_nominees.includes(id)):[]
+ const refresh=<button className="iconButton" aria-label="Refresh table" title="Refresh table" onClick={()=>void load()}><RefreshCw size={18}/></button>
  return <div className="stack lobby pageEntry">
-  <div className="lobbyHero"><span className={`heroCard ${card.red?'red':''}`} aria-hidden="true"><span className="heroIndex">{card.abbr}<br/>{card.suit}</span>{card.suit}</span><div><h1>{info.name}</h1><p>Table {table.code} · {STATUS_TEXT[table.status]}</p><p className="heroDetail">{info.detail} · <span className="nowrap">{info.min}–{info.max} players</span></p></div></div>
-  {table.status!=='results'&&<Button kind="outline" className="wide inviteButton" onClick={()=>setShowQR(s=>!s)}>{showQR?'Hide invite':'Invite / QR'}</Button>}
-  {showQR&&table.status!=='results'&&<section className="card qrCard" aria-label="Invite"><div className="qrInner"><QRCodeSVG value={invite} size={184} includeMargin/></div><p>Scan to join this table, or type the code</p><div className="codeLarge">{table.code}</div><Button kind="secondary" onClick={()=>void share()}><Copy size={15}/> Share link</Button></section>}
+  {blue?<>
+   <button className="backLink" onClick={onLeave}><span aria-hidden="true">‹</span> Home</button>
+   <div className="summaryCard">
+    <span className={`statusChip status-${table.status}`}>{STATUS_TEXT[table.status]}</span>
+    <div><h1 className="summaryTitle">{info.name}</h1><p className="summaryMeta">Table <span className="mono">{table.code}</span> · {info.detail.split(' · ').slice(0,2).join(' · ')}</p></div>
+    {table.status!=='results'&&<Button kind="outline" className="wide" onClick={()=>setShowQR(true)}>Invite / QR</Button>}
+   </div>
+   <Sheet open={showQR&&table.status!=='results'} title="Invite friends" onClose={()=>{setShowQR(false);setShareNote('')}}>
+    <div className="inviteSheet"><div className="qrInner"><QRCodeSVG value={invite} size={184} includeMargin/></div><div className="codeLarge">{table.code}</div><p>Friends can scan this, type the code, or open the link.</p><Button className="wide" onClick={()=>void share()}>{shareNote||'Share invite link'}</Button></div>
+   </Sheet>
+  </>:<>
+   <div className="lobbyHero"><span className={`heroCard ${card.red?'red':''}`} aria-hidden="true"><span className="heroIndex">{card.abbr}<br/>{card.suit}</span>{card.suit}</span><div><h1>{info.name}</h1><p>Table {table.code} · {STATUS_TEXT[table.status]}</p><p className="heroDetail">{info.detail} · <span className="nowrap">{info.min}–{info.max} players</span></p></div></div>
+   {table.status!=='results'&&<Button kind="outline" className="wide inviteButton" onClick={()=>setShowQR(s=>!s)}>{showQR?'Hide invite':'Invite / QR'}</Button>}
+   {showQR&&table.status!=='results'&&<section className="card qrCard" aria-label="Invite"><div className="qrInner"><QRCodeSVG value={invite} size={184} includeMargin/></div><p>Scan to join this table, or type the code</p><div className="codeLarge">{table.code}</div><Button kind="secondary" onClick={()=>void share()}><Copy size={15}/> {shareNote||'Share link'}</Button></section>}
+  </>}
   {table.status!=='results'&&<section aria-labelledby="players-title">
-   <div className="sectionHeading"><h2 id="players-title">Players · {members.length} of {info.max}</h2><button className="iconButton" aria-label="Refresh table" title="Refresh table" onClick={()=>void load()}><RefreshCw size={18}/></button></div>
-   <ul className="seatGrid">
+   {blue?<div className="sectionHeading"><h2 id="players-title">Players</h2><span className="countText">{members.length} of {info.max}{refresh}</span></div>
+   :<div className="sectionHeading"><h2 id="players-title">Players · {members.length} of {info.max}</h2>{refresh}</div>}
+   {blue?<ul className="rowList">
+    {members.map(m=>{const host=m.user_id===table.host_id,mine=m.user_id===me,who=name(m.user_id);return <li key={m.user_id} className="playerRow">
+     <Avatar id={m.user_id} name={who} me={me} size="md"/>
+     <span className="rowText"><b>{who}{mine&&<span className="youChip">you</span>}</b>{host&&<small><Crown className="hostIcon" size={13} aria-hidden="true"/> Host</small>}</span>
+     {table.status==='lobby'&&table.host_id===me&&!mine&&<button className="linkButton" disabled={busy} aria-label={`Make ${who} the host`} onClick={()=>promote(m.user_id)}>Make host</button>}
+     <span className="rowRep" title="5-star reputation baseline">★ 5.0</span>
+    </li>})}
+    {seats>0&&<li><button className="playerRow waiting" aria-label="Waiting for someone to join. Show the invite" onClick={()=>setShowQR(true)}><span className="tintAvatar md empty" aria-hidden="true"/><span>Waiting for someone to join…</span></button></li>}
+   </ul>:<ul className="seatGrid">
     {members.map(m=>{const host=m.user_id===table.host_id,mine=m.user_id===me,who=name(m.user_id);return <li key={m.user_id} className={`seat ${mine?'mine':''}`}>
      {host&&<Crown className="seatCrown" size={16} aria-hidden="true"/>}
      {mine&&<span className="seatYou">you</span>}
@@ -272,7 +400,7 @@ function TableScreen({tableId,me,action,busy,onLeave}:{tableId:string;me:string;
      {table.status==='lobby'&&table.host_id===me&&!mine&&<button className="seatAction" disabled={busy} aria-label={`Make ${who} the host`} onClick={()=>promote(m.user_id)}>Make host</button>}
     </li>})}
     {Array.from({length:seats},(_,i)=><li key={`empty-${i}`} className="seatSlot"><button className="seat empty" aria-label="Empty seat, show the invite QR code" onClick={()=>setShowQR(true)}>Empty seat</button></li>)}
-   </ul>
+   </ul>}
    {table.status==='lobby'&&<div className="lobbyFooter"><p>{members.length<info.min?`Need ${info.min-members.length} more player${info.min-members.length===1?'':'s'} to start`:'Everyone ready? Deal the cards.'}</p><Button onClick={play} disabled={busy||members.length<info.min} className="wide">Start new game</Button><button className="leaveLink" onClick={leave} disabled={busy}>Leave table <LogOut size={14}/></button></div>}
    {table.status==='playing'&&<div className="lobbyFooter"><div className="hint"><ShieldCheck size={18}/> All players are locked into this round. You can close your phone while playing.</div><Button onClick={finishPlay} disabled={busy} className="wide">Cards finished — record results <ArrowRight size={17}/></Button></div>}
   </section>}
@@ -282,19 +410,26 @@ function TableScreen({tableId,me,action,busy,onLeave}:{tableId:string;me:string;
     {activeGame&&!pendingBefore&&(activeGame.deadline?<div className={`voteTimer ${secondsLeft<=10?'low':''}`} role="timer" aria-label={`${secondsLeft} seconds left`}><b>{secondsLeft}</b><span>sec</span></div>:<div className="voteTimer idle" aria-label="The 30-second timer starts with the first vote"><b>30</b><span>sec</span></div>)}
    </div>
    {activeGame&&!pendingBefore?activeGame.state==='tie_offer'?<>
-    <ul className="voteGrid tied">{activeGame.loser_ids.map(id=><li key={id} className="seat"><span className="seatInitials" aria-hidden="true">{name(id).slice(0,2).toUpperCase()}</span><b className="seatName">{name(id)}</b><span className="seatMeta">{id===me?'you · tied':'tied'}</span></li>)}</ul>
+    {blue?<ul className="rowList">{activeGame.loser_ids.map(id=><li key={id} className="playerRow"><Avatar id={id} name={name(id)} me={me} size="md"/><span className="rowText"><b>{name(id)}{id===me&&<span className="youChip">you</span>}</b><small>Tied</small></span></li>)}</ul>
+    :<ul className="voteGrid tied">{activeGame.loser_ids.map(id=><li key={id} className="seat"><span className="seatInitials" aria-hidden="true">{name(id).slice(0,2).toUpperCase()}</span><b className="seatName">{name(id)}</b><span className="seatMeta">{id===me?'you · tied':'tied'}</span></li>)}</ul>}
     <p className="voteRules">{tiedNames} have the same number of votes. If everyone tied accepts, they share the loss and each loses less rating. If anyone declines, they vote again between themselves.</p>
     {activeGame.loser_ids.includes(me)?<div className="voteActions"><Button className="wide" onClick={()=>respond(activeGame.id,true)} disabled={busy}>Accept shared loss</Button><Button kind="outline" className="wide" onClick={()=>respond(activeGame.id,false)} disabled={busy}>Decline, vote again</Button></div>:<p className="voteNote">Waiting for {tiedNames} to decide.</p>}
    </>:<>
     <p className="voteRules">{activeGame.allowed_nominees?`Vote again between ${activeGame.allowed_nominees.map(name).join(' and ')}.`:'Tap the player who was left holding cards.'} A clear majority decides straight away; otherwise the most votes after 30 seconds wins, with at least 2 votes.</p>
-    <ul className="voteGrid">{players.filter(id=>!activeGame.allowed_nominees||activeGame.allowed_nominees.includes(id)).map(id=>{const votes=totals.find(v=>v.game_id===activeGame.id&&v.nominee_id===id)?.votes||0,picked=mySelections[activeGame.id]===id,count=`${votes} ${votes===1?'vote':'votes'}`
+    {blue?<ul className="rowList voteRows">{nominees.map(id=>{const votes=totals.find(v=>v.game_id===activeGame.id&&v.nominee_id===id)?.votes||0,picked=mySelections[activeGame.id]===id,count=`${votes} ${votes===1?'vote':'votes'}`
+     return <li key={id}><button className={`playerRow voteRow ${picked?'picked':''}`} aria-pressed={picked} aria-label={`${name(id)}${id===me?' (you)':''}, ${count}`} disabled={busy} onClick={()=>cast(activeGame.id,id)}>
+      <Avatar id={id} name={name(id)} me={me} size="md"/>
+      <span className="rowText" aria-hidden="true"><b>{name(id)}{id===me&&<span className="youChip">you</span>}</b><small>{count}</small></span>
+      {picked&&<span className="voteCheck" aria-hidden="true">✓</span>}
+     </button></li>})}</ul>
+    :<ul className="voteGrid">{nominees.map(id=>{const votes=totals.find(v=>v.game_id===activeGame.id&&v.nominee_id===id)?.votes||0,picked=mySelections[activeGame.id]===id,count=`${votes} ${votes===1?'vote':'votes'}`
      return <li key={id}><button className={`seat voteCard ${picked?'picked':''}`} aria-pressed={picked} aria-label={`${name(id)}${id===me?' (you)':''}, ${count}`} disabled={busy} onClick={()=>cast(activeGame.id,id)}>
       {picked&&<span className="voteCheck" aria-hidden="true">✓</span>}
       <span className="seatInitials" aria-hidden="true">{name(id).slice(0,2).toUpperCase()}</span>
       <b className="seatName">{name(id)}</b>
       <span className={`votePips ${card.red?'red':''}`} aria-hidden="true">{card.suit.repeat(Math.min(votes,6))}</span>
       <span className="seatMeta" aria-hidden="true">{id===me?'you · ':''}{count}</span>
-     </button></li>})}</ul>
+     </button></li>})}</ul>}
     <p className="voteNote">{activeGame.state==='awaiting'?'The timer starts with the first vote.':'Totals are public; who voted for whom stays hidden until the result is final. You can change your vote.'}</p>
    </>:activeGame?<p className="voteRules">Game {activeGame.slot} opens once the earlier game has a result.</p>:null}
    {games.some(g=>FINAL.includes(g.state))&&<ol className="roundResults" aria-label="Results so far">{games.filter(g=>FINAL.includes(g.state)).map(g=><li key={g.id}><ResultRow game={g} name={name} restart={()=>restart(g.id)} busy={busy}/></li>)}</ol>}
@@ -323,6 +458,13 @@ function ModeChips({mode,setMode}:{mode:Mode;setMode:(m:Mode)=>void}){
 // Top three as player cards with the rank as the corner index; everyone else as ledger rows.
 function Standings({ratings,names,me,mode}:{ratings:Rating[];names:Record<string,string>;me:string;mode:Mode}){
  const card=MODE_CARD[mode],who=(r:Rating)=>names[r.user_id]||'Player'
+ // Blue theme: one white list card, no podium.
+ if(useBlue())return <ol className="listCard">{ratings.map((r,i)=><li key={r.user_id} className={`rankRow ${r.user_id===me?'mine':''}`}>
+  <span className="position" aria-hidden="true">{i+1}</span>
+  <Avatar id={r.user_id} name={who(r)} me={me}/>
+  <span className="rowText"><b>{who(r)}{r.user_id===me&&' (you)'}</b><small>{r.games} games · {r.losses} losses</small></span>
+  <span className="rowValue">{formatRating(r.rating)}</span>
+ </li>)}</ol>
  return <>
   <ol className="podium">{ratings.slice(0,3).map((r,i)=><li key={r.user_id} className={`seat podiumCard ${r.user_id===me?'mine':''}`}>
    <span className={`cornerIndex ${card.red?'red':''}`} aria-hidden="true">{i+1}<br/>{card.suit}</span>
@@ -360,11 +502,23 @@ function GroupsScreen({me,action,busy}:{me:string;action:Action;busy:boolean}){
  const create=()=>void action(async()=>{const id=await rpc<string>('create_friend_group',{p_name:groupName});setSelected(id);setGroupName('');await load()})
  const join=()=>void action(async()=>{const id=await rpc<string>('join_friend_group',{p_code:joinCode});setSelected(id);setJoinCode('');await load()})
  const current=groups.find(g=>g.id===selected),names=Object.fromEntries(ranked.map(x=>[x.profile.id,x.profile.username]))
+ // Blue theme lists every group with its members ("You, Masha and Grisha"), so it loads member names for all of them.
+ const blue=useBlue(),[groupPeople,setGroupPeople]=useState<Record<string,{id:string;name:string}[]>>({})
+ useEffect(()=>{if(!blue||!groups.length)return;let live=true;void (async()=>{
+  const{data:gm}=await supabase.from('group_members').select('group_id,user_id').in('group_id',groups.map(g=>g.id))
+  const userIds=[...new Set((gm||[]).map(x=>x.user_id))]
+  const{data:pp}=userIds.length?await supabase.from('profiles').select('id,username').in('id',userIds):{data:[]}
+  const nm=Object.fromEntries(((pp||[]) as {id:string;username:string}[]).map(p=>[p.id,p.username]))
+  const byGroup:Record<string,{id:string;name:string}[]>={};for(const x of gm||[])(byGroup[x.group_id]||=[]).push({id:x.user_id,name:nm[x.user_id]||'Player'})
+  if(live)setGroupPeople(byGroup)
+ })().catch(console.error);return()=>{live=false}},[blue,groups])
+ const memberLine=(id:string)=>{const list=groupPeople[id];if(!list)return '';const others=list.filter(p=>p.id!==me).map(p=>p.name);return listNames(list.some(p=>p.id===me)?['You',...others]:others)}
  return <div className="stack page pageEntry">
-  <header className="pageHead"><h1>Friend groups</h1><p>A private leaderboard for the people you play with.</p></header>
-  {current&&<section className="stack sm" aria-labelledby="group-title">
-   {groups.length>1&&<label className="field">Group<select value={selected} onChange={e=>setSelected(e.target.value)}>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>}
-   <div className="groupHead"><span className="inviteCard" aria-hidden="true">{current.code.slice(0,4)}<br/>{current.code.slice(4)}</span><div><h2 id="group-title">{current.name}</h2><p>Code <strong className="inviteCode">{current.code}</strong> · {memberIds.length} {memberIds.length===1?'member':'members'}</p></div></div>
+  <header className="pageHead"><h1>{blue?'Groups':'Friend groups'}</h1><p>A private leaderboard for the people you play with.</p></header>
+  {blue&&groups.length>0&&<ul className="listCard">{groups.map(g=><li key={g.id}><button className={`listRow ${g.id===selected?'on':''}`} aria-pressed={g.id===selected} onClick={()=>setSelected(g.id)}><span className="rowText"><b>{g.name}</b><small>{memberLine(g.id)||' '}</small></span><span className="chevron" aria-hidden="true">›</span></button></li>)}</ul>}
+  {current&&<section className="stack sm groupDetail" aria-labelledby="group-title">
+   {!blue&&groups.length>1&&<label className="field">Group<select value={selected} onChange={e=>setSelected(e.target.value)}>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>}
+   <div className="groupHead">{!blue&&<span className="inviteCard" aria-hidden="true">{current.code.slice(0,4)}<br/>{current.code.slice(4)}</span>}<div><h2 id="group-title">{current.name}</h2><p>Code <strong className="inviteCode">{current.code}</strong> · {memberIds.length} {memberIds.length===1?'member':'members'}</p></div></div>
    <ModeChips mode={mode} setMode={setMode}/>
    {ranked.length?<Standings ratings={ranked.map(x=>x.rating)} names={names} me={me} mode={mode}/>:<p className="emptyNote">No ratings in this mode yet.</p>}
    <p className="fieldHint">Share the code so friends can join. Standings use each member's overall rating for this mode.</p>
@@ -390,6 +544,7 @@ function GroupsScreen({me,action,busy}:{me:string;action:Action;busy:boolean}){
 }
 
 function ProfileScreen({me,profile,action,reload}:{me:string;profile:Profile|null;action:Action;reload:()=>Promise<void>}){
+ const {theme,setTheme}=useContext(ThemeContext),blue=theme==='blue'
  const [name,setName]=useState(profile?.username||''),[ratings,setRatings]=useState<Rating[]>([]),[admissions,setAdmissions]=useState(0),[ledger,setLedger]=useState<{game_id:string;delta:number;recorded_at:string;mode:Mode}[]>([])
  const [accountEmail,setAccountEmail]=useState(''),[oldPassword,setOldPassword]=useState(''),[nextPassword,setNextPassword]=useState(''),[accountNotice,setAccountNotice]=useState('')
  useEffect(()=>{let live=true;void supabase.auth.getUser().then(({data})=>{if(live)setAccountEmail(data.user?.email||'')}).catch(console.error);return()=>{live=false}},[me])
@@ -416,14 +571,17 @@ function ProfileScreen({me,profile,action,reload}:{me:string;profile:Profile|nul
   setOldPassword('');setNextPassword('');setAccountNotice('Password changed.')
  })
  return <div className="stack page pageEntry">
-  <header className="profileHero">
+  {blue?<header className="profileHero">
+   <Avatar id={me} name={who} me={me} size="lg"/>
+   <div><h1>{who}</h1><p>{accountEmail&&<>{accountEmail} · </>}<Stars/> reputation</p></div>
+  </header>:<header className="profileHero">
    <span className="seat mine heroPlayer" aria-hidden="true"><span className="seatInitials">{who.slice(0,2).toUpperCase()}</span></span>
    <div><h1>{who}</h1><p><Stars/> reputation</p></div>
-  </header>
+  </header>}
   <dl className="statRow"><div><dt>Games</dt><dd>{total}</dd></div><div><dt>Wins</dt><dd>{wins}</dd></div><div><dt>Losses</dt><dd>{losses}</dd></div></dl>
   <section aria-labelledby="my-ratings-title">
    <h2 id="my-ratings-title" className="sectionTitle">Your ratings</h2>
-   <ul className="modeRows">{MODES.map(m=>{const r=ratings.find(r=>r.mode===m.id);return <li key={m.id} className="modeRow"><MiniModeCard mode={m.id}/><span className="modeText"><b>{m.name}</b><small>{r?.games||0} games · {r?.losses||0} losses</small></span><strong className="modeRowRating">{formatRating(r?.rating||1200)}</strong></li>})}</ul>
+   <ul className="modeRows">{MODES.map(m=>{const r=ratings.find(r=>r.mode===m.id);return <li key={m.id} className="modeRow">{blue?<span className={`rowSuit ${MODE_CARD[m.id].red?'red':''}`} aria-hidden="true">{MODE_CARD[m.id].suit}</span>:<MiniModeCard mode={m.id}/>}<span className="modeText"><b>{m.name}</b><small>{r?.games||0} games · {r?.losses||0} losses</small></span><strong className="modeRowRating">{formatRating(r?.rating||1200)}</strong></li>})}</ul>
   </section>
   {total>=10?<section className="stack sm" aria-labelledby="stats-title">
    <h2 id="stats-title">Statistics</h2>
@@ -436,6 +594,11 @@ function ProfileScreen({me,profile,action,reload}:{me:string;profile:Profile|nul
    <div className="unlockCards" aria-hidden="true">{Array.from({length:10},(_,i)=><span key={i} className={i<total?'on':''}/>)}</div>
    <p>Statistics unlock after 10 games with a confirmed result. {Math.max(0,10-total)} more to go.</p>
   </section>}
+  <section aria-labelledby="look-title">
+   <h2 id="look-title" className="sectionTitle">Appearance</h2>
+   <div className="themePicker" role="group" aria-label="Theme">{THEMES.map(t=><button key={t.id} aria-pressed={theme===t.id} className={`themeOption ${t.id} ${theme===t.id?'on':''}`} onClick={()=>setTheme(t.id)}><span className="themeSwatch" aria-hidden="true"><span/><span/><span/></span><span className="rowText"><b>{t.name}</b><small>{t.description}</small></span></button>)}</div>
+   <p className="fieldHint">Saved on this device.</p>
+  </section>
   <section className="card accountCard" aria-labelledby="account-title">
    <h2 id="account-title">Account</h2>
    <form onSubmit={e=>{e.preventDefault();saveName()}}><label className="field">Display username<input value={name} onChange={e=>setName(e.target.value)} maxLength={22} autoCapitalize="none" autoCorrect="off" spellCheck={false}/></label><Button type="submit" kind="outline">Save username</Button></form>
