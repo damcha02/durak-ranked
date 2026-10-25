@@ -1,68 +1,35 @@
-# Durak Ranked — physical Durak, digital rankings
+# Durak Ranked
 
-A mobile-first Progressive Web App (PWA) for iOS, Android and desktop. **The physical card game is not simulated.** The app tracks tables, result votes, four mode-specific Elo ratings, friend groups, and player statistics.
+A scorebook for Durak nights. You play with a real deck; the app keeps track of who lost and gives everyone a rating for each game mode.
 
-> Status: **implementation starter / pre-production alpha**. This is real source code and SQL, not a deployed or end-to-end verified application. Tests of schema, SQL functions, authentication providers, and multi-phone concurrency must be run against a real Supabase project before use with friends. Do not open it to the public before the security checklist in `docs/ARCHITECTURE.md` is completed.
+Open **https://durak-ranked.pages.dev** on your phone. Nothing to download from an app store.
 
-## Stack
+## Put it on your home screen
 
-- React 19 + TypeScript + Vite; installable PWA; responsive mobile UI.
-- Cloudflare Pages static hosting (or any static host).
-- Supabase Auth (email/password, Google, optional Apple).
-- Supabase PostgreSQL with RLS, transaction-backed RPCs, server-side votes and Elo.
-- Supabase Realtime Postgres Changes (initial version) + fallback refresh polling.
-- SQL migrations in `supabase/migrations`; no frontend `service_role` key.
+**iPhone (Safari)**
+1. Open the link in Safari.
+2. Tap the Share button (the square with an arrow).
+3. Tap **Add to Home Screen**, then **Add**.
 
-## Game modes
+**Android (Chrome)**
+1. Open the link in Chrome.
+2. Tap the **⋮** menu in the top-right corner.
+3. Tap **Install app** (or **Add to Home screen**), then **Install**.
 
-| Mode | Decks | Players | Physical games per round |
-|---|---|---|---|
-| Natural Durak **(default)** | One | 3–8 | 1 |
-| Double Single | Two, combined | 3–16 | 1 |
-| Single Double | Two separate, parallel | 3–8 | 2 |
-| Double Double | Four; two per parallel game | 3–16 | 2 |
+Durak Ranked now opens from its icon like any other app.
 
-Parallel-mode result entry is **sequential**: Game 1 first, then Game 2. Both physical games finish before voting opens. Each confirmed result affects its mode's rating independently.
+## Playing a game
 
-## Quick start
+1. **Create an account** with a username, your email and a password of at least 10 characters.
+2. **Start a table**: pick a game mode and tap **Create table**. Friends join by scanning your QR code (**Invite / QR**) or typing the 8-character table code under **Join a table**.
+3. **Deal the cards**: once enough players have joined, the host taps **Start new game**. Play with your real deck; you can put your phone away.
+4. **Record the result**: when the hand is over, tap **Cards finished — record results**, and everyone votes for the player left holding cards. A clear majority decides straight away; otherwise the vote closes 30 seconds after the first vote.
+5. **See where you stand** under **Rankings**, or set up a private leaderboard for your regular crowd under **Groups**.
 
-Requires Node.js 20+, npm and an owned Supabase project. The source alone cannot create the Supabase project or configure OAuth for you.
+Ratings start at 1,200 and each game mode (Durak, Double Single, Single Double, Double Double) has its own.
 
-1. Create a Supabase project on https://supabase.com/dashboard.
-2. Apply migration files **in filename order** using the Supabase CLI (`supabase db push` after linking) or Supabase SQL Editor. Using the CLI ensures migrations are tracked. Review SQL before applying it: it creates policies/functions and an Auth trigger.
-3. In Supabase **Authentication → Providers**, enable Email; configure Google OAuth if desired. Apple OAuth is optional and normally requires Apple Developer Program membership. In **Authentication → URL Configuration**, set your site URL and add dev and production redirect URLs (`http://localhost:5173/**`, `https://your-site.pages.dev/**`).
-4. Copy `.env.example` to `.env` and supply your Supabase **project URL** and **publishable key**. Never use your secret service-role key in the Vite environment.
-5. `npm install` then `npm run dev`. Browse `http://localhost:5173`.
-6. Create three accounts, join the same table, start Natural Durak, record a result, and check rating updates.
-7. For deployment, build with `npm run build`. On Cloudflare Pages, connect the repository, set build command `npm run build` and output directory `dist`, and set the two `VITE_...` environment variables. `public/_redirects` supports SPA navigation.
+You can switch between the light-blue and the card-table look under **Profile → Appearance**.
 
-### Configuration required for a public release
+---
 
-- Configure a custom SMTP service for email confirmations/password resets; Supabase's default email service is for limited testing.
-- Configure allowed Auth redirect URLs and enabled OAuth providers.
-- Test RLS isolation with at least 3 signed-in accounts, including an outsider.
-- Check that custom SQL RPCs execute successfully and expected Postgres publications exist.
-- Add database backups and monitoring. Supabase Free is not an uptime guarantee and can pause after low activity.
-- Implement rate limiting/abuse protection on table creation, joining, profile names and voting endpoints before public traffic.
-- Test all 24-hour correction edge cases and concurrent confirmation/revoting.
-
-## Free project pausing
-
-Supabase **Free** can pause after seven days of low database activity. The optional Cloudflare scheduled Worker under `cloudflare/` makes two low-privilege database reads daily. This *may* reduce the likelihood of a pause; it is **not guaranteed**. If predictable availability is non-negotiable, switch to Pro or migrate the storage/auth layer to an always-available alternative. Official policy: https://supabase.com/docs/guides/platform/free-project-pausing
-
-To deploy the optional Worker:
-
-1. Create a separate Cloudflare Worker using `cloudflare/worker.js` and `cloudflare/wrangler.toml` (working directory `cloudflare`).
-2. Configure `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` as Worker secrets/variables. Use only the publishable key.
-3. Deploy with `npx wrangler deploy`, after authenticating with your own Cloudflare account.
-4. Monitor Worker logs, and check Supabase dashboard notifications. A successful heartbeat does not guarantee the platform won't pause.
-
-## Commands
-
-- `npm run dev` — local frontend
-- `npm run build` — type-check and build static output
-- `npm run test` — pure TypeScript rating-math unit tests
-
-No databases, Supabase accounts, domains, or Cloudflare services have been provisioned by this repository itself.
-
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for data model, workflows, security boundaries, scaling strategy, and known blockers.
+Setting up or deploying your own copy: see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).

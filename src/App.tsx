@@ -30,7 +30,7 @@ function Button({children,onClick,kind='primary',disabled=false,className='',typ
 }
 // Two looks share every screen: "cards" (card stock, corner indices) and "blue" (the light-blue prototype).
 // Where the layouts differ, components branch on useBlue(); data loading and actions are shared.
-const ThemeContext=createContext<{theme:Theme;setTheme:(t:Theme)=>void}>({theme:'cards',setTheme:()=>{}})
+const ThemeContext=createContext<{theme:Theme;setTheme:(t:Theme)=>void}>({theme:'blue',setTheme:()=>{}})
 const useBlue=()=>useContext(ThemeContext).theme==='blue'
 // Soft avatar tints for the blue theme, picked from the user id so each player keeps one colour; you are always the action tint.
 const TINTS=['#F1DCCF','#D9E8DC','#ECE3C8','#E2DDEE','#F3E1E8']

@@ -5,22 +5,22 @@ const memory=()=>{const data=new Map<string,string>();return {getItem:(k:string)
 const broken={getItem:()=>{throw new Error('blocked')},setItem:()=>{throw new Error('blocked')}}
 
 describe('theme preference',()=>{
-  it('defaults to the cards theme',()=>{
-    expect(readTheme(memory())).toBe('cards')
-    expect(readTheme(undefined)).toBe('cards')
+  it('defaults to the light-blue theme',()=>{
+    expect(readTheme(memory())).toBe('blue')
+    expect(readTheme(undefined)).toBe('blue')
   })
-  it('remembers the light-blue theme',()=>{
-    const store=memory();saveTheme('blue',store)
-    expect(readTheme(store)).toBe('blue')
-    saveTheme('cards',store)
+  it('remembers an explicit choice',()=>{
+    const store=memory();saveTheme('cards',store)
     expect(readTheme(store)).toBe('cards')
+    saveTheme('blue',store)
+    expect(readTheme(store)).toBe('blue')
   })
   it('ignores unknown stored values',()=>{
     const store=memory();store.setItem('durak-ranked-theme','neon')
-    expect(readTheme(store)).toBe('cards')
+    expect(readTheme(store)).toBe('blue')
   })
   it('survives storage that throws',()=>{
-    expect(readTheme(broken)).toBe('cards')
+    expect(readTheme(broken)).toBe('blue')
     expect(()=>saveTheme('blue',broken)).not.toThrow()
   })
 })
