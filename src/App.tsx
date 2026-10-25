@@ -1,7 +1,7 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react'
 import type {Session} from '@supabase/supabase-js'
 import {QRCodeSVG} from 'qrcode.react'
-import {ArrowLeft,ArrowRight,CheckCircle2,ChevronDown,Clock3,Copy,Crown,History,LogOut,RefreshCw,Share2,ShieldCheck,Star,Timer,X} from 'lucide-react'
+import {ArrowRight,CheckCircle2,ChevronDown,Clock3,Copy,Crown,History,LogOut,RefreshCw,ShieldCheck,Star,Timer,X} from 'lucide-react'
 import {configured,date,errorMessage,MODES,modeInfo,rpc,supabase} from './lib'
 import {isEmailIdentifier,isUsername} from './authValidation'
 import {signInByUsername} from './usernameSignIn'
@@ -103,17 +103,17 @@ export default function App(){
  return <div className="appShell">
   <header className="topbar"><div className="topbarInner">
    <button className="brandButton" aria-label={`${APP_NAME}, home`} onClick={()=>go('home')}><Brand/></button>
-   <NavTabs className="headerNav" page={tableId?null:page} go={go}/>
+   <NavTabs className="headerNav" page={tableId?'home':page} go={go}/>
    <button className="avatar" aria-label="Your profile" title="Your profile" onClick={()=>go('profile')}><span>{initials}</span></button>
   </div></header>
-  <main className={`main ${tableId?'':'withNav'}`}>
+  <main className="main withNav">
    {tableId?<TableScreen key={tableId} tableId={tableId} me={user!.id} action={action} busy={busy} onLeave={()=>{setTableId(null);setPage('home')}}/>:
    page==='home'?<HomeScreen me={user!.id} profile={profile} openTable={setTableId} openRankings={()=>setPage('leaderboard')} action={action} busy={busy}/>:
    page==='leaderboard'?<LeaderboardScreen me={user!.id}/>:
    page==='groups'?<GroupsScreen me={user!.id} action={action} busy={busy}/>:
    <ProfileScreen me={user!.id} profile={profile} action={action} reload={reloadProfile}/>}
   </main>
-  {!tableId&&<NavTabs className="bottomNav" page={page} go={go}/>}
+  <NavTabs className="bottomNav" page={tableId?'home':page} go={go}/>
   {message&&<div className="toast" role="alert">{message}<button aria-label="Dismiss message" onClick={()=>setMessage(null)}><X size={16}/></button></div>}
  </div>
 }
@@ -253,15 +253,26 @@ function TableScreen({tableId,me,action,busy,onLeave}:{tableId:string;me:string;
  const correctionVote=(cid:string,approve:boolean)=>void action(async()=>{await rpc('vote_reversal',{p_case:cid,p_approve:approve});await load()})
  const info=table?modeInfo(table.mode):MODES[0]
  if(!table)return <div className="loading">Loading table…</div>
- return <div className="stack pageEntry"><button className="backLink" onClick={onLeave}><ArrowLeft size={18}/> All tables</button>
-  <div className="tableHero"><div><div className="eyebrow">LIVE DURAK TABLE <span className="dotDivider">·</span> #{table.code}</div><h1>{info.name}</h1><p>{info.detail} · {info.min}–{info.max} players</p></div><span className={`statusChip ${table.status}`}><span className="liveDot"/>{table.status==='lobby'?'LOBBY':table.status==='playing'?'PLAYING':'VOTING'}</span></div>
-  <div className="tableActions"><Button kind="secondary" onClick={()=>setShowQR(!showQR)}><Share2 size={17}/> Invite / QR</Button><Button kind="secondary" onClick={()=>void load()}><RefreshCw size={17}/> Refresh</Button></div>
-  {showQR&&<section className="card qrCard"><div className="qrInner"><QRCodeSVG value={invite} size={184} includeMargin/></div><p>Scan to join this table</p><div className="codeLarge">{table.code}</div><Button kind="secondary" onClick={()=>void share()}><Copy size={15}/> Share link</Button></section>}
-  <section className="card"><div className="sectionHeading"><h2>Players <span className="softCount">{members.length}/{info.max}</span></h2><span className="muted tiny">{table.status==='lobby'?'ROSTER OPEN':'ROSTER LOCKED'}</span></div>
-   <div className="playerList">{members.map((m,i)=><div className="playerRow" key={m.user_id}><div className="playerNum">{String(i+1).padStart(2,'0')}</div><div className="playerAvatar">{name(m.user_id).slice(0,2).toUpperCase()}</div><div className="playerName"><b>{name(m.user_id)}</b>{m.user_id===me&&<span className="youPill">YOU</span>}{m.user_id===table.host_id&&<span title="Host"><Crown size={14} className="hostCrown"/></span>}</div><Stars compact/>{table.status==='lobby'&&table.host_id===me&&m.user_id!==me&&<button className="subtle" title="Transfer host" disabled={busy} onClick={()=>promote(m.user_id)}><Crown size={15}/></button>}</div>)}</div>
-   {table.status==='lobby'&&<div className="playerFooter"><p>{members.length<info.min?`Need ${info.min-members.length} more player${info.min-members.length===1?'':'s'} to start`:'Everyone ready? Deal the cards.'}</p><Button onClick={play} disabled={busy||members.length<info.min} className="wide">Start new game <ArrowRight size={18}/></Button></div>}
-   {table.status==='playing'&&<div className="playerFooter"><div className="hint"><ShieldCheck size={18}/> All players are locked into this round. You can close your phone while playing.</div><Button onClick={finishPlay} disabled={busy} className="wide">Cards finished — record results <ArrowRight size={17}/></Button></div>}
-   {table.status==='lobby'&&<button className="leaveLink" onClick={leave} disabled={busy}>Leave table <LogOut size={14}/></button>}
+ const seats=table.status==='lobby'?Math.max(0,info.min-members.length):0,card=MODE_CARD[table.mode]
+ return <div className="stack lobby pageEntry">
+  <div className="lobbyHero"><span className={`heroCard ${card.red?'red':''}`} aria-hidden="true"><span className="heroIndex">{card.abbr}<br/>{card.suit}</span>{card.suit}</span><div><h1>{info.name}</h1><p>Table {table.code} · {STATUS_TEXT[table.status]}</p><p className="heroDetail">{info.detail} · <span className="nowrap">{info.min}–{info.max} players</span></p></div></div>
+  <Button kind="outline" className="wide inviteButton" onClick={()=>setShowQR(s=>!s)}>{showQR?'Hide invite':'Invite / QR'}</Button>
+  {showQR&&<section className="card qrCard" aria-label="Invite"><div className="qrInner"><QRCodeSVG value={invite} size={184} includeMargin/></div><p>Scan to join this table, or type the code</p><div className="codeLarge">{table.code}</div><Button kind="secondary" onClick={()=>void share()}><Copy size={15}/> Share link</Button></section>}
+  <section aria-labelledby="players-title">
+   <div className="sectionHeading"><h2 id="players-title">Players · {members.length} of {info.max}</h2><button className="iconButton" aria-label="Refresh table" title="Refresh table" onClick={()=>void load()}><RefreshCw size={18}/></button></div>
+   <ul className="seatGrid">
+    {members.map(m=>{const host=m.user_id===table.host_id,mine=m.user_id===me,who=name(m.user_id);return <li key={m.user_id} className={`seat ${mine?'mine':''}`}>
+     {host&&<Crown className="seatCrown" size={16} aria-hidden="true"/>}
+     {mine&&<span className="seatYou">you</span>}
+     <span className="seatInitials" aria-hidden="true">{who.slice(0,2).toUpperCase()}</span>
+     <b className="seatName" title={who}>{who}</b>
+     <span className="seatMeta"><span title="5-star reputation baseline">★ 5.0</span>{host&&' · host'}</span>
+     {table.status==='lobby'&&table.host_id===me&&!mine&&<button className="seatAction" disabled={busy} aria-label={`Make ${who} the host`} onClick={()=>promote(m.user_id)}>Make host</button>}
+    </li>})}
+    {Array.from({length:seats},(_,i)=><li key={`empty-${i}`} className="seatSlot"><button className="seat empty" aria-label="Empty seat, show the invite QR code" onClick={()=>setShowQR(true)}>Empty seat</button></li>)}
+   </ul>
+   {table.status==='lobby'&&<div className="lobbyFooter"><p>{members.length<info.min?`Need ${info.min-members.length} more player${info.min-members.length===1?'':'s'} to start`:'Everyone ready? Deal the cards.'}</p><Button onClick={play} disabled={busy||members.length<info.min} className="wide">Start new game</Button><button className="leaveLink" onClick={leave} disabled={busy}>Leave table <LogOut size={14}/></button></div>}
+   {table.status==='playing'&&<div className="lobbyFooter"><div className="hint"><ShieldCheck size={18}/> All players are locked into this round. You can close your phone while playing.</div><Button onClick={finishPlay} disabled={busy} className="wide">Cards finished — record results <ArrowRight size={17}/></Button></div>}
   </section>
   {table.status==='results'&&<section className="card votingCard"><div className="sectionHeading"><div><div className="eyebrow">RESULT VERIFICATION</div><h2>{activeGame?`Game ${activeGame.slot} of ${games.length}`:'Results'}</h2></div><div className="timerBadge"><Timer size={17}/>{activeGame?.deadline?`${Math.max(0,Math.ceil((new Date(activeGame.deadline).getTime()-displayNow)/1000))}s`:'30s'}</div></div>
    {activeGame&& !pendingBefore ? <>
@@ -276,7 +287,6 @@ function TableScreen({tableId,me,action,busy,onLeave}:{tableId:string;me:string;
   </section>}
   {table.status==='lobby'&&historyGames.length>0&&<section className="card"><button className="sectionHeading historyToggle" onClick={()=>setShowHistory(s=>!s)}><h2><History size={18}/> Recent results</h2><ChevronDown size={18}/></button>{showHistory&&<div className="stack sm">{historyGames.filter(g=>['confirmed','tied','void','unresolved'].includes(g.state)).slice(0,12).map(g=><div key={g.id} className="historyItem"><ResultLine game={g} name={name} restart={()=>restart(g.id)} busy={busy}/>{ballots[g.id]?.length>0&&<div className="ballots">{ballots[g.id].map(v=><span key={v.voter_id}>{name(v.voter_id)} → {name(v.nominee_id)}</span>)}</div>}{['confirmed','tied'].includes(g.state)&&g.finalized_at&&Date.now()-new Date(g.finalized_at).getTime()<86400000&&<button className="subtle" onClick={()=>openCorrection(g.id)}>Request correction</button>}{cases.filter(c=>c.game_id===g.id&&c.state==='open').map(c=><div className="correction" key={c.id}><span>Correction vote · {yesCounts[c.id]||0} approvals</span><Button kind="secondary" onClick={()=>correctionVote(c.id,true)}>Approve</Button><Button kind="ghost" onClick={()=>correctionVote(c.id,false)}>Reject</Button></div>)}</div>)}</div>}</section>}
   {table.status==='results'&&games.some(g=>g.state==='unresolved')&&<div className="hint"><Clock3 size={17}/> Unresolved votes can be manually restarted before the next round.</div>}
-  <p className="center muted tiny">Results and ratings are saved securely. Real cards, real rivalries.</p>
  </div>
 }
 function ResultLine({game,name,restart,busy}:{game:Game;name:(id:string)=>string;restart:()=>void;busy:boolean}){
