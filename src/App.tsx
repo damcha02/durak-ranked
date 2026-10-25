@@ -1,7 +1,7 @@
 import {useCallback,useEffect,useMemo,useState} from 'react'
 import type {Session} from '@supabase/supabase-js'
 import {QRCodeSVG} from 'qrcode.react'
-import {ArrowLeft,ArrowRight,Check,CheckCircle2,ChevronDown,ChevronRight,Clock3,Copy,Crown,History,Home,LogOut,Plus,RefreshCw,Share2,ShieldCheck,Star,Timer,TrendingUp,Users,X} from 'lucide-react'
+import {ArrowLeft,ArrowRight,Check,CheckCircle2,ChevronDown,ChevronRight,Clock3,Copy,Crown,History,Home,LogOut,RefreshCw,Share2,ShieldCheck,Star,Timer,TrendingUp,UserRound,Users,X} from 'lucide-react'
 import {configured,date,errorMessage,MODES,modeInfo,rpc,supabase} from './lib'
 import {isEmailIdentifier,isUsername} from './authValidation'
 import {signInByUsername} from './usernameSignIn'
@@ -12,11 +12,19 @@ type Action=(fn:()=>Promise<unknown>)=>Promise<void>
 const formatRating=(rating:number)=>Math.round(rating).toLocaleString()
 const getJoinCode=()=>new URLSearchParams(location.search).get('join')?.trim().toUpperCase() || ''
 const Stars=({compact=false}:{compact?:boolean})=><span className="stars" title="5-star reputation baseline"><Star size={compact?11:14} fill="currentColor"/> 5.0</span>
+const APP_NAME='Durak Ranked'
+// Decorative suit per mode; ︎ keeps iOS from rendering the glyphs as emoji.
+const SUITS:Record<Mode,{glyph:string;red:boolean}>={natural:{glyph:'♠︎',red:false},double_single:{glyph:'♣︎',red:false},single_double:{glyph:'♥︎',red:true},double_double:{glyph:'♦︎',red:true}}
+const Suit=({mode,small=false}:{mode:Mode;small?:boolean})=><span className={`suitCard ${SUITS[mode].red?'red':''} ${small?'sm':''}`} aria-hidden="true">{SUITS[mode].glyph}</span>
+const Brand=({large=false}:{large?:boolean})=><span className={`brand ${large?'large':''}`}><span className="brandMark" aria-hidden="true">♠&#xFE0E;</span><span>{APP_NAME}</span></span>
+const STATUS_TEXT:Record<TableRow['status'],string>={lobby:'Waiting for players',playing:'Game in progress',results:'Recording results'}
+const STATUS_ORDER:Record<TableRow['status'],number>={results:0,playing:1,lobby:2}
+const greeting=()=>{const h=new Date().getHours();return h>=5&&h<12?'Good morning':h>=12&&h<18?'Good afternoon':'Good evening'}
 
 function Button({children,onClick,kind='primary',disabled=false,className='',type='button'}:{children:React.ReactNode;onClick?:()=>void;kind?:'primary'|'secondary'|'ghost'|'danger';disabled?:boolean;className?:string;type?:'button'|'submit'}){
  return <button type={type} className={`button ${kind} ${className}`} onClick={onClick} disabled={disabled}>{children}</button>
 }
-function AuthScreen(){
+function AuthScreen({joinCode}:{joinCode:string}){
  const [identifier,setIdentifier]=useState(''),[email,setEmail]=useState(''),[username,setUsername]=useState(''),[password,setPassword]=useState('')
  const [tab,setTab]=useState<'sign-in'|'register'>('sign-in'),[notice,setNotice]=useState(''),[working,setWorking]=useState(false)
  const act=async(fn:()=>Promise<void>)=>{setWorking(true);setNotice('');try{await fn()}catch(e){setNotice(errorMessage(e))}finally{setWorking(false)}}
@@ -43,26 +51,34 @@ function AuthScreen(){
   }
  })
  const provider=(p:'google'|'apple')=>void act(async()=>{const{error}=await supabase.auth.signInWithOAuth({provider:p,options:{redirectTo:location.origin+location.pathname}});if(error)throw error})
- return <div className="authWrap"><div className="authGlow"/><div className="authPanel">
-  <div className="logo large"><span className="logoIcon">♠</span><span>durak<span className="logoDot">.</span></span></div>
-  <div className="eyebrow">THE GAME STAYS ON THE TABLE</div>
-  <h1>Make every<br/><em>loss count.</em></h1>
-  <p className="authSub">Play with real cards. Track every round. Climb the leaderboard with friends.</p>
-  <div className="segmented"><button className={tab==='sign-in'?'selected':''} onClick={()=>setTab('sign-in')}>Sign in</button><button className={tab==='register'?'selected':''} onClick={()=>setTab('register')}>Create account</button></div>
-  <form onSubmit={e=>{e.preventDefault();submit()}} className="stack sm">
-   {tab==='register'?<>
-    <label>Username<input required type="text" minLength={3} maxLength={22} pattern="[A-Za-z0-9_]{3,22}" placeholder="cookie" autoComplete="username" value={username} onChange={e=>setUsername(e.target.value)}/></label>
-    <label>Email address<input required type="email" placeholder="you@example.com" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)}/></label>
-   </>:<label>Username or email<input required type="text" placeholder="cookie or you@example.com" autoComplete="username" value={identifier} onChange={e=>setIdentifier(e.target.value)}/></label>}
-   <label>Password<input required minLength={tab==='register'?10:1} type="password" placeholder="••••••••••" autoComplete={tab==='register'?'new-password':'current-password'} value={password} onChange={e=>setPassword(e.target.value)}/></label>
-   <Button type="submit" disabled={working}>{working?'Please wait…':tab==='register'?'Create account':'Sign in'} <ArrowRight size={17}/></Button>
-  </form>
-  {tab==='register'&&<p className="muted tiny">No email confirmation required during this testing phase. Use an email address you control so you can recover your account.</p>}
-  <div className="or">or continue with</div>
-  <div className="social"><Button kind="secondary" onClick={()=>provider('google')} disabled={working}>Google</Button><Button kind="secondary" onClick={()=>provider('apple')} disabled={working}>Apple</Button></div>
-  <p className="muted tiny">Google and Apple require provider configuration. Apple sign-in typically requires an Apple Developer membership.</p>
-  {notice&&<div className="alert" role="alert">{notice}</div>}
- </div></div>
+ return <div className="authWrap"><main className="authInner">
+  <header className="authIntro">
+   <Brand large/>
+   <h1>Keep score at the card table</h1>
+   <p>Play Durak with a real deck. When a hand ends, everyone at the table agrees who lost, and ratings update for each game mode.</p>
+  </header>
+  {joinCode&&<p className="authInvite" role="status">You've been invited to table <b>{joinCode}</b>. Sign in or create an account and you'll join it straight away.</p>}
+  <section className="authCard" aria-label={tab==='register'?'Create account':'Sign in'}>
+   <div className="segmented" role="group" aria-label="Account">
+    <button type="button" aria-pressed={tab==='sign-in'} className={tab==='sign-in'?'selected':''} onClick={()=>setTab('sign-in')}>Sign in</button>
+    <button type="button" aria-pressed={tab==='register'} className={tab==='register'?'selected':''} onClick={()=>setTab('register')}>Create account</button>
+   </div>
+   <form onSubmit={e=>{e.preventDefault();submit()}} className="stack sm">
+    {tab==='register'?<>
+     <label>Username<input required type="text" minLength={3} maxLength={22} pattern="[A-Za-z0-9_]{3,22}" placeholder="cookie" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={username} onChange={e=>setUsername(e.target.value)}/></label>
+     <label>Email address<input required type="email" placeholder="you@example.com" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)}/></label>
+    </>:<label>Username or email<input required type="text" placeholder="cookie or you@example.com" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={identifier} onChange={e=>setIdentifier(e.target.value)}/></label>}
+    <label>Password<input required minLength={tab==='register'?10:1} type="password" placeholder="••••••••••" autoComplete={tab==='register'?'new-password':'current-password'} value={password} onChange={e=>setPassword(e.target.value)}/></label>
+    {tab==='register'&&<p className="muted tiny">At least 10 characters.</p>}
+    <Button type="submit" disabled={working} className="wide">{working?'Please wait…':tab==='register'?'Create account':'Sign in'} <ArrowRight size={18}/></Button>
+   </form>
+   {tab==='register'&&<p className="muted tiny">No email confirmation required during this testing phase. Use an email address you control so you can recover your account.</p>}
+   <div className="or">or continue with</div>
+   <div className="social"><Button kind="secondary" onClick={()=>provider('google')} disabled={working}>Google</Button><Button kind="secondary" onClick={()=>provider('apple')} disabled={working}>Apple</Button></div>
+   <p className="muted tiny">Google and Apple require provider configuration. Apple sign-in typically requires an Apple Developer membership.</p>
+   {notice&&<div className="alert" role="alert">{notice}</div>}
+  </section>
+ </main></div>
 }
 
 export default function App(){
@@ -74,27 +90,32 @@ export default function App(){
  useEffect(()=>{let valid=true;void supabase.auth.getSession().then(({data})=>{if(valid){setSession(data.session);setLoading(false)}});const{subscription}=supabase.auth.onAuthStateChange((_event,s)=>{setSession(s);setLoading(false)}).data;return()=>{valid=false;subscription.unsubscribe()}},[])
  useEffect(()=>{if(user){void reloadProfile().catch(e=>setMessage(errorMessage(e))) }else setProfile(null)},[user?.id,reloadProfile])
  useEffect(()=>{if(!joinCode||!user)return;const c=joinCode;setJoinCode('');void (async()=>{try{setBusy(true);const id=await rpc<string>('join_table',{p_code:c});setTableId(id);history.replaceState(null,'',location.pathname)}catch(e){setMessage(errorMessage(e))}finally{setBusy(false)}})()},[user?.id,joinCode])
+ useEffect(()=>{window.scrollTo(0,0)},[page,tableId])
  const action:Action=async fn=>{if(busy)return;setBusy(true);setMessage(null);try{await fn()}catch(e){setMessage(errorMessage(e))}finally{setBusy(false)}}
- if(!configured)return <div className="setup"><div className="logo large"><span className="logoIcon">♠</span>durak<span className="logoDot">.</span></div><h1>Connect your backend</h1><p>Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> to a <code>.env</code> file, then restart Vite.</p><p className="muted">See README.md for the complete Supabase setup.</p></div>
- if(loading)return <div className="loading">Loading Durak…</div>
- if(!session)return <AuthScreen/>
+ if(!configured)return <div className="setup"><Brand large/><h1>Connect your backend</h1><p>Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> to a <code>.env</code> file, then restart Vite.</p><p className="muted">See README.md for the complete Supabase setup.</p></div>
+ if(loading)return <div className="loading" role="status"><Brand large/><p>Loading {APP_NAME}…</p></div>
+ if(!session)return <AuthScreen joinCode={joinCode}/>
+ const initials=(profile?.username||'U').slice(0,2).toUpperCase()
  return <div className="appShell">
-  <header className="topbar"><button className="logo logoButton" onClick={()=>{setPage('home');setTableId(null)}}><span className="logoIcon">♠</span>durak<span className="logoDot">.</span></button><div className="topbarRight"><span className="livePill"><span className="liveDot"/> LIVE RATINGS</span><button className="avatar" title="Your profile" onClick={()=>{setTableId(null);setPage('profile')}}>{(profile?.username||'U').slice(0,2).toUpperCase()}</button></div></header>
-  <main className="main">
+  <header className="topbar"><div className="topbarInner">
+   <button className="brandButton" aria-label={`${APP_NAME}, home`} onClick={()=>{setPage('home');setTableId(null)}}><Brand/></button>
+   <button className="avatar" aria-label="Your profile" title="Your profile" onClick={()=>{setTableId(null);setPage('profile')}}>{initials}</button>
+  </div></header>
+  <main className={`main ${tableId?'':'withNav'}`}>
    {tableId?<TableScreen key={tableId} tableId={tableId} me={user!.id} action={action} busy={busy} onLeave={()=>{setTableId(null);setPage('home')}}/>:
-   page==='home'?<HomeScreen me={user!.id} profile={profile} openTable={setTableId} action={action} busy={busy}/>:
+   page==='home'?<HomeScreen me={user!.id} profile={profile} openTable={setTableId} openRankings={()=>setPage('leaderboard')} action={action} busy={busy}/>:
    page==='leaderboard'?<LeaderboardScreen me={user!.id}/>:
    page==='groups'?<GroupsScreen me={user!.id} action={action} busy={busy}/>:
    <ProfileScreen me={user!.id} profile={profile} action={action} reload={reloadProfile}/>}
   </main>
-  {!tableId&&<nav className="bottomNav">
-   {([{id:'home',label:'Home',icon:Home},{id:'leaderboard',label:'Rankings',icon:TrendingUp},{id:'groups',label:'Groups',icon:Users},{id:'profile',label:'Profile',icon:Star}] as const).map(p=><button key={p.id} className={page===p.id?'on':''} onClick={()=>setPage(p.id)}><p.icon size={20}/><span>{p.label}</span></button>)}
+  {!tableId&&<nav className="bottomNav" aria-label="Main">
+   {([{id:'home',label:'Home',icon:Home},{id:'leaderboard',label:'Rankings',icon:TrendingUp},{id:'groups',label:'Groups',icon:Users},{id:'profile',label:'Profile',icon:UserRound}] as const).map(p=><button key={p.id} className={page===p.id?'on':''} aria-current={page===p.id?'page':undefined} onClick={()=>setPage(p.id)}><p.icon size={22} strokeWidth={page===p.id?2.25:1.75} aria-hidden="true"/><span>{p.label}</span></button>)}
   </nav>}
   {message&&<div className="toast" role="alert">{message}<button aria-label="Dismiss message" onClick={()=>setMessage(null)}><X size={16}/></button></div>}
  </div>
 }
 
-function HomeScreen({me,profile,openTable,action,busy}:{me:string;profile:Profile|null;openTable:(id:string)=>void;action:Action;busy:boolean}){
+function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;profile:Profile|null;openTable:(id:string)=>void;openRankings:()=>void;action:Action;busy:boolean}){
  const[mode,setMode]=useState<Mode>('natural'),[expanded,setExpanded]=useState(false),[join,setJoin]=useState(''),[tables,setTables]=useState<TableRow[]>([]),[ratings,setRatings]=useState<Rating[]>([]),[groups,setGroups]=useState<Group[]>([]),[group,setGroup]=useState('')
  const load=useCallback(async()=>{const {data:members}=await supabase.from('table_members').select('table_id').eq('user_id',me).eq('is_active',true);const ids=(members||[]).map(m=>m.table_id);const [{data:tt},{data:rr},{data:gm}]=await Promise.all([
   ids.length?supabase.from('tables').select('*').in('id',ids).order('created_at',{ascending:false}):Promise.resolve({data:[]}),
@@ -105,18 +126,40 @@ function HomeScreen({me,profile,openTable,action,busy}:{me:string;profile:Profil
  useEffect(()=>{void load();const id=setInterval(()=>void load(),12000);return()=>clearInterval(id)},[load])
  const create=()=>void action(async()=>{const id=await rpc<string>('create_table',{p_mode:mode,p_group:group||null});openTable(id)})
  const joinRoom=()=>void action(async()=>{if(!join.trim())throw new Error('Enter a table code');const id=await rpc<string>('join_table',{p_code:join});openTable(id)})
- const mainRating=ratings.find(r=>r.mode==='natural')
+ // Tables that need attention first (results, then playing, then lobby); the sort is stable, so newest stays first within a status.
+ const [current,...others]=useMemo(()=>[...tables].sort((a,b)=>STATUS_ORDER[a.status]-STATUS_ORDER[b.status]),[tables])
+ const picked=modeInfo(mode)
  return <div className="stack pageEntry">
-  <section className="welcome"><div><div className="eyebrow">YOUR DURAK ARENA</div><h1>Good evening, <span className="serif">{profile?.username||'player'}</span><span className="period">.</span></h1><p>Someone has to lose. Make it count.</p></div><div className="scoreBig"><div className="eyebrow">DURAK ELO</div><strong>{formatRating(mainRating?.rating??1200)}</strong><span>YOUR RATING</span></div></section>
-  <section className="card heroCreate"><div className="cardTop"><div className="sectionIcon"><Plus size={21}/></div><div><h2>Start a table</h2><p>Get everyone in and deal the cards.</p></div></div>
-   <div className="modeCurrent"><div><span className="eyebrow">GAME MODE</span><h3>{modeInfo(mode).name}</h3><p>{modeInfo(mode).detail} · {modeInfo(mode).min}–{modeInfo(mode).max} players</p></div><button className="textButton" onClick={()=>setExpanded(e=>!e)}>Change <ChevronDown size={16}/></button></div>
-   {expanded&&<div className="modeList">{MODES.map(m=><button key={m.id} className={mode===m.id?'active':''} onClick={()=>{setMode(m.id);setExpanded(false)}}><span><b>{m.name}</b><small>{m.detail} · {m.min}–{m.max} players</small></span>{mode===m.id&&<Check size={18}/>}</button>)}</div>}
-   {groups.length>0&&<label className="fieldLabel">Friend group (optional)<select value={group} onChange={e=>setGroup(e.target.value)}><option value="">No group</option>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>}
-   <Button onClick={create} disabled={busy} className="wide">Create table <ArrowRight size={18}/></Button>
+  <section className="greeting"><h1>{greeting()}, {profile?.username||'friend'}</h1><p>{current?current.status==='lobby'?'Your table is still open.':'Your game is still going.':'Start a table, or join one a friend has set up.'}</p></section>
+  {current&&<section className="stack sm" aria-labelledby="tables-title">
+   <div className="sectionHeading"><h2 id="tables-title">Your tables</h2><button className="iconButton" aria-label="Refresh tables" title="Refresh tables" onClick={()=>void load()}><RefreshCw size={18}/></button></div>
+   <div className="returnCard">
+    <div className="returnTop"><Suit mode={current.mode}/><div><h3>{modeInfo(current.mode).name}</h3><p>Table {current.code} · {STATUS_TEXT[current.status]}</p></div></div>
+    <Button onClick={()=>openTable(current.id)} className="wide">Return to table <ArrowRight size={18}/></Button>
+   </div>
+   {others.map(t=><button className="tableEntry" key={t.id} onClick={()=>openTable(t.id)}><Suit mode={t.mode} small/><span className="entryText"><strong>{modeInfo(t.mode).name}</strong><span>Table {t.code} · {STATUS_TEXT[t.status]}</span></span><ChevronRight size={18} aria-hidden="true"/></button>)}
+  </section>}
+  <div className="actionGrid">
+   <section className="card stack sm" aria-labelledby="create-title">
+    <div><h2 id="create-title">Start a table</h2><p className="cardSub">Choose a game mode, then invite everyone sitting with you.</p></div>
+    <div className="modePicker"><Suit mode={mode}/><div className="modeText"><span>Game mode</span><b>{picked.name}</b><small>{picked.detail} · {picked.min}–{picked.max} players</small></div><button className="textButton" aria-expanded={expanded} aria-controls="mode-list" onClick={()=>setExpanded(e=>!e)}>Change <ChevronDown size={16} className={expanded?'flip':''} aria-hidden="true"/></button></div>
+    {expanded&&<div className="modeList" id="mode-list">{MODES.map(m=><button key={m.id} aria-pressed={mode===m.id} className={mode===m.id?'active':''} onClick={()=>{setMode(m.id);setExpanded(false)}}><Suit mode={m.id} small/><span className="modeText"><b>{m.name}</b><small>{m.detail} · {m.min}–{m.max} players</small></span>{mode===m.id&&<Check size={18} aria-hidden="true"/>}</button>)}</div>}
+    {groups.length>0&&<label className="fieldLabel">Friend group (optional)<select value={group} onChange={e=>setGroup(e.target.value)}><option value="">No group</option>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>}
+    <Button onClick={create} disabled={busy} className="wide">Create table <ArrowRight size={18}/></Button>
+   </section>
+   <section className="card stack sm" aria-labelledby="join-title">
+    <div><h2 id="join-title">Join a table</h2><p className="cardSub">Type the 8-character code from the host, or scan the QR code on their phone.</p></div>
+    <form className="inlineField" onSubmit={e=>{e.preventDefault();joinRoom()}}>
+     <input className="codeInput" aria-label="Table code" placeholder="Table code" maxLength={8} autoComplete="off" autoCapitalize="characters" autoCorrect="off" spellCheck={false} enterKeyHint="go" value={join} onChange={e=>setJoin(e.target.value.toUpperCase())}/>
+     <Button type="submit" disabled={busy||!join.trim()}>Join <ArrowRight size={16}/></Button>
+    </form>
+   </section>
+  </div>
+  <section className="card ratingsCard" aria-labelledby="ratings-title">
+   <div className="sectionHeading"><h2 id="ratings-title">Your ratings</h2><button className="textButton" onClick={openRankings}>See rankings <ChevronRight size={16} aria-hidden="true"/></button></div>
+   <ul className="ratingGrid">{MODES.map(m=>{const r=ratings.find(r=>r.mode===m.id);return <li key={m.id}><Suit mode={m.id} small/><span><span className="ratingMode">{m.name}</span><b>{formatRating(r?.rating??1200)}</b><small>{r?.games||0} {r?.games===1?'game':'games'}</small></span></li>})}</ul>
+   <p className="muted tiny">Everyone starts at 1,200, and each game mode keeps its own rating.</p>
   </section>
-  <section className="card joinCard"><div className="cardTop"><div className="sectionIcon light"><Users size={20}/></div><div><h2>Join a table</h2><p>Have an invite code? You're in.</p></div></div><div className="inlineField"><input aria-label="Invite code" placeholder="8-character code" maxLength={8} value={join} onChange={e=>setJoin(e.target.value.toUpperCase())}/><Button onClick={joinRoom} disabled={busy||!join.trim()}>Join <ArrowRight size={16}/></Button></div></section>
-  {tables.length>0&&<section className="stack sm"><div className="sectionHeading"><h2>Your tables</h2><button className="subtle" onClick={()=>void load()}><RefreshCw size={16}/></button></div>{tables.map(t=><button className="tableEntry" key={t.id} onClick={()=>openTable(t.id)}><div className="tableGlyph">♠</div><div><strong>{modeInfo(t.mode).name}</strong><span>#{t.code} · {t.status==='lobby'?'Waiting for players':t.status==='playing'?'Game in progress':'Recording results'}</span></div><ChevronRight size={18}/></button>)}</section>}
-  <p className="center muted tiny">One loser. Many winners. Every round matters.</p>
  </div>
 }
 
@@ -168,7 +211,7 @@ function TableScreen({tableId,me,action,busy,onLeave}:{tableId:string;me:string;
  },[activeGame?.id,activeGame?.deadline,activeGame?.state,now,load])
  const name=(id:string)=>profiles[id]?.username||`Player ${id.slice(0,4)}`
  const invite=table?`${location.origin}${location.pathname}?join=${table.code}`:''
- const share=async()=>{if(navigator.share){try{await navigator.share({title:'Join my Durak table',url:invite});return}catch{/* copy fallback */}}await navigator.clipboard.writeText(invite)}
+ const share=async()=>{if(navigator.share){try{await navigator.share({title:`Join my table on ${APP_NAME}`,text:`Join my Durak table on ${APP_NAME} with code ${table?.code}.`,url:invite});return}catch{/* copy fallback */}}await navigator.clipboard.writeText(invite)}
  const play=()=>void action(async()=>{await rpc('start_round',{p_table:tableId});await load()})
  const finishPlay=()=>void action(async()=>{await rpc('begin_results',{p_table:tableId});await load()})
  const cast=(game:string,nominee:string)=>void action(async()=>{await rpc('cast_vote',{p_game:game,p_nominee:nominee});setMySelections(s=>({...s,[game]:nominee}));await load()})
@@ -244,7 +287,7 @@ function ProfileScreen({me,profile,action,reload}:{me:string;profile:Profile|nul
  return <div className="stack pageEntry"><div className="pageHead"><div className="eyebrow">YOUR PERFORMANCE</div><h1>My profile<span className="period">.</span></h1></div>
   <section className="card profileCard"><div className="profileIcon">{profile?.username.slice(0,2).toUpperCase()}</div><h2>{profile?.username}</h2><Stars/><div className="profileQuick"><div><b>{total}</b><span>Ranked results</span></div><div><b>{Math.max(0,total-ratings.reduce((s,r)=>s+r.losses,0))}</b><span>Wins</span></div><div><b>{ratings.reduce((s,r)=>s+r.losses,0)}</b><span>Losses</span></div></div></section>
   <section className="card stack sm"><h2>My ratings</h2>{MODES.map(m=>{const r=ratings.find(r=>r.mode===m.id);return <div className="ratingRow" key={m.id}><div><b>{m.name}</b><small>{r?.games||0} results · {r?.losses||0} losses</small></div><strong>{formatRating(r?.rating||1200)}</strong></div>})}</section>
-  {total>=10?<section className="card stack sm"><div className="sectionHeading"><h2>Advanced statistics</h2><CheckCircle2 color="#64af88" size={20}/></div><div className="statsGrid"><div><span>Win rate</span><b>{total?Math.round(100*(total-ratings.reduce((s,r)=>s+r.losses,0))/total):0}%</b></div><div><span>Verified self-admissions</span><b>{admissions}</b></div><div><span>Modes played</span><b>{ratings.filter(r=>r.games>0).length}</b></div><div><span>Ranked results</span><b>{total}</b></div></div><div className="chartCard"><div className="eyebrow">DURAK · RATING TREND</div><svg viewBox="0 0 320 105" role="img" aria-label="Durak cumulative rating trend"><polyline fill="none" stroke="#e6c879" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={naturalPath}/></svg></div><div className="eyebrow">RECENT RATING CHANGES</div>{ledger.slice(0,8).map(entry=><div className="ratingRow" key={entry.game_id}><div><b>{modeInfo(entry.mode).name}</b><small>{date(entry.recorded_at)}</small></div><strong className={entry.delta<0?'lossDelta':'gainDelta'}>{entry.delta>=0?'+':''}{entry.delta.toFixed(1)}</strong></div>)}</section>:<div className="hint"><ShieldCheck size={18}/> Advanced statistics unlock after 10 validated individual game results. {Math.max(0,10-total)} more to go.</div>}
+  {total>=10?<section className="card stack sm"><div className="sectionHeading"><h2>Advanced statistics</h2><CheckCircle2 className="statOk" size={20} aria-hidden="true"/></div><div className="statsGrid"><div><span>Win rate</span><b>{total?Math.round(100*(total-ratings.reduce((s,r)=>s+r.losses,0))/total):0}%</b></div><div><span>Verified self-admissions</span><b>{admissions}</b></div><div><span>Modes played</span><b>{ratings.filter(r=>r.games>0).length}</b></div><div><span>Ranked results</span><b>{total}</b></div></div><div className="chartCard"><div className="eyebrow">DURAK · RATING TREND</div><svg viewBox="0 0 320 105" role="img" aria-label="Durak cumulative rating trend"><polyline fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={naturalPath}/></svg></div><div className="eyebrow">RECENT RATING CHANGES</div>{ledger.slice(0,8).map(entry=><div className="ratingRow" key={entry.game_id}><div><b>{modeInfo(entry.mode).name}</b><small>{date(entry.recorded_at)}</small></div><strong className={entry.delta<0?'lossDelta':'gainDelta'}>{entry.delta>=0?'+':''}{entry.delta.toFixed(1)}</strong></div>)}</section>:<div className="hint"><ShieldCheck size={18}/> Advanced statistics unlock after 10 validated individual game results. {Math.max(0,10-total)} more to go.</div>}
   <section className="card stack sm"><h2>Account settings</h2>
    <label>Display username<input value={name} onChange={e=>setName(e.target.value)} maxLength={22}/></label>
    <Button kind="secondary" onClick={()=>void action(async()=>{await rpc('set_username',{p_username:name.trim()});await reload();setAccountNotice('Username updated.')})}>Save username</Button>

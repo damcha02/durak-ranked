@@ -1,4 +1,4 @@
-# Durak Ratings — physical Durak, digital rankings
+# Durak Ranked — physical Durak, digital rankings
 
 A mobile-first Progressive Web App (PWA) for iOS, Android and desktop. **The physical card game is not simulated.** The app tracks tables, result votes, four mode-specific Elo ratings, friend groups, and player statistics.
 
