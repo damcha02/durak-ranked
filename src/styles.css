@@ -78,9 +78,7 @@ h3{font-size:1.125rem;line-height:1.25}
 .button.wide{width:100%;min-height:52px;font-size:1.125rem;white-space:normal;text-align:center}
 .linkButton{min-height:44px;display:inline-flex;align-items:center;padding:0 2px;border:0;background:none;color:var(--felt);font-weight:700;font-size:1rem;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
 .linkButton:hover{color:var(--felt-deep)}
-.textButton,.subtle,.leaveLink{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 10px;border:0;border-radius:8px;background:transparent;color:var(--felt);font-weight:700;font-size:.95rem}
-.textButton:hover:enabled,.subtle:hover:enabled{background:var(--felt-tint)}
-.subtle{min-height:40px;padding:6px 8px}
+.leaveLink{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 10px;border:0;border-radius:8px;background:transparent;color:var(--felt);font-weight:700;font-size:.95rem}
 .iconButton{width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:10px;background:none;color:var(--ink-soft)}
 .iconButton:hover{background:var(--sunk)}
 
@@ -245,24 +243,47 @@ select{appearance:none;-webkit-appearance:none;padding-right:40px;background-ima
 .hint{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;padding:12px;border:1px solid #c8d6c4;border-radius:var(--radius-sm);background:var(--felt-tint);color:var(--felt-deep);font-size:.95rem;line-height:1.5}
 .hint svg{flex:none;margin-top:2px}
 .leaveLink{margin-top:12px;color:var(--red)}
-.votingCard{border-color:var(--brass)}
-.votingCard>p{margin-bottom:16px;color:var(--ink);font-size:1rem;line-height:1.55}
-.timerBadge{display:inline-flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid #dcc89b;border-radius:9px;background:var(--brass-tint);color:var(--brass-ink);font-size:.9rem;font-weight:700;font-variant-numeric:tabular-nums}
-.voteOptions{display:flex;flex-direction:column;gap:9px;margin:16px 0}
-.voteOption{min-height:56px;display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--card);color:var(--ink);text-align:left}
-.voteOption.picked{border-color:var(--felt);background:var(--felt-tint);box-shadow:inset 0 0 0 1px var(--felt)}
-.voteOption.picked svg{color:var(--felt)}
-.voteName{flex:1;font-size:1rem;font-weight:700}
-.voteCount{color:var(--ink-soft);font-size:.9rem;font-variant-numeric:tabular-nums}
-.buttonPair{display:flex;flex-wrap:wrap;gap:10px}
-.resultLine{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:10px 0;color:var(--ink);font-size:.95rem}
-.resultLine span:nth-child(2){flex:1;display:inline-flex;align-items:center;gap:5px}
-.historyToggle{width:100%;min-height:44px;padding:0;border:0;background:none;color:inherit;cursor:pointer}
-.historyItem{padding:6px 0 11px;border-top:1px solid var(--line)}
-.ballots{display:flex;flex-wrap:wrap;gap:6px;margin:3px 0 10px}
-.ballots span{padding:6px 8px;border-radius:6px;background:var(--sunk);color:var(--ink);font-size:.8rem}
-.correction{display:flex;align-items:center;flex-wrap:wrap;gap:8px;color:var(--ink-soft);font-size:.9rem}
-.correction .button{min-height:40px;padding:6px 12px;font-size:.9rem}
+
+/* Voting: one card per player, the countdown is a card too */
+.voting{display:flex;flex-direction:column;gap:16px}
+.voteHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.voteGame{color:var(--ink-soft);font-size:.9375rem;font-weight:700}
+.voteHead h2{font-size:1.5rem;line-height:1.2}
+.voteTimer{flex:none;width:52px;height:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1.5px solid var(--ink);border-radius:7px;background:var(--card);line-height:1}
+.voteTimer b{font:700 1.5rem/1 var(--serif);font-variant-numeric:tabular-nums}
+.voteTimer span{margin-top:4px;color:var(--ink-soft);font-size:.75rem}
+.voteTimer.low{border-color:var(--red);color:var(--red)}
+.voteTimer.idle{border:1.5px dashed var(--line-strong);color:var(--ink-soft)}
+.voteRules{color:var(--ink-2);font-size:1rem;line-height:1.5}
+.voteNote{color:var(--ink-soft);font-size:.9375rem;line-height:1.5}
+.voteGrid{list-style:none;margin:0;padding:4px 0 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.voteGrid>li{display:grid}
+.voteGrid.tied{grid-template-columns:repeat(auto-fill,minmax(96px,120px))}
+.voteCard{width:100%;color:var(--ink)}
+.voteCard:not(.picked):hover:enabled{border-color:var(--line-strong)}
+.voteCard:disabled{opacity:1;cursor:progress}
+.voteCard.picked{padding:4.5px;border:2.5px solid var(--felt);box-shadow:0 4px 12px rgba(31,28,25,.12);transform:translateY(-4px)}
+.voteCheck{position:absolute;top:6px;right:6px;width:24px;height:24px;display:grid;place-items:center;border-radius:50%;background:var(--felt);color:var(--on-felt);font-size:.8125rem;font-weight:700}
+.votePips{min-height:1.1em;color:var(--ink);font-size:13px;letter-spacing:2px;line-height:1.1}
+.votePips.red{color:var(--red)}
+.voteActions{display:flex;flex-direction:column;gap:10px}
+.roundResults{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.resultRow{display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px;min-height:48px;padding:8px 0;border-bottom:1px solid var(--line)}
+.historyItem .resultRow{border-bottom:0}
+.resultGame{min-width:64px;font:700 1rem var(--serif)}
+.resultText{flex:1}
+.resultRow.unresolved .resultText,.resultRow.void .resultText{color:var(--ink-soft)}
+.historyCard h2{margin:0}
+.historyToggle{width:100%;min-height:44px;display:flex;align-items:center;justify-content:space-between;padding:0;border:0;background:none;font:inherit;color:inherit}
+.flip{transform:rotate(180deg)}
+.historyList{list-style:none;margin:8px 0 0;padding:0}
+.historyItem{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:4px 0 12px;border-top:1px solid var(--line)}
+.ballots{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.ballotsLabel{margin-right:2px;color:var(--ink-soft);font-size:.875rem;font-weight:700}
+.ballots span:not(.ballotsLabel){padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--sunk);font-size:.875rem}
+.correction{width:100%;display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 12px;border:1px dashed var(--brass);border-radius:var(--radius-sm);color:var(--ink-2);font-size:.9375rem}
+.correction span{flex-basis:100%}
+.correction .button{min-height:40px;padding:6px 14px;font-size:.9375rem}
 
 /* Rankings, groups, profile (new palette; layout unchanged for now) */
 .modeTabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none}
@@ -299,6 +320,7 @@ select{appearance:none;-webkit-appearance:none;padding-right:40px;background-ima
 
 @media(max-width:379px){
  .modeSuit{display:none}
+ .voteGrid:not(.tied){grid-template-columns:repeat(2,minmax(0,1fr))}
  .seatGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
  .tableCard.front .button{margin-right:10px}
 }
@@ -329,4 +351,4 @@ select{appearance:none;-webkit-appearance:none;padding-right:40px;background-ima
  .rateValue{grid-area:value;font-size:1.5rem}
  .rateCard small{grid-area:games}
 }
-@media(min-width:600px){.seatGrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(min-width:600px){.seatGrid,.voteGrid:not(.tied){grid-template-columns:repeat(4,minmax(0,1fr))}}

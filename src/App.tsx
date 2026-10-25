@@ -1,7 +1,7 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react'
 import type {Session} from '@supabase/supabase-js'
 import {QRCodeSVG} from 'qrcode.react'
-import {ArrowRight,CheckCircle2,ChevronDown,Clock3,Copy,Crown,History,LogOut,RefreshCw,ShieldCheck,Star,Timer,X} from 'lucide-react'
+import {ArrowRight,CheckCircle2,ChevronDown,Clock3,Copy,Crown,LogOut,RefreshCw,ShieldCheck,Star,X} from 'lucide-react'
 import {configured,date,errorMessage,MODES,modeInfo,rpc,supabase} from './lib'
 import {isEmailIdentifier,isUsername} from './authValidation'
 import {signInByUsername} from './usernameSignIn'
@@ -254,11 +254,13 @@ function TableScreen({tableId,me,action,busy,onLeave}:{tableId:string;me:string;
  const info=table?modeInfo(table.mode):MODES[0]
  if(!table)return <div className="loading">Loading table…</div>
  const seats=table.status==='lobby'?Math.max(0,info.min-members.length):0,card=MODE_CARD[table.mode]
+ const secondsLeft=activeGame?.deadline?Math.max(0,Math.ceil((new Date(activeGame.deadline).getTime()-displayNow)/1000)):30
+ const tiedNames=activeGame?activeGame.loser_ids.map(name).join(' and '):''
  return <div className="stack lobby pageEntry">
   <div className="lobbyHero"><span className={`heroCard ${card.red?'red':''}`} aria-hidden="true"><span className="heroIndex">{card.abbr}<br/>{card.suit}</span>{card.suit}</span><div><h1>{info.name}</h1><p>Table {table.code} · {STATUS_TEXT[table.status]}</p><p className="heroDetail">{info.detail} · <span className="nowrap">{info.min}–{info.max} players</span></p></div></div>
-  <Button kind="outline" className="wide inviteButton" onClick={()=>setShowQR(s=>!s)}>{showQR?'Hide invite':'Invite / QR'}</Button>
-  {showQR&&<section className="card qrCard" aria-label="Invite"><div className="qrInner"><QRCodeSVG value={invite} size={184} includeMargin/></div><p>Scan to join this table, or type the code</p><div className="codeLarge">{table.code}</div><Button kind="secondary" onClick={()=>void share()}><Copy size={15}/> Share link</Button></section>}
-  <section aria-labelledby="players-title">
+  {table.status!=='results'&&<Button kind="outline" className="wide inviteButton" onClick={()=>setShowQR(s=>!s)}>{showQR?'Hide invite':'Invite / QR'}</Button>}
+  {showQR&&table.status!=='results'&&<section className="card qrCard" aria-label="Invite"><div className="qrInner"><QRCodeSVG value={invite} size={184} includeMargin/></div><p>Scan to join this table, or type the code</p><div className="codeLarge">{table.code}</div><Button kind="secondary" onClick={()=>void share()}><Copy size={15}/> Share link</Button></section>}
+  {table.status!=='results'&&<section aria-labelledby="players-title">
    <div className="sectionHeading"><h2 id="players-title">Players · {members.length} of {info.max}</h2><button className="iconButton" aria-label="Refresh table" title="Refresh table" onClick={()=>void load()}><RefreshCw size={18}/></button></div>
    <ul className="seatGrid">
     {members.map(m=>{const host=m.user_id===table.host_id,mine=m.user_id===me,who=name(m.user_id);return <li key={m.user_id} className={`seat ${mine?'mine':''}`}>
@@ -273,24 +275,45 @@ function TableScreen({tableId,me,action,busy,onLeave}:{tableId:string;me:string;
    </ul>
    {table.status==='lobby'&&<div className="lobbyFooter"><p>{members.length<info.min?`Need ${info.min-members.length} more player${info.min-members.length===1?'':'s'} to start`:'Everyone ready? Deal the cards.'}</p><Button onClick={play} disabled={busy||members.length<info.min} className="wide">Start new game</Button><button className="leaveLink" onClick={leave} disabled={busy}>Leave table <LogOut size={14}/></button></div>}
    {table.status==='playing'&&<div className="lobbyFooter"><div className="hint"><ShieldCheck size={18}/> All players are locked into this round. You can close your phone while playing.</div><Button onClick={finishPlay} disabled={busy} className="wide">Cards finished — record results <ArrowRight size={17}/></Button></div>}
-  </section>
-  {table.status==='results'&&<section className="card votingCard"><div className="sectionHeading"><div><div className="eyebrow">RESULT VERIFICATION</div><h2>{activeGame?`Game ${activeGame.slot} of ${games.length}`:'Results'}</h2></div><div className="timerBadge"><Timer size={17}/>{activeGame?.deadline?`${Math.max(0,Math.ceil((new Date(activeGame.deadline).getTime()-displayNow)/1000))}s`:'30s'}</div></div>
-   {activeGame&& !pendingBefore ? <>
-     {activeGame.state==='tie_offer'?<div className="stack sm"><p>Tie between {activeGame.loser_ids.map(name).join(' and ')}. Each tied player must accept a shared, reduced Elo loss. Otherwise voting restarts among them.</p>{activeGame.loser_ids.includes(me)?<div className="buttonPair"><Button onClick={()=>respond(activeGame.id,true)} disabled={busy}>Accept shared loss</Button><Button kind="secondary" onClick={()=>respond(activeGame.id,false)} disabled={busy}>Reject / revote</Button></div>:<p className="muted">Waiting for the tied players to respond.</p>}</div>:<>
-     <p>Who lost? Vote for one person. A strict majority confirms early; otherwise the most votes after 30 seconds wins (minimum 2).</p>
-     <div className="voteOptions">{players.filter(id=>!activeGame.allowed_nominees||activeGame.allowed_nominees.includes(id)).map(id=>{const votes=totals.find(v=>v.game_id===activeGame.id&&v.nominee_id===id)?.votes||0;const selected=mySelections[activeGame.id]===id;return <button disabled={busy} className={`voteOption ${selected?'picked':''}`} key={id} onClick={()=>cast(activeGame.id,id)}><span className="playerAvatar">{name(id).slice(0,2).toUpperCase()}</span><span className="voteName">{name(id)} {id===me?'(me)':''}</span><span className="voteCount">{votes} {votes===1?'vote':'votes'}</span>{selected&&<CheckCircle2 size={19}/>}</button>})}</div>
-     {activeGame.state==='awaiting'&&<p className="muted tiny">The timer begins with the first vote.</p>}
-     {activeGame.state==='voting'&&<p className="muted tiny">Totals are public, individual votes stay anonymous until the result is final. Votes may be changed.</p>}
-    </>}
-    </>:<p className="muted">Waiting for Game 1 to finish its vote.</p>}
-   {games.filter(g=>['confirmed','tied','unresolved','void'].includes(g.state)).map(g=><ResultLine key={g.id} game={g} name={name} restart={()=>restart(g.id)} busy={busy}/>) }
   </section>}
-  {table.status==='lobby'&&historyGames.length>0&&<section className="card"><button className="sectionHeading historyToggle" onClick={()=>setShowHistory(s=>!s)}><h2><History size={18}/> Recent results</h2><ChevronDown size={18}/></button>{showHistory&&<div className="stack sm">{historyGames.filter(g=>['confirmed','tied','void','unresolved'].includes(g.state)).slice(0,12).map(g=><div key={g.id} className="historyItem"><ResultLine game={g} name={name} restart={()=>restart(g.id)} busy={busy}/>{ballots[g.id]?.length>0&&<div className="ballots">{ballots[g.id].map(v=><span key={v.voter_id}>{name(v.voter_id)} → {name(v.nominee_id)}</span>)}</div>}{['confirmed','tied'].includes(g.state)&&g.finalized_at&&Date.now()-new Date(g.finalized_at).getTime()<86400000&&<button className="subtle" onClick={()=>openCorrection(g.id)}>Request correction</button>}{cases.filter(c=>c.game_id===g.id&&c.state==='open').map(c=><div className="correction" key={c.id}><span>Correction vote · {yesCounts[c.id]||0} approvals</span><Button kind="secondary" onClick={()=>correctionVote(c.id,true)}>Approve</Button><Button kind="ghost" onClick={()=>correctionVote(c.id,false)}>Reject</Button></div>)}</div>)}</div>}</section>}
-  {table.status==='results'&&games.some(g=>g.state==='unresolved')&&<div className="hint"><Clock3 size={17}/> Unresolved votes can be manually restarted before the next round.</div>}
+  {table.status==='results'&&<section className="voting" aria-labelledby="vote-title">
+   <div className="voteHead">
+    <div>{games.length>1&&activeGame&&<p className="voteGame">Game {activeGame.slot} of {games.length}</p>}<h2 id="vote-title">{!activeGame?'Results':pendingBefore?'One game at a time':activeGame.state==='tie_offer'?'It\'s a tie':'Who lost?'}</h2></div>
+    {activeGame&&!pendingBefore&&(activeGame.deadline?<div className={`voteTimer ${secondsLeft<=10?'low':''}`} role="timer" aria-label={`${secondsLeft} seconds left`}><b>{secondsLeft}</b><span>sec</span></div>:<div className="voteTimer idle" aria-label="The 30-second timer starts with the first vote"><b>30</b><span>sec</span></div>)}
+   </div>
+   {activeGame&&!pendingBefore?activeGame.state==='tie_offer'?<>
+    <ul className="voteGrid tied">{activeGame.loser_ids.map(id=><li key={id} className="seat"><span className="seatInitials" aria-hidden="true">{name(id).slice(0,2).toUpperCase()}</span><b className="seatName">{name(id)}</b><span className="seatMeta">{id===me?'you · tied':'tied'}</span></li>)}</ul>
+    <p className="voteRules">{tiedNames} have the same number of votes. If everyone tied accepts, they share the loss and each loses less rating. If anyone declines, they vote again between themselves.</p>
+    {activeGame.loser_ids.includes(me)?<div className="voteActions"><Button className="wide" onClick={()=>respond(activeGame.id,true)} disabled={busy}>Accept shared loss</Button><Button kind="outline" className="wide" onClick={()=>respond(activeGame.id,false)} disabled={busy}>Decline, vote again</Button></div>:<p className="voteNote">Waiting for {tiedNames} to decide.</p>}
+   </>:<>
+    <p className="voteRules">{activeGame.allowed_nominees?`Vote again between ${activeGame.allowed_nominees.map(name).join(' and ')}.`:'Tap the player who was left holding cards.'} A clear majority decides straight away; otherwise the most votes after 30 seconds wins, with at least 2 votes.</p>
+    <ul className="voteGrid">{players.filter(id=>!activeGame.allowed_nominees||activeGame.allowed_nominees.includes(id)).map(id=>{const votes=totals.find(v=>v.game_id===activeGame.id&&v.nominee_id===id)?.votes||0,picked=mySelections[activeGame.id]===id,count=`${votes} ${votes===1?'vote':'votes'}`
+     return <li key={id}><button className={`seat voteCard ${picked?'picked':''}`} aria-pressed={picked} aria-label={`${name(id)}${id===me?' (you)':''}, ${count}`} disabled={busy} onClick={()=>cast(activeGame.id,id)}>
+      {picked&&<span className="voteCheck" aria-hidden="true">✓</span>}
+      <span className="seatInitials" aria-hidden="true">{name(id).slice(0,2).toUpperCase()}</span>
+      <b className="seatName">{name(id)}</b>
+      <span className={`votePips ${card.red?'red':''}`} aria-hidden="true">{card.suit.repeat(Math.min(votes,6))}</span>
+      <span className="seatMeta" aria-hidden="true">{id===me?'you · ':''}{count}</span>
+     </button></li>})}</ul>
+    <p className="voteNote">{activeGame.state==='awaiting'?'The timer starts with the first vote.':'Totals are public; who voted for whom stays hidden until the result is final. You can change your vote.'}</p>
+   </>:activeGame?<p className="voteRules">Game {activeGame.slot} opens once the earlier game has a result.</p>:null}
+   {games.some(g=>FINAL.includes(g.state))&&<ol className="roundResults" aria-label="Results so far">{games.filter(g=>FINAL.includes(g.state)).map(g=><li key={g.id}><ResultRow game={g} name={name} restart={()=>restart(g.id)} busy={busy}/></li>)}</ol>}
+   {games.some(g=>g.state==='unresolved')&&<div className="hint"><Clock3 size={17}/> Games without a result can be voted on again before the next round.</div>}
+  </section>}
+  {table.status==='lobby'&&historyGames.length>0&&<section className="card historyCard">
+   <h2><button className="historyToggle" aria-expanded={showHistory} aria-controls="history-list" onClick={()=>setShowHistory(s=>!s)}>Recent results <ChevronDown size={18} className={showHistory?'flip':''} aria-hidden="true"/></button></h2>
+   {showHistory&&<ul className="historyList" id="history-list">{historyGames.filter(g=>FINAL.includes(g.state)).slice(0,12).map(g=><li key={g.id} className="historyItem">
+    <ResultRow game={g} name={name} restart={()=>restart(g.id)} busy={busy}/>
+    {ballots[g.id]?.length>0&&<p className="ballots"><span className="ballotsLabel">Votes</span>{ballots[g.id].map(v=><span key={v.voter_id}>{name(v.voter_id)} → {name(v.nominee_id)}</span>)}</p>}
+    {['confirmed','tied'].includes(g.state)&&g.finalized_at&&Date.now()-new Date(g.finalized_at).getTime()<86400000&&<button className="linkButton" onClick={()=>openCorrection(g.id)}>Request correction</button>}
+    {cases.filter(c=>c.game_id===g.id&&c.state==='open').map(c=><div className="correction" key={c.id}><span>Correction vote · {yesCounts[c.id]||0} {yesCounts[c.id]===1?'approval':'approvals'}</span><Button kind="secondary" onClick={()=>correctionVote(c.id,true)}>Approve</Button><Button kind="ghost" onClick={()=>correctionVote(c.id,false)}>Reject</Button></div>)}
+   </li>)}</ul>}
+  </section>}
  </div>
 }
-function ResultLine({game,name,restart,busy}:{game:Game;name:(id:string)=>string;restart:()=>void;busy:boolean}){
- return <div className="resultLine"><span className="muted tiny">GAME {game.slot}</span><span>{game.state==='confirmed'?<><CheckCircle2 size={15}/> Lost: <b>{name(game.loser_ids[0])}</b></>:game.state==='tied'?<>Shared loss: <b>{game.loser_ids.map(name).join(', ')}</b></>:game.state==='unresolved'?<><Clock3 size={15}/> Unresolved</>:game.state==='void'?'Reversed':'Awaiting result'}</span>{game.state==='unresolved'&&<button className="subtle" disabled={busy} onClick={restart}>Revote</button>}</div>
+const FINAL:Game['state'][]=['confirmed','tied','unresolved','void']
+function ResultRow({game,name,restart,busy}:{game:Game;name:(id:string)=>string;restart:()=>void;busy:boolean}){
+ return <div className={`resultRow ${game.state}`}><span className="resultGame">Game {game.slot}</span><span className="resultText">{game.state==='confirmed'?<><b>{name(game.loser_ids[0])}</b> lost</>:game.state==='tied'?<>Shared loss: <b>{game.loser_ids.map(name).join(', ')}</b></>:game.state==='unresolved'?'No result':game.state==='void'?'Reversed after a correction vote':'Waiting for a result'}</span>{game.state==='unresolved'&&<button className="linkButton" disabled={busy} onClick={restart}>Vote again</button>}</div>
 }
 
 function LeaderboardScreen({me}:{me:string}){
