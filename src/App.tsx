@@ -1,7 +1,7 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react'
 import type {Session} from '@supabase/supabase-js'
 import {QRCodeSVG} from 'qrcode.react'
-import {ArrowRight,CheckCircle2,ChevronDown,Clock3,Copy,Crown,LogOut,RefreshCw,ShieldCheck,Star,X} from 'lucide-react'
+import {ArrowRight,ChevronDown,Clock3,Copy,Crown,LogOut,RefreshCw,ShieldCheck,Star,X} from 'lucide-react'
 import {configured,date,errorMessage,MODES,modeInfo,rpc,supabase} from './lib'
 import {isEmailIdentifier,isUsername} from './authValidation'
 import {signInByUsername} from './usernameSignIn'
@@ -316,13 +316,39 @@ function ResultRow({game,name,restart,busy}:{game:Game;name:(id:string)=>string;
  return <div className={`resultRow ${game.state}`}><span className="resultGame">Game {game.slot}</span><span className="resultText">{game.state==='confirmed'?<><b>{name(game.loser_ids[0])}</b> lost</>:game.state==='tied'?<>Shared loss: <b>{game.loser_ids.map(name).join(', ')}</b></>:game.state==='unresolved'?'No result':game.state==='void'?'Reversed after a correction vote':'Waiting for a result'}</span>{game.state==='unresolved'&&<button className="linkButton" disabled={busy} onClick={restart}>Vote again</button>}</div>
 }
 
+// Game-mode switch shared by Rankings and Groups: one chip per mode, with its suit.
+function ModeChips({mode,setMode}:{mode:Mode;setMode:(m:Mode)=>void}){
+ return <div className="modeChips" role="group" aria-label="Game mode">{MODES.map(m=><button key={m.id} aria-pressed={mode===m.id} className={`${mode===m.id?'on':''} ${MODE_CARD[m.id].red?'red':''}`} onClick={()=>setMode(m.id)}><span className="chipSuit" aria-hidden="true">{MODE_CARD[m.id].suit}</span>{m.name}</button>)}</div>
+}
+// Top three as player cards with the rank as the corner index; everyone else as ledger rows.
+function Standings({ratings,names,me,mode}:{ratings:Rating[];names:Record<string,string>;me:string;mode:Mode}){
+ const card=MODE_CARD[mode],who=(r:Rating)=>names[r.user_id]||'Player'
+ return <>
+  <ol className="podium">{ratings.slice(0,3).map((r,i)=><li key={r.user_id} className={`seat podiumCard ${r.user_id===me?'mine':''}`}>
+   <span className={`cornerIndex ${card.red?'red':''}`} aria-hidden="true">{i+1}<br/>{card.suit}</span>
+   {r.user_id===me&&<span className="seatYou">you</span>}
+   <span className="seatInitials" aria-hidden="true">{who(r).slice(0,2).toUpperCase()}</span>
+   <b className="seatName" title={who(r)}>{who(r)}</b>
+   <span className="podiumRating">{formatRating(r.rating)}</span>
+   <span className="seatMeta">{r.games} {r.games===1?'game':'games'}</span>
+  </li>)}</ol>
+  {ratings.length>3&&<ol className="rankList" start={4}>{ratings.slice(3).map((r,i)=><li key={r.user_id} className={`rankRow ${r.user_id===me?'mine':''}`}>
+   <span className="position" aria-hidden="true">{i+4}</span>
+   <span className="playerAvatar" aria-hidden="true">{who(r).slice(0,2).toUpperCase()}</span>
+   <span className="rankName"><strong>{who(r)}{r.user_id===me&&<span className="youTag">you</span>}</strong><small>{r.games} games · {r.losses} losses</small></span>
+   <span className="rankScore">{formatRating(r.rating)}</span>
+  </li>)}</ol>}
+ </>
+}
+
 function LeaderboardScreen({me}:{me:string}){
  const [mode,setMode]=useState<Mode>('natural'),[ratings,setRatings]=useState<Rating[]>([]),[users,setUsers]=useState<Record<string,Profile>>({}),[loading,setLoading]=useState(true)
  useEffect(()=>{let live=true;setLoading(true);void (async()=>{const{data,error}=await supabase.from('ratings').select('*').eq('mode',mode).order('rating',{ascending:false}).limit(100);if(error)throw error;const scores=(data||[]) as Rating[];const{data:p}=scores.length?await supabase.from('profiles').select('*').in('id',scores.map(r=>r.user_id)):{data:[]};if(live){setRatings(scores);setUsers(Object.fromEntries(((p||[]) as Profile[]).map(x=>[x.id,x])));setLoading(false)}})().catch(console.error);return()=>{live=false}},[mode])
- return <div className="stack pageEntry"><div className="pageHead"><div className="eyebrow">THE GLOBAL BOARD</div><h1>Rankings<span className="period">.</span></h1><p>Every defeat reshapes the standings.</p></div>
-  <div className="modeTabs">{MODES.map(m=><button key={m.id} onClick={()=>setMode(m.id)} className={m.id===mode?'on':''}>{m.name}</button>)}</div>
-  <section className="card leaderboard">{loading?<p>Loading…</p>:ratings.length===0?<p>No ranked games yet. Start the first table.</p>:ratings.map((r,i)=><div className={`rankRow ${r.user_id===me?'mine':''}`} key={r.user_id}><span className="position">#{i+1}</span><div className="playerAvatar">{users[r.user_id]?.username.slice(0,2).toUpperCase()||'?'}</div><div className="rankName"><strong>{users[r.user_id]?.username||'Player'} {r.user_id===me&&<span className="youPill">YOU</span>}</strong><small>{r.games} games · {r.losses} losses</small></div><span className="rankScore">{formatRating(r.rating)}</span></div>)}</section>
-  <p className="center muted tiny">Ratings are specific to each mode. Everyone starts at 1200.</p>
+ const names=useMemo(()=>Object.fromEntries(Object.values(users).map(u=>[u.id,u.username])),[users])
+ return <div className="stack page pageEntry">
+  <header className="pageHead"><h1>Rankings</h1><p>Everyone starts at 1,200, and each game mode has its own standings.</p></header>
+  <ModeChips mode={mode} setMode={setMode}/>
+  <section aria-label={`${modeInfo(mode).name} standings`}>{loading?<p className="emptyNote">Loading…</p>:ratings.length===0?<p className="emptyNote">No ranked {modeInfo(mode).name} games yet. Start a table and play the first one.</p>:<Standings ratings={ratings} names={names} me={me} mode={mode}/>}</section>
  </div>
 }
 
@@ -333,9 +359,33 @@ function GroupsScreen({me,action,busy}:{me:string;action:Action;busy:boolean}){
  useEffect(()=>{if(!selected)return;void (async()=>{const{data:gm}=await supabase.from('group_members').select('user_id').eq('group_id',selected);const ids=(gm||[]).map(x=>x.user_id);setMemberIds(ids);if(!ids.length){setRanked([]);return}const[{data:rr},{data:pp}]=await Promise.all([supabase.from('ratings').select('*').in('user_id',ids).eq('mode',mode).order('rating',{ascending:false}),supabase.from('profiles').select('*').in('id',ids)]);const pm=Object.fromEntries(((pp||[]) as Profile[]).map(x=>[x.id,x]));setRanked(((rr||[]) as Rating[]).map(r=>({profile:pm[r.user_id],rating:r})).filter(x=>x.profile))})()},[selected,mode])
  const create=()=>void action(async()=>{const id=await rpc<string>('create_friend_group',{p_name:groupName});setSelected(id);setGroupName('');await load()})
  const join=()=>void action(async()=>{const id=await rpc<string>('join_friend_group',{p_code:joinCode});setSelected(id);setJoinCode('');await load()})
- return <div className="stack pageEntry"><div className="pageHead"><div className="eyebrow">YOUR CIRCLE</div><h1>Friend groups<span className="period">.</span></h1><p>Private leaderboards for every rivalry.</p></div>
- <section className="card"><h2>Create a group</h2><div className="inlineField"><input placeholder="Group name" maxLength={60} value={groupName} onChange={e=>setGroupName(e.target.value)}/><Button disabled={busy||groupName.trim().length<2} onClick={create}>Create</Button></div><div className="or">or</div><div className="inlineField"><input placeholder="Group invite code" maxLength={8} value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())}/><Button kind="secondary" disabled={busy||!joinCode.trim()} onClick={join}>Join</Button></div></section>
- {groups.length>0&&<section className="card stack sm"><div className="sectionHeading"><h2>My groups</h2><span className="muted tiny">{groups.length} GROUPS</span></div><select value={selected} onChange={e=>setSelected(e.target.value)}>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select><p className="muted">Share the invite code with friends: <strong className="inviteCode">{groups.find(g=>g.id===selected)?.code}</strong></p><div className="modeTabs">{MODES.map(m=><button className={mode===m.id?'on':''} onClick={()=>setMode(m.id)} key={m.id}>{m.name}</button>)}</div>{ranked.map((x,i)=><div className="rankRow" key={x.profile.id}><span className="position">#{i+1}</span><strong className="rankName">{x.profile.username}</strong><span className="rankScore">{formatRating(x.rating.rating)}</span></div>)}<p className="muted tiny">{memberIds.length} members · group-specific leaderboard uses each player's global mode rating.</p></section>}
+ const current=groups.find(g=>g.id===selected),names=Object.fromEntries(ranked.map(x=>[x.profile.id,x.profile.username]))
+ return <div className="stack page pageEntry">
+  <header className="pageHead"><h1>Friend groups</h1><p>A private leaderboard for the people you play with.</p></header>
+  {current&&<section className="stack sm" aria-labelledby="group-title">
+   {groups.length>1&&<label className="field">Group<select value={selected} onChange={e=>setSelected(e.target.value)}>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>}
+   <div className="groupHead"><span className="inviteCard" aria-hidden="true">{current.code.slice(0,4)}<br/>{current.code.slice(4)}</span><div><h2 id="group-title">{current.name}</h2><p>Code <strong className="inviteCode">{current.code}</strong> · {memberIds.length} {memberIds.length===1?'member':'members'}</p></div></div>
+   <ModeChips mode={mode} setMode={setMode}/>
+   {ranked.length?<Standings ratings={ranked.map(x=>x.rating)} names={names} me={me} mode={mode}/>:<p className="emptyNote">No ratings in this mode yet.</p>}
+   <p className="fieldHint">Share the code so friends can join. Standings use each member's overall rating for this mode.</p>
+  </section>}
+  <div className="groupForms">
+   <section aria-labelledby="new-group-title">
+    <h2 id="new-group-title" className="sectionTitle">Start a group</h2>
+    <form onSubmit={e=>{e.preventDefault();if(groupName.trim().length>=2)create()}}>
+     <label className="field" htmlFor="group-name">Group name</label>
+     <div className="joinRow"><input id="group-name" placeholder="Thursday regulars" maxLength={60} value={groupName} onChange={e=>setGroupName(e.target.value)}/><Button type="submit" disabled={busy||groupName.trim().length<2}>Create</Button></div>
+    </form>
+   </section>
+   <section aria-labelledby="join-group-title">
+    <h2 id="join-group-title" className="sectionTitle">Join a group</h2>
+    <form onSubmit={e=>{e.preventDefault();if(joinCode.trim())join()}}>
+     <label className="field" htmlFor="group-code">Group code</label>
+     <div className="joinRow"><input id="group-code" className="codeInput" placeholder="8 characters" maxLength={8} autoComplete="off" autoCapitalize="characters" autoCorrect="off" spellCheck={false} enterKeyHint="go" aria-describedby="group-code-hint" value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())}/><Button type="submit" kind="outline" disabled={busy||!joinCode.trim()}>Join</Button></div>
+     <p id="group-code-hint" className="fieldHint">Ask a member for the group's code.</p>
+    </form>
+   </section>
+  </div>
  </div>
 }
 
@@ -345,37 +395,53 @@ function ProfileScreen({me,profile,action,reload}:{me:string;profile:Profile|nul
  useEffect(()=>{let live=true;void supabase.auth.getUser().then(({data})=>{if(live)setAccountEmail(data.user?.email||'')}).catch(console.error);return()=>{live=false}},[me])
  useEffect(()=>{if(profile)setName(profile.username)},[profile?.username])
  useEffect(()=>{void (async()=>{const[{data:r},{count},{data:ll}]=await Promise.all([supabase.from('ratings').select('*').eq('user_id',me),supabase.from('honesty_events').select('*',{count:'exact',head:true}).eq('user_id',me),supabase.from('rating_ledger').select('game_id,delta,recorded_at,mode').eq('user_id',me).order('recorded_at',{ascending:false}).limit(200)]);setRatings((r||[]) as Rating[]);setAdmissions(count||0);setLedger((ll||[]) as {game_id:string;delta:number;recorded_at:string;mode:Mode}[])})()},[me])
- const total=ratings.reduce((s,r)=>s+r.games,0)
+ const total=ratings.reduce((s,r)=>s+r.games,0),losses=ratings.reduce((s,r)=>s+r.losses,0),wins=Math.max(0,total-losses),who=profile?.username||''
  const naturalPath=useMemo(()=>{const events=ledger.filter(l=>l.mode==='natural').slice().reverse();let rating=1200;const vals=[1200,...events.map(l=>(rating+=l.delta))];const min=Math.min(...vals)-10,max=Math.max(...vals)+10;return vals.map((v,i)=>`${10+(i/Math.max(1,vals.length-1))*300},${95-(v-min)/Math.max(1,max-min)*80}`).join(' ')},[ledger])
- return <div className="stack pageEntry"><div className="pageHead"><div className="eyebrow">YOUR PERFORMANCE</div><h1>My profile<span className="period">.</span></h1></div>
-  <section className="card profileCard"><div className="profileIcon">{profile?.username.slice(0,2).toUpperCase()}</div><h2>{profile?.username}</h2><Stars/><div className="profileQuick"><div><b>{total}</b><span>Ranked results</span></div><div><b>{Math.max(0,total-ratings.reduce((s,r)=>s+r.losses,0))}</b><span>Wins</span></div><div><b>{ratings.reduce((s,r)=>s+r.losses,0)}</b><span>Losses</span></div></div></section>
-  <section className="card stack sm"><h2>My ratings</h2>{MODES.map(m=>{const r=ratings.find(r=>r.mode===m.id);return <div className="ratingRow" key={m.id}><div><b>{m.name}</b><small>{r?.games||0} results · {r?.losses||0} losses</small></div><strong>{formatRating(r?.rating||1200)}</strong></div>})}</section>
-  {total>=10?<section className="card stack sm"><div className="sectionHeading"><h2>Advanced statistics</h2><CheckCircle2 className="statOk" size={20} aria-hidden="true"/></div><div className="statsGrid"><div><span>Win rate</span><b>{total?Math.round(100*(total-ratings.reduce((s,r)=>s+r.losses,0))/total):0}%</b></div><div><span>Verified self-admissions</span><b>{admissions}</b></div><div><span>Modes played</span><b>{ratings.filter(r=>r.games>0).length}</b></div><div><span>Ranked results</span><b>{total}</b></div></div><div className="chartCard"><div className="eyebrow">DURAK · RATING TREND</div><svg viewBox="0 0 320 105" role="img" aria-label="Durak cumulative rating trend"><polyline fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={naturalPath}/></svg></div><div className="eyebrow">RECENT RATING CHANGES</div>{ledger.slice(0,8).map(entry=><div className="ratingRow" key={entry.game_id}><div><b>{modeInfo(entry.mode).name}</b><small>{date(entry.recorded_at)}</small></div><strong className={entry.delta<0?'lossDelta':'gainDelta'}>{entry.delta>=0?'+':''}{entry.delta.toFixed(1)}</strong></div>)}</section>:<div className="hint"><ShieldCheck size={18}/> Advanced statistics unlock after 10 validated individual game results. {Math.max(0,10-total)} more to go.</div>}
-  <section className="card stack sm"><h2>Account settings</h2>
-   <label>Display username<input value={name} onChange={e=>setName(e.target.value)} maxLength={22}/></label>
-   <Button kind="secondary" onClick={()=>void action(async()=>{await rpc('set_username',{p_username:name.trim()});await reload();setAccountNotice('Username updated.')})}>Save username</Button>
-   <label>Email address<input type="email" autoComplete="email" value={accountEmail} onChange={e=>setAccountEmail(e.target.value)}/></label>
-   <Button kind="secondary" onClick={()=>void action(async()=>{
-    if(!accountEmail.trim())throw new Error('Enter an email address.')
-    const {data,error}=await supabase.auth.updateUser({email:accountEmail.trim()})
-    if(error)throw error
-    setAccountNotice(data.user?.new_email ? 'Email change pending. Follow the verification instructions sent to your email.' : 'Email update requested. If Supabase sends confirmation links, complete them to finish.')
-   })}>Update email</Button>
-   <p className="muted tiny">Keep Secure email change enabled in Supabase. Email changes may require confirmation of the old and new addresses.</p>
-   <label>Current password<input type="password" autoComplete="current-password" value={oldPassword} onChange={e=>setOldPassword(e.target.value)}/></label>
-   <label>New password<input type="password" minLength={10} autoComplete="new-password" value={nextPassword} onChange={e=>setNextPassword(e.target.value)}/></label>
-   <Button kind="secondary" onClick={()=>void action(async()=>{
-    if(nextPassword.length<10)throw new Error('New password must be at least 10 characters.')
-    if(!oldPassword)throw new Error('Enter your current password.')
-    const {data:user,error:userError}=await supabase.auth.getUser()
-    if(userError||!user.user?.email)throw userError||new Error('Cannot determine current email.')
-    const {error:loginError}=await supabase.auth.signInWithPassword({email:user.user.email,password:oldPassword})
-    if(loginError)throw new Error('Current password is incorrect.')
-    const {error:updateError}=await supabase.auth.updateUser({password:nextPassword})
-    if(updateError)throw updateError
-    setOldPassword('');setNextPassword('');setAccountNotice('Password changed.')
-   })}>Change password</Button>
-   {accountNotice&&<p className="muted tiny" role="status">{accountNotice}</p>}
+ const saveName=()=>void action(async()=>{await rpc('set_username',{p_username:name.trim()});await reload();setAccountNotice('Username updated.')})
+ const saveEmail=()=>void action(async()=>{
+  if(!accountEmail.trim())throw new Error('Enter an email address.')
+  const {data,error}=await supabase.auth.updateUser({email:accountEmail.trim()})
+  if(error)throw error
+  setAccountNotice(data.user?.new_email ? 'Email change pending. Follow the verification instructions sent to your email.' : 'Email update requested. If Supabase sends confirmation links, complete them to finish.')
+ })
+ const savePassword=()=>void action(async()=>{
+  if(nextPassword.length<10)throw new Error('New password must be at least 10 characters.')
+  if(!oldPassword)throw new Error('Enter your current password.')
+  const {data:user,error:userError}=await supabase.auth.getUser()
+  if(userError||!user.user?.email)throw userError||new Error('Cannot determine current email.')
+  const {error:loginError}=await supabase.auth.signInWithPassword({email:user.user.email,password:oldPassword})
+  if(loginError)throw new Error('Current password is incorrect.')
+  const {error:updateError}=await supabase.auth.updateUser({password:nextPassword})
+  if(updateError)throw updateError
+  setOldPassword('');setNextPassword('');setAccountNotice('Password changed.')
+ })
+ return <div className="stack page pageEntry">
+  <header className="profileHero">
+   <span className="seat mine heroPlayer" aria-hidden="true"><span className="seatInitials">{who.slice(0,2).toUpperCase()}</span></span>
+   <div><h1>{who}</h1><p><Stars/> reputation</p></div>
+  </header>
+  <dl className="statRow"><div><dt>Games</dt><dd>{total}</dd></div><div><dt>Wins</dt><dd>{wins}</dd></div><div><dt>Losses</dt><dd>{losses}</dd></div></dl>
+  <section aria-labelledby="my-ratings-title">
+   <h2 id="my-ratings-title" className="sectionTitle">Your ratings</h2>
+   <ul className="modeRows">{MODES.map(m=>{const r=ratings.find(r=>r.mode===m.id);return <li key={m.id} className="modeRow"><MiniModeCard mode={m.id}/><span className="modeText"><b>{m.name}</b><small>{r?.games||0} games · {r?.losses||0} losses</small></span><strong className="modeRowRating">{formatRating(r?.rating||1200)}</strong></li>})}</ul>
+  </section>
+  {total>=10?<section className="stack sm" aria-labelledby="stats-title">
+   <h2 id="stats-title">Statistics</h2>
+   <dl className="statsGrid"><div><dt>Win rate</dt><dd>{total?Math.round(100*wins/total):0}%</dd></div><div><dt>Honest self-votes</dt><dd>{admissions}</dd></div><div><dt>Modes played</dt><dd>{ratings.filter(r=>r.games>0).length}</dd></div><div><dt>Games with a result</dt><dd>{total}</dd></div></dl>
+   <div className="chartCard"><h3>Durak rating over time</h3><svg viewBox="0 0 320 105" role="img" aria-label="Durak cumulative rating trend"><polyline fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={naturalPath}/></svg></div>
+   <h3 className="subTitle">Recent rating changes</h3>
+   <ul className="modeRows">{ledger.slice(0,8).map(entry=><li key={entry.game_id} className="modeRow"><span className="modeText"><b>{modeInfo(entry.mode).name}</b><small>{date(entry.recorded_at)}</small></span><strong className={`modeRowRating ${entry.delta<0?'lossDelta':'gainDelta'}`}>{entry.delta>=0?'+':'−'}{Math.abs(entry.delta).toFixed(1)}</strong></li>)}</ul>
+  </section>:<section className="unlock" aria-labelledby="stats-title">
+   <h2 id="stats-title" className="sectionTitle">Statistics</h2>
+   <div className="unlockCards" aria-hidden="true">{Array.from({length:10},(_,i)=><span key={i} className={i<total?'on':''}/>)}</div>
+   <p>Statistics unlock after 10 games with a confirmed result. {Math.max(0,10-total)} more to go.</p>
+  </section>}
+  <section className="card accountCard" aria-labelledby="account-title">
+   <h2 id="account-title">Account</h2>
+   <form onSubmit={e=>{e.preventDefault();saveName()}}><label className="field">Display username<input value={name} onChange={e=>setName(e.target.value)} maxLength={22} autoCapitalize="none" autoCorrect="off" spellCheck={false}/></label><Button type="submit" kind="outline">Save username</Button></form>
+   <form onSubmit={e=>{e.preventDefault();saveEmail()}}><label className="field">Email address<input type="email" autoComplete="email" value={accountEmail} onChange={e=>setAccountEmail(e.target.value)}/></label><p className="fieldHint">Keep Secure email change enabled in Supabase. Email changes may require confirmation of the old and new addresses.</p><Button type="submit" kind="outline">Update email</Button></form>
+   <form onSubmit={e=>{e.preventDefault();savePassword()}}><label className="field">Current password<input type="password" autoComplete="current-password" value={oldPassword} onChange={e=>setOldPassword(e.target.value)}/></label><label className="field">New password<input type="password" minLength={10} autoComplete="new-password" aria-describedby="new-password-hint" value={nextPassword} onChange={e=>setNextPassword(e.target.value)}/></label><p id="new-password-hint" className="fieldHint">At least 10 characters</p><Button type="submit" kind="outline">Change password</Button></form>
+   {accountNotice&&<p className="accountNotice" role="status">{accountNotice}</p>}
    <Button kind="danger" onClick={()=>void supabase.auth.signOut()}>Sign out <LogOut size={17}/></Button>
   </section>
  </div>
