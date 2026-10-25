@@ -1,7 +1,7 @@
-import {useCallback,useEffect,useMemo,useState} from 'react'
+import {useCallback,useEffect,useMemo,useRef,useState} from 'react'
 import type {Session} from '@supabase/supabase-js'
 import {QRCodeSVG} from 'qrcode.react'
-import {ArrowLeft,ArrowRight,Check,CheckCircle2,ChevronDown,ChevronRight,Clock3,Copy,Crown,History,Home,LogOut,RefreshCw,Share2,ShieldCheck,Star,Timer,TrendingUp,UserRound,Users,X} from 'lucide-react'
+import {ArrowLeft,ArrowRight,CheckCircle2,ChevronDown,Clock3,Copy,Crown,History,LogOut,RefreshCw,Share2,ShieldCheck,Star,Timer,X} from 'lucide-react'
 import {configured,date,errorMessage,MODES,modeInfo,rpc,supabase} from './lib'
 import {isEmailIdentifier,isUsername} from './authValidation'
 import {signInByUsername} from './usernameSignIn'
@@ -13,16 +13,22 @@ const formatRating=(rating:number)=>Math.round(rating).toLocaleString()
 const getJoinCode=()=>new URLSearchParams(location.search).get('join')?.trim().toUpperCase() || ''
 const Stars=({compact=false}:{compact?:boolean})=><span className="stars" title="5-star reputation baseline"><Star size={compact?11:14} fill="currentColor"/> 5.0</span>
 const APP_NAME='Durak Ranked'
-// Decorative suit per mode; ︎ keeps iOS from rendering the glyphs as emoji.
-const SUITS:Record<Mode,{glyph:string;red:boolean}>={natural:{glyph:'♠︎',red:false},double_single:{glyph:'♣︎',red:false},single_double:{glyph:'♥︎',red:true},double_double:{glyph:'♦︎',red:true}}
-const Suit=({mode,small=false}:{mode:Mode;small?:boolean})=><span className={`suitCard ${SUITS[mode].red?'red':''} ${small?'sm':''}`} aria-hidden="true">{SUITS[mode].glyph}</span>
-const Brand=({large=false}:{large?:boolean})=><span className={`brand ${large?'large':''}`}><span className="brandMark" aria-hidden="true">♠&#xFE0E;</span><span>{APP_NAME}</span></span>
+// Every game mode is a card with a corner index (abbreviation + suit). \uFE0E keeps iOS from drawing the suits as emoji.
+const MODE_CARD:Record<Mode,{abbr:string;suit:string;red:boolean}>={natural:{abbr:'D',suit:'\u2660\uFE0E',red:false},double_single:{abbr:'DS',suit:'\u2663\uFE0E',red:false},single_double:{abbr:'SD',suit:'\u2665\uFE0E',red:true},double_double:{abbr:'DD',suit:'\u2666\uFE0E',red:true}}
+const CornerIndex=({mode,flip=false}:{mode:Mode;flip?:boolean})=><span className={`cornerIndex ${MODE_CARD[mode].red?'red':''} ${flip?'flip':''}`} aria-hidden="true">{MODE_CARD[mode].abbr}<br/>{MODE_CARD[mode].suit}</span>
+const MiniModeCard=({mode}:{mode:Mode})=><span className={`miniCard ${MODE_CARD[mode].red?'red':''}`} aria-hidden="true"><span className="miniIndex">{MODE_CARD[mode].abbr}</span>{MODE_CARD[mode].suit}</span>
+const Brand=()=><span className="brand"><span className="brandMark" aria-hidden="true">{'\u2660\uFE0E'}</span><span>{APP_NAME}</span></span>
+const NAV:{id:Page;label:string;suit:string;red:boolean}[]=[{id:'home',label:'Home',suit:'\u2660\uFE0E',red:false},{id:'leaderboard',label:'Rankings',suit:'\u2663\uFE0E',red:false},{id:'groups',label:'Groups',suit:'\u2665\uFE0E',red:true},{id:'profile',label:'Profile',suit:'\u2666\uFE0E',red:true}]
 const STATUS_TEXT:Record<TableRow['status'],string>={lobby:'Waiting for players',playing:'Game in progress',results:'Recording results'}
 const STATUS_ORDER:Record<TableRow['status'],number>={results:0,playing:1,lobby:2}
 const greeting=()=>{const h=new Date().getHours();return h>=5&&h<12?'Good morning':h>=12&&h<18?'Good afternoon':'Good evening'}
 
-function Button({children,onClick,kind='primary',disabled=false,className='',type='button'}:{children:React.ReactNode;onClick?:()=>void;kind?:'primary'|'secondary'|'ghost'|'danger';disabled?:boolean;className?:string;type?:'button'|'submit'}){
+function Button({children,onClick,kind='primary',disabled=false,className='',type='button'}:{children:React.ReactNode;onClick?:()=>void;kind?:'primary'|'secondary'|'outline'|'ghost'|'danger';disabled?:boolean;className?:string;type?:'button'|'submit'}){
  return <button type={type} className={`button ${kind} ${className}`} onClick={onClick} disabled={disabled}>{children}</button>
+}
+// Suits double as tab icons. Rendered twice (bottom bar on phones, header on desktop); CSS shows one.
+function NavTabs({page,go,className}:{page:Page|null;go:(p:Page)=>void;className:string}){
+ return <nav className={className} aria-label="Main">{NAV.map(n=><button key={n.id} className={`${page===n.id?'on':''} ${n.red?'red':''}`} aria-current={page===n.id?'page':undefined} onClick={()=>go(n.id)}><span className="navSuit" aria-hidden="true">{n.suit}</span><span>{n.label}</span></button>)}</nav>
 }
 function AuthScreen({joinCode}:{joinCode:string}){
  const [identifier,setIdentifier]=useState(''),[email,setEmail]=useState(''),[username,setUsername]=useState(''),[password,setPassword]=useState('')
@@ -50,34 +56,31 @@ function AuthScreen({joinCode}:{joinCode:string}){
    await signInByUsername(identifier.trim(),password)
   }
  })
- const provider=(p:'google'|'apple')=>void act(async()=>{const{error}=await supabase.auth.signInWithOAuth({provider:p,options:{redirectTo:location.origin+location.pathname}});if(error)throw error})
+ // Username problems are shown under the username field; everything else above the submit button.
+ const usernameError=tab==='register'&&/username/i.test(notice)
+ const errorLine=<p id="auth-error" className="fieldError" role="alert"><span aria-hidden="true">{'\u2666\uFE0E'}</span>{notice}</p>
  return <div className="authWrap"><main className="authInner">
-  <header className="authIntro">
-   <Brand large/>
-   <h1>Keep score at the card table</h1>
-   <p>Play Durak with a real deck. When a hand ends, everyone at the table agrees who lost, and ratings update for each game mode.</p>
-  </header>
-  {joinCode&&<p className="authInvite" role="status">You've been invited to table <b>{joinCode}</b>. Sign in or create an account and you'll join it straight away.</p>}
-  <section className="authCard" aria-label={tab==='register'?'Create account':'Sign in'}>
-   <div className="segmented" role="group" aria-label="Account">
-    <button type="button" aria-pressed={tab==='sign-in'} className={tab==='sign-in'?'selected':''} onClick={()=>setTab('sign-in')}>Sign in</button>
-    <button type="button" aria-pressed={tab==='register'} className={tab==='register'?'selected':''} onClick={()=>setTab('register')}>Create account</button>
-   </div>
-   <form onSubmit={e=>{e.preventDefault();submit()}} className="stack sm">
-    {tab==='register'?<>
-     <label>Username<input required type="text" minLength={3} maxLength={22} pattern="[A-Za-z0-9_]{3,22}" placeholder="cookie" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={username} onChange={e=>setUsername(e.target.value)}/></label>
-     <label>Email address<input required type="email" placeholder="you@example.com" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)}/></label>
-    </>:<label>Username or email<input required type="text" placeholder="cookie or you@example.com" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={identifier} onChange={e=>setIdentifier(e.target.value)}/></label>}
-    <label>Password<input required minLength={tab==='register'?10:1} type="password" placeholder="••••••••••" autoComplete={tab==='register'?'new-password':'current-password'} value={password} onChange={e=>setPassword(e.target.value)}/></label>
-    {tab==='register'&&<p className="muted tiny">At least 10 characters.</p>}
-    <Button type="submit" disabled={working} className="wide">{working?'Please wait…':tab==='register'?'Create account':'Sign in'} <ArrowRight size={18}/></Button>
-   </form>
-   {tab==='register'&&<p className="muted tiny">No email confirmation required during this testing phase. Use an email address you control so you can recover your account.</p>}
-   <div className="or">or continue with</div>
-   <div className="social"><Button kind="secondary" onClick={()=>provider('google')} disabled={working}>Google</Button><Button kind="secondary" onClick={()=>provider('apple')} disabled={working}>Apple</Button></div>
-   <p className="muted tiny">Google and Apple require provider configuration. Apple sign-in typically requires an Apple Developer membership.</p>
-   {notice&&<div className="alert" role="alert">{notice}</div>}
-  </section>
+  {joinCode?<>
+   <h1 className="brandHeading"><Brand/></h1>
+   <div className="authInvite" role="status"><span className="inviteCard" aria-hidden="true">{joinCode.slice(0,4)}<br/>{joinCode.slice(4)}</span><p>You've been invited to table <strong>{joinCode}</strong>. Sign in or create an account and you'll join it straight away.</p></div>
+  </>:<header className="authIntro">
+   <div className="brandLarge"><span className="brandFan" aria-hidden="true"><span className="fanBack"/><span className="fanFront"><span className="miniIndex">D</span>{'\u2660\uFE0E'}</span></span><h1>Durak<br/>Ranked</h1></div>
+   <p>Keep score for the games you play with a real deck. Vote on who's left holding cards, and see your rating per mode.</p>
+  </header>}
+  <div className="authTabs" role="group" aria-label="Account">
+   <button type="button" aria-pressed={tab==='sign-in'} className={tab==='sign-in'?'selected':''} onClick={()=>setTab('sign-in')}>Sign in</button>
+   <button type="button" aria-pressed={tab==='register'} className={tab==='register'?'selected':''} onClick={()=>setTab('register')}>Create account</button>
+  </div>
+  <form className="authCard" aria-label={tab==='register'?'Create account':'Sign in'} onSubmit={e=>{e.preventDefault();submit()}}>
+   {tab==='register'?<>
+    <div className="fieldGroup"><label className="field">Username<input required type="text" minLength={3} maxLength={22} pattern="[A-Za-z0-9_]{3,22}" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} aria-invalid={usernameError||undefined} aria-describedby={usernameError?'auth-error':undefined} value={username} onChange={e=>setUsername(e.target.value)}/></label>{usernameError&&errorLine}</div>
+    <label className="field">Email address<input required type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)}/></label>
+   </>:<label className="field">Username or email<input required type="text" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={identifier} onChange={e=>setIdentifier(e.target.value)}/></label>}
+   <div className="fieldGroup"><label className="field">Password<input required minLength={tab==='register'?10:1} type="password" autoComplete={tab==='register'?'new-password':'current-password'} aria-describedby={tab==='register'?'password-hint':undefined} value={password} onChange={e=>setPassword(e.target.value)}/></label>{tab==='register'&&<p id="password-hint" className="fieldHint">At least 10 characters</p>}</div>
+   {notice&&!usernameError&&errorLine}
+   <Button type="submit" disabled={working} className="wide">{working?'Please wait…':tab==='register'?'Create account':'Sign in'}</Button>
+  </form>
+  {tab==='register'&&<p className="authNote">No email confirmation required during this testing phase. Use an email address you control so you can recover your account.</p>}
  </main></div>
 }
 
@@ -92,14 +95,16 @@ export default function App(){
  useEffect(()=>{if(!joinCode||!user)return;const c=joinCode;setJoinCode('');void (async()=>{try{setBusy(true);const id=await rpc<string>('join_table',{p_code:c});setTableId(id);history.replaceState(null,'',location.pathname)}catch(e){setMessage(errorMessage(e))}finally{setBusy(false)}})()},[user?.id,joinCode])
  useEffect(()=>{window.scrollTo(0,0)},[page,tableId])
  const action:Action=async fn=>{if(busy)return;setBusy(true);setMessage(null);try{await fn()}catch(e){setMessage(errorMessage(e))}finally{setBusy(false)}}
- if(!configured)return <div className="setup"><Brand large/><h1>Connect your backend</h1><p>Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> to a <code>.env</code> file, then restart Vite.</p><p className="muted">See README.md for the complete Supabase setup.</p></div>
- if(loading)return <div className="loading" role="status"><Brand large/><p>Loading {APP_NAME}…</p></div>
+ if(!configured)return <div className="setup"><Brand/><h1>Connect your backend</h1><p>Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> to a <code>.env</code> file, then restart Vite.</p><p className="muted">See README.md for the complete Supabase setup.</p></div>
+ if(loading)return <div className="loading" role="status"><Brand/><p>Loading {APP_NAME}…</p></div>
  if(!session)return <AuthScreen joinCode={joinCode}/>
  const initials=(profile?.username||'U').slice(0,2).toUpperCase()
+ const go=(p:Page)=>{setTableId(null);setPage(p)}
  return <div className="appShell">
   <header className="topbar"><div className="topbarInner">
-   <button className="brandButton" aria-label={`${APP_NAME}, home`} onClick={()=>{setPage('home');setTableId(null)}}><Brand/></button>
-   <button className="avatar" aria-label="Your profile" title="Your profile" onClick={()=>{setTableId(null);setPage('profile')}}>{initials}</button>
+   <button className="brandButton" aria-label={`${APP_NAME}, home`} onClick={()=>go('home')}><Brand/></button>
+   <NavTabs className="headerNav" page={tableId?null:page} go={go}/>
+   <button className="avatar" aria-label="Your profile" title="Your profile" onClick={()=>go('profile')}><span>{initials}</span></button>
   </div></header>
   <main className={`main ${tableId?'':'withNav'}`}>
    {tableId?<TableScreen key={tableId} tableId={tableId} me={user!.id} action={action} busy={busy} onLeave={()=>{setTableId(null);setPage('home')}}/>:
@@ -108,58 +113,83 @@ export default function App(){
    page==='groups'?<GroupsScreen me={user!.id} action={action} busy={busy}/>:
    <ProfileScreen me={user!.id} profile={profile} action={action} reload={reloadProfile}/>}
   </main>
-  {!tableId&&<nav className="bottomNav" aria-label="Main">
-   {([{id:'home',label:'Home',icon:Home},{id:'leaderboard',label:'Rankings',icon:TrendingUp},{id:'groups',label:'Groups',icon:Users},{id:'profile',label:'Profile',icon:UserRound}] as const).map(p=><button key={p.id} className={page===p.id?'on':''} aria-current={page===p.id?'page':undefined} onClick={()=>setPage(p.id)}><p.icon size={22} strokeWidth={page===p.id?2.25:1.75} aria-hidden="true"/><span>{p.label}</span></button>)}
-  </nav>}
+  {!tableId&&<NavTabs className="bottomNav" page={page} go={go}/>}
   {message&&<div className="toast" role="alert">{message}<button aria-label="Dismiss message" onClick={()=>setMessage(null)}><X size={16}/></button></div>}
  </div>
 }
 
 function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;profile:Profile|null;openTable:(id:string)=>void;openRankings:()=>void;action:Action;busy:boolean}){
  const[mode,setMode]=useState<Mode>('natural'),[expanded,setExpanded]=useState(false),[join,setJoin]=useState(''),[tables,setTables]=useState<TableRow[]>([]),[ratings,setRatings]=useState<Rating[]>([]),[groups,setGroups]=useState<Group[]>([]),[group,setGroup]=useState('')
+ const [loaded,setLoaded]=useState(false),[front,setFront]=useState(0)
  const load=useCallback(async()=>{const {data:members}=await supabase.from('table_members').select('table_id').eq('user_id',me).eq('is_active',true);const ids=(members||[]).map(m=>m.table_id);const [{data:tt},{data:rr},{data:gm}]=await Promise.all([
   ids.length?supabase.from('tables').select('*').in('id',ids).order('created_at',{ascending:false}):Promise.resolve({data:[]}),
   supabase.from('ratings').select('*').eq('user_id',me),supabase.from('group_members').select('group_id').eq('user_id',me)])
- setTables((tt||[]) as TableRow[]);setRatings((rr||[]) as Rating[])
+ setTables((tt||[]) as TableRow[]);setRatings((rr||[]) as Rating[]);setLoaded(true)
  const groupIds=(gm||[]).map(x=>x.group_id);if(groupIds.length){const{data}=await supabase.from('friend_groups').select('*').in('id',groupIds);setGroups((data||[]) as Group[])}else setGroups([])
  },[me])
  useEffect(()=>{void load();const id=setInterval(()=>void load(),12000);return()=>clearInterval(id)},[load])
  const create=()=>void action(async()=>{const id=await rpc<string>('create_table',{p_mode:mode,p_group:group||null});openTable(id)})
  const joinRoom=()=>void action(async()=>{if(!join.trim())throw new Error('Enter a table code');const id=await rpc<string>('join_table',{p_code:join});openTable(id)})
  // Tables that need attention first (results, then playing, then lobby); the sort is stable, so newest stays first within a status.
- const [current,...others]=useMemo(()=>[...tables].sort((a,b)=>STATUS_ORDER[a.status]-STATUS_ORDER[b.status]),[tables])
- const picked=modeInfo(mode)
- return <div className="stack pageEntry">
-  <section className="greeting"><h1>{greeting()}, {profile?.username||'friend'}</h1><p>{current?current.status==='lobby'?'Your table is still open.':'Your game is still going.':'Start a table, or join one a friend has set up.'}</p></section>
-  {current&&<section className="stack sm" aria-labelledby="tables-title">
-   <div className="sectionHeading"><h2 id="tables-title">Your tables</h2><button className="iconButton" aria-label="Refresh tables" title="Refresh tables" onClick={()=>void load()}><RefreshCw size={18}/></button></div>
-   <div className="returnCard">
-    <div className="returnTop"><Suit mode={current.mode}/><div><h3>{modeInfo(current.mode).name}</h3><p>Table {current.code} · {STATUS_TEXT[current.status]}</p></div></div>
-    <Button onClick={()=>openTable(current.id)} className="wide">Return to table <ArrowRight size={18}/></Button>
+ const sorted=useMemo(()=>[...tables].sort((a,b)=>STATUS_ORDER[a.status]-STATUS_ORDER[b.status]),[tables])
+ const hand=sorted.length,idx=hand?front%hand:0,current=sorted[idx],next=hand>1?sorted[(idx+1)%hand]:undefined
+ const picked=modeInfo(mode),played=ratings.some(r=>r.games>0)
+ // New players see all four mode cards; everyone else gets the compact picker behind "Change".
+ const showModes=expanded||(loaded&&hand===0)
+ const modeGrid=useRef<HTMLDivElement>(null),changeButton=useRef<HTMLButtonElement>(null),returnFocus=useRef(false)
+ useEffect(()=>{if(expanded)modeGrid.current?.querySelector<HTMLButtonElement>('.on')?.focus();else if(returnFocus.current){returnFocus.current=false;changeButton.current?.focus()}},[expanded])
+ const pickMode=(m:Mode)=>{setMode(m);if(expanded){returnFocus.current=true;setExpanded(false)}}
+ // Horizontal swipe on the hand of table cards; a swipe must not also count as a tap on the card underneath.
+ const swipeStart=useRef<number|null>(null),swiped=useRef(false)
+ // The release is read from window: a mouse (unlike touch) is not captured, so it may be released outside the hand.
+ const startSwipe=(x:number)=>{
+  swipeStart.current=x;swiped.current=false
+  const stop=()=>{window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',cancel)}
+  const up=(e:PointerEvent)=>{stop();const start=swipeStart.current;swipeStart.current=null;if(start===null)return;const dx=e.clientX-start;swiped.current=Math.abs(dx)>40;if(swiped.current&&hand>1)setFront((idx+(dx<0?1:hand-1))%hand)}
+  const cancel=()=>{stop();swipeStart.current=null}
+  window.addEventListener('pointerup',up);window.addEventListener('pointercancel',cancel)
+ }
+ const describe=(t:TableRow)=>`${modeInfo(t.mode).name}, table ${t.code}, ${STATUS_TEXT[t.status].toLowerCase()}`
+ const status=current?current.status==='lobby'?'Your table is still open.':'Your game is still going.':!loaded?'':played?'No open tables right now. Start one, or join a friend\'s.':'No tables yet. Pick a game to start one, or join a friend\'s.'
+ return <div className="stack home pageEntry">
+  <section className="greeting"><h1>{greeting()}, {profile?.username||'friend'}</h1>{status&&<p>{status}</p>}</section>
+  <div className={`homeGrid ${current?'withHand':''}`}>
+   {current&&<section aria-labelledby="tables-title">
+    <div className="sectionHeading"><h2 id="tables-title">Your tables</h2><span className="handMeta">{hand>1&&<span>Swipe · {idx+1} of {hand}</span>}<button className="iconButton" aria-label="Refresh tables" title="Refresh tables" onClick={()=>void load()}><RefreshCw size={18}/></button></span></div>
+    <div className="hand" onPointerDown={e=>startSwipe(e.clientX)} onClickCapture={e=>{if(swiped.current){swiped.current=false;e.preventDefault();e.stopPropagation()}}}>
+     {next&&<button className="tableCard back" aria-label={`Show ${describe(next)}`} onClick={()=>setFront((idx+1)%hand)}><CornerIndex mode={next.mode}/><span className="tableName">{modeInfo(next.mode).name}</span><span>{next.code}</span><span>{STATUS_TEXT[next.status]}</span></button>}
+     <div className="tableCard front" key={current.id}>
+      <CornerIndex mode={current.mode}/><CornerIndex mode={current.mode} flip/>
+      <div className="tableCardBody"><span className={`tableStatus ${current.status}`}>{STATUS_TEXT[current.status]}</span><h3>{modeInfo(current.mode).name}</h3><span className="tableCode">Table {current.code}</span></div>
+      <Button onClick={()=>openTable(current.id)}>Return to table</Button>
+     </div>
+    </div>
+    {hand>1&&<div className="handDots">{sorted.map((t,i)=><button key={t.id} className={i===idx?'on':''} aria-label={`Show ${describe(t)}`} aria-current={i===idx||undefined} onClick={()=>setFront(i)}/>)}</div>}
+   </section>}
+   <div className="homeActions">
+    <section aria-labelledby="create-title">
+     <h2 id="create-title" className="sectionTitle">Start a table</h2>
+     <div className={`startPanel ${showModes?'open':''}`}>
+      {showModes?<div className="modeGrid" role="group" aria-label="Game mode" ref={modeGrid}>{MODES.map(m=><button key={m.id} aria-pressed={mode===m.id} className={`modeCard ${mode===m.id?'on':''} ${MODE_CARD[m.id].red?'red':''}`} onClick={()=>pickMode(m.id)}><CornerIndex mode={m.id}/>{mode===m.id&&<span className="chosen" aria-hidden="true">✓ Selected</span>}<span className="modeSuit" aria-hidden="true">{MODE_CARD[m.id].suit}</span><span className="modeName">{m.name}</span><span className="modeDetail">{m.detail}<br/><span className="nowrap">{m.min}–{m.max} players</span></span></button>)}</div>
+      :<div className="modeSummary"><MiniModeCard mode={mode}/><div className="modeText"><b>{picked.name}</b><small>{picked.detail} · <span className="nowrap">{picked.min}–{picked.max} players</span></small></div><button ref={changeButton} className="linkButton" aria-label={`Change game mode, currently ${picked.name}`} onClick={()=>setExpanded(true)}>Change</button></div>}
+      {groups.length>0&&<label className="field">Friend group (optional)<select value={group} onChange={e=>setGroup(e.target.value)}><option value="">No group</option>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>}
+      <Button onClick={create} disabled={busy} className="wide">Create {picked.name} table</Button>
+     </div>
+    </section>
+    <section aria-labelledby="join-title">
+     <h2 id="join-title" className="sectionTitle">Join a table</h2>
+     <form onSubmit={e=>{e.preventDefault();joinRoom()}}>
+      <label className="field" htmlFor="join-code">Table code</label>
+      <div className="joinRow"><input id="join-code" className="codeInput" placeholder="8 characters" maxLength={8} autoComplete="off" autoCapitalize="characters" autoCorrect="off" spellCheck={false} enterKeyHint="go" aria-describedby="join-hint" value={join} onChange={e=>setJoin(e.target.value.toUpperCase())}/><Button type="submit" kind="outline" disabled={busy||!join.trim()}>Join</Button></div>
+      <p id="join-hint" className="fieldHint">Type the 8-character code from the host, or scan the QR code on their phone.</p>
+     </form>
+    </section>
    </div>
-   {others.map(t=><button className="tableEntry" key={t.id} onClick={()=>openTable(t.id)}><Suit mode={t.mode} small/><span className="entryText"><strong>{modeInfo(t.mode).name}</strong><span>Table {t.code} · {STATUS_TEXT[t.status]}</span></span><ChevronRight size={18} aria-hidden="true"/></button>)}
-  </section>}
-  <div className="actionGrid">
-   <section className="card stack sm" aria-labelledby="create-title">
-    <div><h2 id="create-title">Start a table</h2><p className="cardSub">Choose a game mode, then invite everyone sitting with you.</p></div>
-    <div className="modePicker"><Suit mode={mode}/><div className="modeText"><span>Game mode</span><b>{picked.name}</b><small>{picked.detail} · {picked.min}–{picked.max} players</small></div><button className="textButton" aria-expanded={expanded} aria-controls="mode-list" onClick={()=>setExpanded(e=>!e)}>Change <ChevronDown size={16} className={expanded?'flip':''} aria-hidden="true"/></button></div>
-    {expanded&&<div className="modeList" id="mode-list">{MODES.map(m=><button key={m.id} aria-pressed={mode===m.id} className={mode===m.id?'active':''} onClick={()=>{setMode(m.id);setExpanded(false)}}><Suit mode={m.id} small/><span className="modeText"><b>{m.name}</b><small>{m.detail} · {m.min}–{m.max} players</small></span>{mode===m.id&&<Check size={18} aria-hidden="true"/>}</button>)}</div>}
-    {groups.length>0&&<label className="fieldLabel">Friend group (optional)<select value={group} onChange={e=>setGroup(e.target.value)}><option value="">No group</option>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>}
-    <Button onClick={create} disabled={busy} className="wide">Create table <ArrowRight size={18}/></Button>
-   </section>
-   <section className="card stack sm" aria-labelledby="join-title">
-    <div><h2 id="join-title">Join a table</h2><p className="cardSub">Type the 8-character code from the host, or scan the QR code on their phone.</p></div>
-    <form className="inlineField" onSubmit={e=>{e.preventDefault();joinRoom()}}>
-     <input className="codeInput" aria-label="Table code" placeholder="Table code" maxLength={8} autoComplete="off" autoCapitalize="characters" autoCorrect="off" spellCheck={false} enterKeyHint="go" value={join} onChange={e=>setJoin(e.target.value.toUpperCase())}/>
-     <Button type="submit" disabled={busy||!join.trim()}>Join <ArrowRight size={16}/></Button>
-    </form>
-   </section>
   </div>
-  <section className="card ratingsCard" aria-labelledby="ratings-title">
-   <div className="sectionHeading"><h2 id="ratings-title">Your ratings</h2><button className="textButton" onClick={openRankings}>See rankings <ChevronRight size={16} aria-hidden="true"/></button></div>
-   <ul className="ratingGrid">{MODES.map(m=>{const r=ratings.find(r=>r.mode===m.id);return <li key={m.id}><Suit mode={m.id} small/><span><span className="ratingMode">{m.name}</span><b>{formatRating(r?.rating??1200)}</b><small>{r?.games||0} {r?.games===1?'game':'games'}</small></span></li>})}</ul>
-   <p className="muted tiny">Everyone starts at 1,200, and each game mode keeps its own rating.</p>
-  </section>
+  {played?<section aria-labelledby="ratings-title">
+   <div className="sectionHeading"><h2 id="ratings-title">Your ratings</h2><button className="linkButton" onClick={openRankings}>See rankings</button></div>
+   <ul className="rateList">{MODES.map(m=>{const r=ratings.find(r=>r.mode===m.id),games=r?.games||0;return <li key={m.id} className={`rateItem ${games?'':'unplayed'} ${MODE_CARD[m.id].red?'red':''}`}><span className="rateName"><span className="rateNameSuit" aria-hidden="true">{MODE_CARD[m.id].suit}</span>{m.name}</span><span className="rateCard"><span className="rateSuit" aria-hidden="true">{MODE_CARD[m.id].suit}</span><b className="rateValue">{formatRating(r?.rating??1200)}</b><small>{games} {games===1?'game':'games'}</small></span></li>})}</ul>
+  </section>:loaded&&<p className="startsAt"><span>Everyone starts at 1,200 in each mode.</span><button className="linkButton" onClick={openRankings}>Rankings</button></p>}
  </div>
 }
 
