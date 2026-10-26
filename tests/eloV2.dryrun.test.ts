@@ -1,25 +1,8 @@
 // End-to-end test of the Phase C dry run: export.sql against a production-like V1 database,
 // then the local replay and report.
 import {describe,it,expect} from 'vitest'
-import {Db} from './sql/db'
-import {rpcTable,rpcRound,rpcTiedRound,rpcCorrection} from './sql/flows'
+import {productionLike} from './sql/flows'
 import {exportFrom,parseExport,dryRun,renderMarkdown,renderCsv} from '../scripts/elo-v2/dryRun'
-
-async function productionLike(){
- const db=await Db.create({withV2:false}) // production today: migrations 0001–0005 only
- const [a,b,c,d,e,f]=await db.users('alice','bob','carol','dave','erin','frank')
- const natural=await rpcTable(db,'natural',[a,b,c])
- await rpcRound(db,natural,[a,b,c],[a]);await rpcRound(db,natural,[a,b,c],[b])
- const [voided]=await rpcRound(db,natural,[a,b,c],[c])
- const [kept]=await rpcRound(db,natural,[a,b,c],[a])
- await rpcCorrection(db,voided,[a,b],true);await rpcCorrection(db,kept,[b,c],false)
- await rpcRound(db,natural,[a,b,c],[null])
- const big=await rpcTable(db,'double_single',[a,b,c,d,e,f])
- await rpcRound(db,big,[a,b,c,d,e,f],[f]);await rpcTiedRound(db,big,[a,b,c,d,e,f],[d,e])
- const parallel=await rpcTable(db,'single_double',[a,b,c,d])
- await rpcRound(db,parallel,[a,b,c,d],[a,a]);await rpcRound(db,parallel,[a,b,c,d],[b,null])
- return db
-}
 
 describe('Phase C dry run',()=>{
  it('passes every check on a consistent V1 history and reports every player per mode',async()=>{

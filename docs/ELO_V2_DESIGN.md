@@ -235,7 +235,72 @@ The report checks:
 
 Then it lists every player per mode: current vs. V2 rating, change, games, losses, and old vs. new rank.
 
-## 7. Decisions (resolved)
+## 7. Phase C runbook: activation and restore
+
+`scripts/elo-v2/activate.sql` and `restore.sql` each run as **one transaction**. By default they
+are a *rehearsal*: they do everything, print the result, then roll back. They only commit with
+`-v commit=on`, and only after every check has passed. Any failure stops psql (exit code 3) before
+`COMMIT`, and the server rolls back everything, including the switch, the ratings, the ledger and the backup.
+
+**Activation** (`activate.sql`):
+1. **Preconditions.** The migration must be applied, the formula must still be `v1`, and there must be no existing `elo_v2_backup` schema.
+2. **Locks.**
+   * SHARE locks on all game, account and membership tables: writes wait, reads continue.
+   * EXCLUSIVE locks on ratings and ledger.
+   * The per-mode rating locks.
+
+   `lock_timeout` is 10 s. If a game is being finalized for longer than that, the script gives up and changes nothing.
+3. **Backup.** It creates the schema `elo_v2_backup`, which is not exposed through the API and has
+   no grants. Into it go ratings, ledger and config, copies of rounds, rosters, games and
+   corrections, checksums, and a digest of the history.
+4. **Switch.** It sets `formula='v2'` and replays all four modes.
+5. **Checks.**
+   * Every game, account and membership table is checksum-identical.
+   * The ledger keys equal the backup's.
+   * Every game sums to exactly 0 in whole cents, and each mode totals 1200 per player.
+   * Games and losses are unchanged.
+   * A second, independent replay reproduces the result.
+6. It prints every player's V1 → V2 rating and rank, then commits (or, in a rehearsal, rolls back).
+
+**Restore** (`restore.sql`): the same locks, then it switches to `v1` and replays all modes under V1.
+* Games played after activation are kept and rated under V1.
+* If nothing changed since activation, the result must equal the backup (max diff 1e-6), or it aborts.
+* The backup schema is kept. Drop it by hand later (`drop schema elo_v2_backup cascade`).
+
+**Tested:**
+* In `npm test` (PGlite): rehearsal leaves no trace; activation equals the dry-run preview; refusal
+  cases; rollback on corrupt history; exact restore; restore after new games.
+* On 2026-10-26 with real `psql` against **PostgreSQL 17.11** (production's version), loaded with the
+  production export and production's `rls_auto_enable` event trigger:
+  * applying the migration left ratings byte-identical;
+  * the activation rehearsal rolled back cleanly;
+  * with a game transaction holding a lock for 20 s, activation timed out after 10 s and changed nothing;
+  * with a 3 s lock, it waited and then committed, matching the dry run to the cent;
+  * a second activation was refused;
+  * the restore rehearsal and the real restore returned the original V1 ratings (max diff 4.5e-12, V1 float noise).
+
+### Steps (each needs explicit approval)
+
+Use the same connection string as for the export; psql prompts for the password. Pick a moment
+when nobody is playing.
+
+1. **Fresh dry run.** Re-run the export and `node scripts/elo-v2/run.ts`. All checks must pass,
+   and the numbers are what activation will produce.
+2. **Apply the migration.** It is inert while the switch is off.
+   * First find out how migrations 0001–0005 were applied: run `npx supabase migration list`.
+   * If they appear as applied remotely, run `npx supabase db push --dry-run`. It must list
+     **only** `202610260001_elo_v2.sql`. Then run `npx supabase db push`.
+   * If the remote history is empty (they were run in the SQL editor), do **not** use `db push`,
+     because it would try to re-run 0001–0005. Instead run:
+     `psql "<connection>" -X -v ON_ERROR_STOP=1 -1 -f supabase/migrations/202610260001_elo_v2.sql`
+3. **Activation rehearsal:** `psql "<connection>" -X -v ON_ERROR_STOP=1 -f scripts/elo-v2/activate.sql`.
+   Compare the printed table with the dry-run report.
+4. **Activate:** the same command with `-v commit=on`. Check the rankings in the app afterwards.
+5. **If needed, restore:** `restore.sql`, rehearsal first, then `-v commit=on`.
+6. Once you are satisfied, merge `elo-v2` into `main`. No frontend redeploy is needed, because no
+   app code changed. Eventually, drop `elo_v2_backup`.
+
+## 8. Decisions (resolved)
 
 1. Formula A, K = 20.
 2. Shared losses are split in proportion to (1 − p).

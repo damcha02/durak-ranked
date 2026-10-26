@@ -46,6 +46,18 @@ export class Db{
   const r=await this.one<{v:T}>(`select public.${fn}(${placeholders}) as v`,args)
   return r.v
  }
+ /**
+  * Runs one of the psql scripts in scripts/elo-v2 as psql would, minus the meta-commands:
+  * its own begin/commit/rollback lines are replaced by one transaction that commits only
+  * when `commit` is true and the whole script succeeded.
+  */
+ async runPsqlScript(file:string,{commit}:{commit:boolean}){
+  const body=readFileSync(join(import.meta.dirname,'../../scripts/elo-v2',file),'utf8').split('\n')
+   .filter(l=>!l.startsWith('\\')&&!/^(begin|commit|rollback);$/.test(l.trim())).join('\n')
+  await this.pg.exec('begin')
+  try{await this.pg.exec(body)}catch(e){await this.pg.exec('rollback');throw e}
+  await this.pg.exec(commit?'commit':'rollback')
+ }
  async setFormula(formula:'v1'|'v2'){await this.pg.query(`update private.rating_config set formula=$1,updated_at=now()`,[formula])}
  async rebuild(mode:Mode){await this.pg.query(`select private.rebuild_mode($1::public.durak_mode)`,[mode])}
  async rebuildAll(){for(const m of MODES)await this.rebuild(m)}

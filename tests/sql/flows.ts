@@ -1,5 +1,5 @@
 // Real game flow through the public RPCs, as the app drives it.
-import type {Db,Mode} from './db.ts'
+import {Db,type Mode} from './db.ts'
 
 export async function rpcTable(db:Db,mode:Mode,players:string[]){
  const tid=await db.rpc<string>(players[0],'create_table',[mode,null])
@@ -37,4 +37,22 @@ export async function rpcCorrection(db:Db,game:string,voters:string[],approve:bo
  const cid=await db.rpc<string>(voters[0],'request_reversal',[game])
  for(const v of voters)await db.rpc(v,'vote_reversal',[cid,approve])
  return cid
+}
+
+/** A V1 database like production today (migrations 0001–0005) with varied history:
+ * corrections approved and rejected, an unresolved game, a shared loss, parallel games. */
+export async function productionLike(){
+ const db=await Db.create({withV2:false})
+ const [a,b,c,d,e,f]=await db.users('alice','bob','carol','dave','erin','frank')
+ const natural=await rpcTable(db,'natural',[a,b,c])
+ await rpcRound(db,natural,[a,b,c],[a]);await rpcRound(db,natural,[a,b,c],[b])
+ const [voided]=await rpcRound(db,natural,[a,b,c],[c])
+ const [kept]=await rpcRound(db,natural,[a,b,c],[a])
+ await rpcCorrection(db,voided,[a,b],true);await rpcCorrection(db,kept,[b,c],false)
+ await rpcRound(db,natural,[a,b,c],[null])
+ const big=await rpcTable(db,'double_single',[a,b,c,d,e,f])
+ await rpcRound(db,big,[a,b,c,d,e,f],[f]);await rpcTiedRound(db,big,[a,b,c,d,e,f],[d,e])
+ const parallel=await rpcTable(db,'single_double',[a,b,c,d])
+ await rpcRound(db,parallel,[a,b,c,d],[a,a]);await rpcRound(db,parallel,[a,b,c,d],[b,null])
+ return db
 }
