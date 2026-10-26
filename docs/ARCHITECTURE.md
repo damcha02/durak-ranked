@@ -55,6 +55,8 @@ E_iL = 1 / (1 + 10^((R_L - R_i)/400))
 
 For a jointly accepted tied loss, each tied loser incurs a reduced, half-weight penalty relative to their pairwise comparisons with remaining winners. All gains/losses remain zero-sum. The number of physical games can be two per parallel round; both are scored against the **same start-of-round rating snapshot**. Ratings are replayed in deterministic order of round start when a result is confirmed or reversed.
 
+**Elo V2** (player-count-aware, K=20; see [ELO_V2_DESIGN.md](ELO_V2_DESIGN.md)) is installed behind `private.rating_config.formula`, which defaults to `'v1'`. Until it is activated, the V1 formula above stays live, unchanged.
+
 This current implementation recalculates all rating history in a mode on every confirmed result or correction. That deliberately favors correctness and reversibility for a small alpha, but **does not scale to a large public platform**. Before launch at scale, implement incremental writes on normal finalization and targeted replay/checkpointing on corrections, and benchmark under contention. PostgreSQL advisory locks serialize rebuilds per mode.
 
 ### Trust and security

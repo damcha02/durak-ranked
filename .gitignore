@@ -4,3 +4,6 @@ dist/
 .env.local
 .supabase/
 *.log
+
+# Elo V2 dry-run exports and reports (contain usernames)
+scripts/elo-v2/out/
