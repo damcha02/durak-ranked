@@ -7,6 +7,8 @@ import {isEmailIdentifier,isUsername} from './authValidation'
 import {signInByUsername} from './usernameSignIn'
 import {applyTheme,readTheme,saveTheme,THEMES} from './theme'
 import type {Theme} from './theme'
+import {formatChance,lossChances,readShowChances,saveShowChances} from './lossChance'
+import type {Chance} from './lossChance'
 import type {Game,Group,Member,Mode,Profile,Rating,TableRow,VoteTotal} from './lib'
 
 type Page='home'|'leaderboard'|'groups'|'profile'
@@ -37,6 +39,8 @@ const TINTS=['#F1DCCF','#D9E8DC','#ECE3C8','#E2DDEE','#F3E1E8']
 const tint=(id:string,me?:string)=>id===me?'#D6E6F2':TINTS[[...id].reduce((s,c)=>s+c.charCodeAt(0),0)%TINTS.length]
 const Avatar=({id,name,me,size=''}:{id:string;name:string;me?:string;size?:string})=><span className={`tintAvatar ${size}`} style={{background:tint(id,me)}} aria-hidden="true">{name.slice(0,2).toUpperCase()}</span>
 const listNames=(names:string[])=>names.length<=1?(names[0]||''):`${names.slice(0,-1).join(', ')} and ${names[names.length-1]}`
+// Tiny italic line under a player's name: Elo in the table's mode and the estimated chance of being the Durak, with a bar.
+const ChanceLine=({chance}:{chance:Chance})=><span className="lossChance" title="Estimated from Elo, not a prediction"><span className="chanceBar" aria-hidden="true"><span style={{width:`${100*chance.p}%`}}/></span><span>{formatChance(chance.p)} to lose</span><span>· {formatRating(chance.rating)} Elo</span></span>
 const SuitBox=({mode}:{mode:Mode})=><span className={`suitBox ${MODE_CARD[mode].red?'red':''}`} aria-hidden="true">{MODE_CARD[mode].suit}</span>
 
 // Bottom sheet (blue theme): pickers and the invite open over the page so you keep your place.
@@ -142,6 +146,8 @@ export default function App(){
  const [page,setPage]=useState<Page>('home'),[tableId,setTableId]=useState<string|null>(null),[message,setMessage]=useState<string|null>(null),[busy,setBusy]=useState(false)
  const [joinCode,setJoinCode]=useState(getJoinCode())
  const [theme,setThemeState]=useState<Theme>(readTheme)
+ const [showChances,setShowChancesState]=useState(readShowChances)
+ const setShowChances=(show:boolean)=>{setShowChancesState(show);saveShowChances(show)}
  const themeValue=useMemo(()=>({theme,setTheme:(t:Theme)=>{setThemeState(t);saveTheme(t);applyTheme(t)}}),[theme])
  const user=session?.user
  const reloadProfile=useCallback(async()=>{if(!user)return;const {data,error}=await supabase.from('profiles').select('*').eq('id',user.id).single();if(error)throw error;setProfile(data as Profile)},[user?.id])
@@ -168,11 +174,11 @@ export default function App(){
   </div></header>
   <main className="main withNav">
    <div key={screenKey} className={`screen enter-${nav.current.dir}`}>
-   {tableId?<TableScreen key={tableId} tableId={tableId} me={user!.id} action={action} busy={busy} onLeave={()=>{setTableId(null);setPage('home')}}/>:
+   {tableId?<TableScreen key={tableId} tableId={tableId} me={user!.id} action={action} busy={busy} showChances={showChances} onLeave={()=>{setTableId(null);setPage('home')}}/>:
    page==='home'?<HomeScreen me={user!.id} profile={profile} openTable={setTableId} openRankings={()=>setPage('leaderboard')} action={action} busy={busy}/>:
    page==='leaderboard'?<LeaderboardScreen me={user!.id}/>:
    page==='groups'?<GroupsScreen me={user!.id} action={action} busy={busy}/>:
-   <ProfileScreen me={user!.id} profile={profile} action={action} reload={reloadProfile}/>}
+   <ProfileScreen me={user!.id} profile={profile} action={action} reload={reloadProfile} showChances={showChances} setShowChances={setShowChances}/>}
    </div>
   </main>
   <NavTabs className="bottomNav" page={tableId?'home':page} go={go}/>
@@ -296,10 +302,12 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
  </div>
 }
 
-function TableScreen({tableId,me,action,busy,onLeave}:{tableId:string;me:string;action:Action;busy:boolean;onLeave:()=>void}){
+function TableScreen({tableId,me,action,busy,showChances,onLeave}:{tableId:string;me:string;action:Action;busy:boolean;showChances:boolean;onLeave:()=>void}){
  const [table,setTable]=useState<TableRow|null>(null),[members,setMembers]=useState<Member[]>([]),[profiles,setProfiles]=useState<Record<string,Profile>>({}),[players,setPlayers]=useState<string[]>([]),[games,setGames]=useState<Game[]>([]),[totals,setTotals]=useState<VoteTotal[]>([]),[historyGames,setHistoryGames]=useState<Game[]>([]),[cases,setCases]=useState<{id:string;game_id:string;state:string;created_at:string}[]>([]),[yesCounts,setYesCounts]=useState<Record<string,number>>({}),[now,setNow]=useState(Date.now()),[showQR,setShowQR]=useState(false),[mySelections,setMySelections]=useState<Record<string,string>>({}),[showHistory,setShowHistory]=useState(false),[ballots,setBallots]=useState<Record<string,{voter_id:string;nominee_id:string}[]>>({})
  const [displayNow, setDisplayNow] = useState(Date.now())
  const blue=useBlue(),[shareNote,setShareNote]=useState('')
+ // Ratings behind the losing-chance estimate, tagged with the round they belong to (null = lobby preview).
+ const [chanceInput,setChanceInput]=useState<{round:string|null;ratings:Record<string,number|null>}|null>(null)
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -314,12 +322,17 @@ function TableScreen({tableId,me,action,busy,onLeave}:{tableId:string;me:string;
    supabase.from('table_members').select('*').eq('table_id',tableId).eq('is_active',true).order('joined_at'),
    supabase.from('rounds').select('id').eq('table_id',tableId).order('started_at',{ascending:false}).limit(12)
   ]);setMembers((mm||[]) as Member[])
-  const rids=(allR||[]).map(r=>r.id)
-  const [{data:rp},{data:gg},{data:historic}]=await Promise.all([
+  const rids=(allR||[]).map(r=>r.id),seated=(mm||[]).map(m=>m.user_id),none=Promise.resolve({data:[],error:null})
+  const [{data:rp},{data:gg},{data:historic},chanceRows]=await Promise.all([
     t.current_round_id?supabase.from('round_players').select('user_id').eq('round_id',t.current_round_id):Promise.resolve({data:[]}),
     t.current_round_id?supabase.from('round_games').select('*').eq('round_id',t.current_round_id).order('slot'):Promise.resolve({data:[]}),
-    rids.length?supabase.from('round_games').select('*').in('round_id',rids).order('finalized_at',{ascending:false}).limit(24):Promise.resolve({data:[]})
+    rids.length?supabase.from('round_games').select('*').in('round_id',rids).order('finalized_at',{ascending:false}).limit(24):Promise.resolve({data:[]}),
+    // Losing chance: live ratings of whoever is seated in the lobby; once the round is locked, the ratings stored when it started.
+    // A failed read (e.g. before the snapshot migration is applied) only hides the estimate.
+    t.status==='lobby'?(seated.length?supabase.from('ratings').select('user_id,rating').eq('mode',t.mode).in('user_id',seated):none)
+    :t.status==='playing'&&t.current_round_id?supabase.from('round_players').select('user_id,rating:rating_at_start').eq('round_id',t.current_round_id):none
   ]);
+  setChanceInput(chanceRows.error||t.status==='results'?null:{round:t.status==='lobby'?null:t.current_round_id,ratings:Object.fromEntries((chanceRows.data||[]).map(r=>[r.user_id,r.rating]))})
   setPlayers((rp||[]).map(x=>x.user_id));setGames((gg||[]) as Game[]);setHistoryGames((historic||[]) as Game[])
   const allIds=[...(mm||[]).map(m=>m.user_id),...(rp||[]).map(p=>p.user_id),...(historic||[]).flatMap(g=>g.loser_ids)];
   if(allIds.length){const{data:people}=await supabase.from('profiles').select('*').in('id',[...new Set(allIds)]);setProfiles(Object.fromEntries(((people||[]) as Profile[]).map(p=>[p.id,p])))}
@@ -362,6 +375,10 @@ function TableScreen({tableId,me,action,busy,onLeave}:{tableId:string;me:string;
  const secondsLeft=activeGame?.deadline?Math.max(0,Math.ceil((new Date(activeGame.deadline).getTime()-displayNow)/1000)):30
  const tiedNames=activeGame?activeGame.loser_ids.map(name).join(' and '):''
  const nominees=activeGame?players.filter(id=>!activeGame.allowed_nominees||activeGame.allowed_nominees.includes(id)):[]
+ // Lobby: a live preview for the current members. Playing: fixed at the round's start, the same for both games of a parallel round.
+ const chanceRound=table.status==='lobby'?null:table.current_round_id
+ const chances=showChances&&table.status!=='results'&&chanceInput?.round===chanceRound?lossChances(table.status==='lobby'?members.map(m=>m.user_id):players,chanceInput.ratings):null
+ const chanceNote=chances&&<p className="chanceNote">{table.status==='lobby'?'Estimated chance of losing, from each player\'s Elo in this mode. It changes as players join or leave.':`Estimated chance of losing, fixed when this round started${info.games>1?' and used for both games':''}.`} An estimate, not a prediction. You can hide it in Profile.</p>
  const refresh=<button className="iconButton" aria-label="Refresh table" title="Refresh table" onClick={()=>void load()}><RefreshCw size={18}/></button>
  return <div className="stack lobby pageEntry">
   {blue?<>
@@ -385,7 +402,7 @@ function TableScreen({tableId,me,action,busy,onLeave}:{tableId:string;me:string;
    {blue?<ul className="rowList">
     {members.map(m=>{const host=m.user_id===table.host_id,mine=m.user_id===me,who=name(m.user_id);return <li key={m.user_id} className="playerRow">
      <Avatar id={m.user_id} name={who} me={me} size="md"/>
-     <span className="rowText"><b>{who}{mine&&<span className="youChip">you</span>}</b>{host&&<small><Crown className="hostIcon" size={13} aria-hidden="true"/> Host</small>}</span>
+     <span className="rowText"><b>{who}{mine&&<span className="youChip">you</span>}</b>{chances?.[m.user_id]&&<ChanceLine chance={chances[m.user_id]}/>}{host&&<small><Crown className="hostIcon" size={13} aria-hidden="true"/> Host</small>}</span>
      {table.status==='lobby'&&table.host_id===me&&!mine&&<button className="linkButton" disabled={busy} aria-label={`Make ${who} the host`} onClick={()=>promote(m.user_id)}>Make host</button>}
      <span className="rowRep" title="5-star reputation baseline">★ 5.0</span>
     </li>})}
@@ -396,11 +413,13 @@ function TableScreen({tableId,me,action,busy,onLeave}:{tableId:string;me:string;
      {mine&&<span className="seatYou">you</span>}
      <span className="seatInitials" aria-hidden="true">{who.slice(0,2).toUpperCase()}</span>
      <b className="seatName" title={who}>{who}</b>
+     {chances?.[m.user_id]&&<ChanceLine chance={chances[m.user_id]}/>}
      <span className="seatMeta"><span title="5-star reputation baseline">★ 5.0</span>{host&&' · host'}</span>
      {table.status==='lobby'&&table.host_id===me&&!mine&&<button className="seatAction" disabled={busy} aria-label={`Make ${who} the host`} onClick={()=>promote(m.user_id)}>Make host</button>}
     </li>})}
     {Array.from({length:seats},(_,i)=><li key={`empty-${i}`} className="seatSlot"><button className="seat empty" aria-label="Empty seat, show the invite QR code" onClick={()=>setShowQR(true)}>Empty seat</button></li>)}
    </ul>}
+   {chanceNote}
    {table.status==='lobby'&&<div className="lobbyFooter"><p>{members.length<info.min?`Need ${info.min-members.length} more player${info.min-members.length===1?'':'s'} to start`:'Everyone ready? Deal the cards.'}</p><Button onClick={play} disabled={busy||members.length<info.min} className="wide">Start new game</Button><button className="leaveLink" onClick={leave} disabled={busy}>Leave table <LogOut size={14}/></button></div>}
    {table.status==='playing'&&<div className="lobbyFooter"><div className="hint"><ShieldCheck size={18}/> All players are locked into this round. You can close your phone while playing.</div><Button onClick={finishPlay} disabled={busy} className="wide">Cards finished — record results <ArrowRight size={17}/></Button></div>}
   </section>}
@@ -543,7 +562,7 @@ function GroupsScreen({me,action,busy}:{me:string;action:Action;busy:boolean}){
  </div>
 }
 
-function ProfileScreen({me,profile,action,reload}:{me:string;profile:Profile|null;action:Action;reload:()=>Promise<void>}){
+function ProfileScreen({me,profile,action,reload,showChances,setShowChances}:{me:string;profile:Profile|null;action:Action;reload:()=>Promise<void>;showChances:boolean;setShowChances:(show:boolean)=>void}){
  const {theme,setTheme}=useContext(ThemeContext),blue=theme==='blue'
  const [name,setName]=useState(profile?.username||''),[ratings,setRatings]=useState<Rating[]>([]),[admissions,setAdmissions]=useState(0),[ledger,setLedger]=useState<{game_id:string;delta:number;recorded_at:string;mode:Mode}[]>([])
  const [accountEmail,setAccountEmail]=useState(''),[oldPassword,setOldPassword]=useState(''),[nextPassword,setNextPassword]=useState(''),[accountNotice,setAccountNotice]=useState('')
@@ -597,6 +616,7 @@ function ProfileScreen({me,profile,action,reload}:{me:string;profile:Profile|nul
   <section aria-labelledby="look-title">
    <h2 id="look-title" className="sectionTitle">Appearance</h2>
    <div className="themePicker" role="group" aria-label="Theme">{THEMES.map(t=><button key={t.id} aria-pressed={theme===t.id} className={`themeOption ${t.id} ${theme===t.id?'on':''}`} onClick={()=>setTheme(t.id)}><span className="themeSwatch" aria-hidden="true"><span/><span/><span/></span><span className="rowText"><b>{t.name}</b><small>{t.description}</small></span></button>)}</div>
+   <label className="toggleRow"><span className="rowText"><b>Show losing chances</b><small>At the table, each player's estimated chance of being the Durak, from Elo.</small></span><input type="checkbox" role="switch" className="switch" checked={showChances} onChange={e=>setShowChances(e.target.checked)}/></label>
    <p className="fieldHint">Saved on this device.</p>
   </section>
   <section className="card accountCard" aria-labelledby="account-title">

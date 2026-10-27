@@ -43,3 +43,12 @@ Run against a throwaway Supabase project; **not executed as part of artifact cre
 - Invite QR code scanned on another smartphone; unauthenticated user signs in and joins.
 - Install PWA on iOS Safari and Android Chrome, test service-worker update flow.
 - App reopened after being backgrounded >30 seconds must reconcile server-authoritative deadline.
+
+## Pre-game losing chance
+
+- Apply `202610270001_round_rating_snapshot.sql` before deploying the frontend (without it, the estimate is simply hidden while a round is in progress).
+- Lobby with 3 players at different ratings: each row shows a tiny italic "xx.x% to lose · rating Elo" line under the name; equal ratings show equal values.
+- A fourth player joins, then leaves: everyone's estimate updates within a few seconds.
+- Start a Single Double round: the estimates stay the same after Game 1 is confirmed and during Game 2.
+- After the round, the lobby shows estimates from the updated ratings.
+- Profile → Appearance → turn off "Show losing chances": the lobby looks as before; reload keeps it off; turn it on again.

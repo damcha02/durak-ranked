@@ -8,6 +8,7 @@ export type Mode='natural'|'double_single'|'single_double'|'double_double'
 export const MODES:Mode[]=['natural','double_single','single_double','double_double']
 const MIGRATIONS=join(import.meta.dirname,'../../supabase/migrations')
 export const V2_MIGRATION='202610260001_elo_v2.sql'
+export const SNAPSHOT_MIGRATION='202610270001_round_rating_snapshot.sql'
 
 // Minimal stand-ins for what Supabase provides: roles, auth.users, auth.uid(), auth.role().
 const SUPABASE_STUB=`
@@ -26,10 +27,12 @@ export class Db{
  private tableByMode=new Map<Mode,string>()
  readonly pg:PGlite
  constructor(pg:PGlite){this.pg=pg}
- static async create({withV2=true}:{withV2?:boolean}={}){
+ /** `before` stops at that migration file (exclusive). */
+ static async create({withV2=true,before}:{withV2?:boolean;before?:string}={}){
   const db=new Db(new PGlite())
   await db.pg.exec(SUPABASE_STUB)
-  for(const f of migrationFiles())if(withV2||f!==V2_MIGRATION)await db.applyMigration(f)
+  // withV2:false is the database as it was before Elo V2 (migrations 0001–0005), so later migrations are left out too.
+  for(const f of migrationFiles())if((withV2||f<V2_MIGRATION)&&(!before||f<before))await db.applyMigration(f)
   return db
  }
  async applyMigration(file:string){await this.pg.exec(readFileSync(join(MIGRATIONS,file),'utf8'))}

@@ -4,11 +4,11 @@ export const THEMES:{id:Theme;name:string;description:string;color:string}[]=[
   {id:'cards',name:'Cards',description:'Card stock, ink and forest green',color:'#ece6da'}
 ]
 const KEY='durak-ranked-theme'
-type Store=Pick<Storage,'getItem'|'setItem'>
+export type Store=Pick<Storage,'getItem'|'setItem'>
 
 // Light blue is the default; only an explicit "cards" choice switches it.
 // The theme is a per-device convenience: storage can be missing or throw (private mode, blocked site data).
-const defaultStore=():Store|undefined=>{try{return globalThis.localStorage}catch{return undefined}}
+export const defaultStore=():Store|undefined=>{try{return globalThis.localStorage}catch{return undefined}}
 
 export function readTheme(store:Store|undefined=defaultStore()):Theme{
   try{return store?.getItem(KEY)==='cards'?'cards':'blue'}catch{return 'blue'}

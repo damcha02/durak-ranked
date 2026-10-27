@@ -25,6 +25,7 @@
 - `friend_groups` / `group_members`: multiple private groups and member-scoped read policies; group code joins. Group board filters global mode scores to group members.
 - `tables` / `table_members`: lobby, physical playing, sequential results; QR/link/room code; host transfer and automatic reassignment.
 - `rounds` / `round_players`: immutable player snapshot at physical round start. Leaving/joining disabled during active rounds; shutting off phones does not alter membership.
+  `round_players.rating_at_start` (migration `202610270001`) stores each player's rating in the table's mode at round start, filled by a trigger. It is display-only: the lobby's pre-game losing chance (`src/lossChance.ts`, the Elo V2 `p_i = 10^(-R_i/400) / Σ 10^(-R_j/400)`) uses it once the round is locked, so both games of a parallel round show the same estimate. In the lobby the estimate is a live preview from current ratings. Players can hide it in Profile (stored per device). No rating calculation reads it.
 - `round_games`: slot 1 or 2 (for parallel modes), state, server-authoritative voting deadline, winners implied by snapshot minus losers.
 - `game_votes` / `vote_totals`: ballots protected by RLS until result is final; public tallies available to the round participants.
 - `tie_responses`: acceptance of reduced shared loss, or a constrained runoff; tie response window defaults to 30 seconds.
