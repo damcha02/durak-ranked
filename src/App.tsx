@@ -202,8 +202,8 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
   supabase.from('ratings').select('*').eq('user_id',me),supabase.from('group_members').select('group_id').eq('user_id',me)])
  setTables((tt||[]) as TableRow[]);setRatings((rr||[]) as Rating[]);setLoaded(true)
  const groupIds=(gm||[]).map(x=>x.group_id);if(groupIds.length){const{data}=await supabase.from('friend_groups').select('*').in('id',groupIds);setGroups((data||[]) as Group[])}else setGroups([])
- // The blue theme's table summary names the players ("With Masha and Grisha"), so it also loads who sits at each table.
- if(blue&&ids.length){
+ // Both themes name the players at each table ("With Masha and Grisha"), so it also loads who sits at each table.
+ if(ids.length){
   const{data:seated}=await supabase.from('table_members').select('table_id,user_id').in('table_id',ids).eq('is_active',true).order('joined_at')
   const userIds=[...new Set((seated||[]).map(s=>s.user_id))]
   const{data:pp}=userIds.length?await supabase.from('profiles').select('id,username').in('id',userIds):{data:[]}
@@ -211,7 +211,7 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
   const byTable:Record<string,{id:string;name:string}[]>={};for(const s of seated||[])(byTable[s.table_id]||=[]).push({id:s.user_id,name:names[s.user_id]||'Player'})
   setPeople(byTable)
  }
- },[me,blue])
+ },[me])
  useEffect(()=>{void load();const id=setInterval(()=>void load(),12000);return()=>clearInterval(id)},[load])
  const create=()=>void action(async()=>{const id=await rpc<string>('create_table',{p_mode:mode,p_group:group||null});openTable(id)})
  const joinRoom=()=>void action(async()=>{if(!join.trim())throw new Error('Enter a table code');const id=await rpc<string>('join_table',{p_code:join});openTable(id)})
@@ -237,6 +237,8 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
  const describe=(t:TableRow)=>`${modeInfo(t.mode).name}, table ${t.code}, ${STATUS_TEXT[statusOf(t)].toLowerCase()}`
  const lead=blue?sorted[0]:current
  const status=lead?lead.closed_at?'Your table closed after 24 hours without activity. Start a new one whenever you play again.':lead.status==='results'?'Your table is waiting for your vote.':lead.status==='playing'?'Your game is still going.':'Your table is waiting for players.':!loaded?'':played?'No open tables right now. Start one, or join a friend\'s.':'No tables yet. Pick a game to start one, or join a friend\'s.'
+ // Card theme: just the players, under the table code (the card already shows the status).
+ const playersText=(t:TableRow)=>{if(!people[t.id])return '';const others=people[t.id].filter(p=>p.id!==me).map(p=>p.name);return others.length?`With ${listNames(others)}`:'Just you so far'}
  const withText=(t:TableRow)=>{const others=(people[t.id]||[]).filter(p=>p.id!==me).map(p=>p.name);return t.closed_at?`Closed ${dateTime(t.closed_at)}`:people[t.id]?others.length?`With ${listNames(others)}`:'Just you so far':STATUS_TEXT[t.status]}
  const groupField=groups.length>0&&<label className="field">Friend group (optional)<select value={group} onChange={e=>setGroup(e.target.value)}><option value="">No group</option>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
  const joinSection=<section aria-labelledby="join-title">
@@ -280,10 +282,10 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
    {current&&<section aria-labelledby="tables-title">
     <div className="sectionHeading"><h2 id="tables-title">Your tables</h2><span className="handMeta">{hand>1&&<span>Swipe · {idx+1} of {hand}</span>}<button className="iconButton" aria-label="Refresh tables" title="Refresh tables" onClick={()=>void load()}><RefreshCw size={18}/></button></span></div>
     <div className="hand" onPointerDown={e=>startSwipe(e.clientX)} onClickCapture={e=>{if(swiped.current){swiped.current=false;e.preventDefault();e.stopPropagation()}}}>
-     {next&&<button className="tableCard back" aria-label={`Show ${describe(next)}`} onClick={()=>setFront((idx+1)%hand)}><CornerIndex mode={next.mode}/><span className="tableName">{modeInfo(next.mode).name}</span><span>{next.code}</span><span>{STATUS_TEXT[statusOf(next)]}</span></button>}
+     {next&&<button className="tableCard back" aria-label={`Show ${describe(next)}`} onClick={()=>setFront((idx+1)%hand)}><CornerIndex mode={next.mode}/><span className="tableName">{modeInfo(next.mode).name}</span><span>{next.code}</span><span>{STATUS_TEXT[statusOf(next)]}</span>{playersText(next)&&<span className="tablePlayers">{playersText(next)}</span>}</button>}
      <div className="tableCard front" key={current.id}>
       <CornerIndex mode={current.mode}/><CornerIndex mode={current.mode} flip/>
-      <div className="tableCardBody"><span className={`tableStatus status-${statusOf(current)}`}>{STATUS_TEXT[statusOf(current)]}</span><h3>{modeInfo(current.mode).name}</h3><span className="tableCode">Table {current.code}</span></div>
+      <div className="tableCardBody"><span className={`tableStatus status-${statusOf(current)}`}>{STATUS_TEXT[statusOf(current)]}</span><h3>{modeInfo(current.mode).name}</h3><span className="tableCode">Table {current.code}</span>{playersText(current)&&<span className="tablePlayers">{playersText(current)}</span>}</div>
       <Button kind={current.closed_at?'outline':'primary'} onClick={()=>openTable(current.id)}>{current.closed_at?'View closed table':'Return to table'}</Button>
      </div>
     </div>

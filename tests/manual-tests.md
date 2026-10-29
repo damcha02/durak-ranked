@@ -62,6 +62,10 @@ Run against a throwaway Supabase project; **not executed as part of artifact cre
 - A game reversed by a correction shows "Reversed after a correction vote" and ±0.00.
 - As an outsider, `select public.game_details('<game id>')` fails with "Not a participant"; `select * from rating_ledger` shows only your own games.
 
+## Home tables (cards theme)
+
+- With two or more open tables, the front card shows the table code and "With masha and olga" ("Just you so far" when alone); the card behind shows its players too. Swipe to see each table's players without opening it.
+
 ## Table expiry
 
 - After `db push`: no "Table expiry NOT scheduled" warning; `select jobname, schedule from cron.job` lists `durak-close-inactive-tables`.

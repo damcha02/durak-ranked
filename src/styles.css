@@ -164,6 +164,8 @@ select{appearance:none;-webkit-appearance:none;padding-right:40px;background-ima
 .tableStatus.status-results{color:var(--red)}
 .tableStatus.status-lobby,.tableStatus.status-closed{color:var(--ink-soft)}
 .tableCode{color:var(--ink-soft);font-size:1rem}
+.tablePlayers{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;color:var(--ink-2);font-size:.9375rem;line-height:1.35;overflow-wrap:anywhere}
+.tableCard.back .tablePlayers{-webkit-line-clamp:2;color:var(--ink-soft);font-size:.875rem}
 .tableCard.front .button{min-height:50px;margin:0 18px 14px 0;padding:10px 12px;white-space:normal}
 .handDots{display:flex;justify-content:center;max-width:380px}
 .handDots button{width:28px;height:28px;display:grid;place-items:center;padding:0;border:0;background:none}
