@@ -72,6 +72,19 @@ Run against a throwaway Supabase project; **not executed as part of artifact cre
 - Tap a point (or drag across the chart) on the phone: the panel above shows its date/time, Elo and change. On a computer, hover; arrow keys work after focusing the chart.
 - After a correction reverses a game, it disappears from the chart and the later points move to the replayed values.
 
+## Home tables (cards theme)
+
+- With two or more open tables, the front card shows the table code and "With masha and olga" ("Just you so far" when alone); the card behind shows its players too. Swipe to see each table's players without opening it.
+
+## Losing-streak penalty
+
+- Apply `202610290001_loss_streak_penalty.sql`, deploy the frontend: no rating changes, no streak shown anywhere.
+- Run `scripts/loss-streak/activate.sql` as a rehearsal, then with `-v commit=on`; `scripts/loss-streak/status.sql` shows `loss_streak_v1` and no streaks.
+- Lose three games in a row in one mode (any tables): Profile shows "3-loss streak · next loss +25%" under that mode; History shows no penalty.
+- Lose a 4th: Profile shows "4-loss streak · +25% penalty"; History tags the game, shows the extra next to the tag, and the details list each winner's share ("incl. +x.xx streak"). The game still sums to zero.
+- Win once: the streak disappears from Profile. A loss in another mode starts its own count.
+- Both themes: the tags and Profile notes keep the existing look.
+
 ## Table expiry
 
 - After `db push`: no "Table expiry NOT scheduled" warning; `select jobname, schedule from cron.job` lists `durak-close-inactive-tables`.

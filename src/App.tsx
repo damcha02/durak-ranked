@@ -11,6 +11,7 @@ import {formatChance,lossChances,readShowChances,saveShowChances} from './lossCh
 import type {Chance} from './lossChance'
 import {RatingChart} from './RatingChart'
 import type {RatedGame} from './ratingChart'
+import {streakLabel,streakPenaltyNext} from './lossStreak'
 import type {Game,GameDetails,Group,HistoryGame,Member,Mode,Profile,Rating,TableRow,VoteTotal} from './lib'
 
 type Page='home'|'history'|'leaderboard'|'groups'|'profile'
@@ -204,8 +205,8 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
   supabase.from('ratings').select('*').eq('user_id',me),supabase.from('group_members').select('group_id').eq('user_id',me)])
  setTables((tt||[]) as TableRow[]);setRatings((rr||[]) as Rating[]);setLoaded(true)
  const groupIds=(gm||[]).map(x=>x.group_id);if(groupIds.length){const{data}=await supabase.from('friend_groups').select('*').in('id',groupIds);setGroups((data||[]) as Group[])}else setGroups([])
- // The blue theme's table summary names the players ("With Masha and Grisha"), so it also loads who sits at each table.
- if(blue&&ids.length){
+ // Both themes name the players at each table ("With Masha and Grisha"), so it also loads who sits at each table.
+ if(ids.length){
   const{data:seated}=await supabase.from('table_members').select('table_id,user_id').in('table_id',ids).eq('is_active',true).order('joined_at')
   const userIds=[...new Set((seated||[]).map(s=>s.user_id))]
   const{data:pp}=userIds.length?await supabase.from('profiles').select('id,username').in('id',userIds):{data:[]}
@@ -213,7 +214,7 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
   const byTable:Record<string,{id:string;name:string}[]>={};for(const s of seated||[])(byTable[s.table_id]||=[]).push({id:s.user_id,name:names[s.user_id]||'Player'})
   setPeople(byTable)
  }
- },[me,blue])
+ },[me])
  useEffect(()=>{void load();const id=setInterval(()=>void load(),12000);return()=>clearInterval(id)},[load])
  const create=()=>void action(async()=>{const id=await rpc<string>('create_table',{p_mode:mode,p_group:group||null});openTable(id)})
  const joinRoom=()=>void action(async()=>{if(!join.trim())throw new Error('Enter a table code');const id=await rpc<string>('join_table',{p_code:join});openTable(id)})
@@ -239,6 +240,8 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
  const describe=(t:TableRow)=>`${modeInfo(t.mode).name}, table ${t.code}, ${STATUS_TEXT[statusOf(t)].toLowerCase()}`
  const lead=blue?sorted[0]:current
  const status=lead?lead.closed_at?'Your table closed after 24 hours without activity. Start a new one whenever you play again.':lead.status==='results'?'Your table is waiting for your vote.':lead.status==='playing'?'Your game is still going.':'Your table is waiting for players.':!loaded?'':played?'No open tables right now. Start one, or join a friend\'s.':'No tables yet. Pick a game to start one, or join a friend\'s.'
+ // Card theme: just the players, under the table code (the card already shows the status).
+ const playersText=(t:TableRow)=>{if(!people[t.id])return '';const others=people[t.id].filter(p=>p.id!==me).map(p=>p.name);return others.length?`With ${listNames(others)}`:'Just you so far'}
  const withText=(t:TableRow)=>{const others=(people[t.id]||[]).filter(p=>p.id!==me).map(p=>p.name);return t.closed_at?`Closed ${dateTime(t.closed_at)}`:people[t.id]?others.length?`With ${listNames(others)}`:'Just you so far':STATUS_TEXT[t.status]}
  const groupField=groups.length>0&&<label className="field">Friend group (optional)<select value={group} onChange={e=>setGroup(e.target.value)}><option value="">No group</option>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
  const joinSection=<section aria-labelledby="join-title">
@@ -282,10 +285,10 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
    {current&&<section aria-labelledby="tables-title">
     <div className="sectionHeading"><h2 id="tables-title">Your tables</h2><span className="handMeta">{hand>1&&<span>Swipe · {idx+1} of {hand}</span>}<button className="iconButton" aria-label="Refresh tables" title="Refresh tables" onClick={()=>void load()}><RefreshCw size={18}/></button></span></div>
     <div className="hand" onPointerDown={e=>startSwipe(e.clientX)} onClickCapture={e=>{if(swiped.current){swiped.current=false;e.preventDefault();e.stopPropagation()}}}>
-     {next&&<button className="tableCard back" aria-label={`Show ${describe(next)}`} onClick={()=>setFront((idx+1)%hand)}><CornerIndex mode={next.mode}/><span className="tableName">{modeInfo(next.mode).name}</span><span>{next.code}</span><span>{STATUS_TEXT[statusOf(next)]}</span></button>}
+     {next&&<button className="tableCard back" aria-label={`Show ${describe(next)}`} onClick={()=>setFront((idx+1)%hand)}><CornerIndex mode={next.mode}/><span className="tableName">{modeInfo(next.mode).name}</span><span>{next.code}</span><span>{STATUS_TEXT[statusOf(next)]}</span>{playersText(next)&&<span className="tablePlayers">{playersText(next)}</span>}</button>}
      <div className="tableCard front" key={current.id}>
       <CornerIndex mode={current.mode}/><CornerIndex mode={current.mode} flip/>
-      <div className="tableCardBody"><span className={`tableStatus status-${statusOf(current)}`}>{STATUS_TEXT[statusOf(current)]}</span><h3>{modeInfo(current.mode).name}</h3><span className="tableCode">Table {current.code}</span></div>
+      <div className="tableCardBody"><span className={`tableStatus status-${statusOf(current)}`}>{STATUS_TEXT[statusOf(current)]}</span><h3>{modeInfo(current.mode).name}</h3><span className="tableCode">Table {current.code}</span>{playersText(current)&&<span className="tablePlayers">{playersText(current)}</span>}</div>
       <Button kind={current.closed_at?'outline':'primary'} onClick={()=>openTable(current.id)}>{current.closed_at?'View closed table':'Return to table'}</Button>
      </div>
     </div>
@@ -519,7 +522,7 @@ function HistoryItem({game:g,me,open,toggle}:{game:HistoryGame;me:string;open:bo
  useEffect(()=>{if(!open||details)return;let live=true
   rpc<GameDetails>('game_details',{p_game:g.game_id}).then(d=>{if(live)setDetails(d)}).catch(e=>{if(live)setError(errorMessage(e))})
   return()=>{live=false}},[open,details,g.game_id])
- const card=MODE_CARD[g.mode],panel=`game-${g.game_id}`,delta=Number(g.delta)
+ const card=MODE_CARD[g.mode],panel=`game-${g.game_id}`,delta=Number(g.delta),extra=Number(g.streak_extra??0)
  const losers=g.loser_ids.map((id,i)=>id===me?'you':g.loser_names[i])
  return <li className={`logItem ${g.state}`}>
   <button className="logSummary" aria-expanded={open} aria-controls={panel} onClick={toggle}>
@@ -529,18 +532,21 @@ function HistoryItem({game:g,me,open,toggle}:{game:HistoryGame;me:string;open:bo
     <small>{dateTime(g.played_at)} · <span className="nowrap">{g.player_count} players</span></small>
     <small className="logResult">{resultText(g.state,losers)}</small>
     <small className="logElo">Elo {elo(Number(g.rating_before))} → {elo(Number(g.rating_after))}</small>
+    {g.streak_penalty&&<small className="logStreak"><span className="streakTag">{extra<0?streakLabel(g.loss_streak):extra>0?'Streak penalty share':'Losing-streak penalty'}</span>{extra!==0&&<span className="streakAmount">{signed(extra)}</span>}</small>}
    </span>
    <span className="logRating"><strong className={deltaClass(delta)} aria-label={`Rating change ${signed(delta)}`}>{signed(delta)}</strong></span>
   </button>
   {open&&<div className="logDetails" id={panel}>
    {error?<p className="fieldError" role="alert">{error}</p>:!details?<p className="logMeta">Loading…</p>:<>
     <p className="logStatus">{STATE_TEXT[details.state]||resultText(details.state,[])}{details.correction&&CORRECTION_TEXT[details.correction]?` ${CORRECTION_TEXT[details.correction]}`:''}</p>
+    {details.streak_penalty&&<p className="logMeta">Losing-streak penalty: from the 4th loss in a row in a mode, a loss costs 25% more, and the extra goes to the winners in proportion to their gains.</p>}
     <p className="logMeta">Played {dateTime(details.played_at)}{details.finalized_at&&` · result recorded ${dateTime(details.finalized_at)}`}</p>
     <ul className="logPlayers" aria-label="Players">{details.players.map(p=><li key={p.user_id}>
-     <span className="logName"><b>{p.username}{p.user_id===me&&' (you)'}</b>{p.lost&&<span className="lostTag">{details.state==='tied'?'shared loss':details.state==='void'?'voted loser':'lost'}</span>}</span>
+     <span className="logName"><b>{p.username}{p.user_id===me&&' (you)'}</b>{p.lost&&<span className="lostTag">{details.state==='tied'?'shared loss':details.state==='void'?'voted loser':'lost'}</span>}{Number(p.streak_extra??0)<0&&<span className="streakTag">{streakLabel(p.loss_streak)}</span>}</span>
      <span className="logRating">
       <strong className={deltaClass(Number(p.delta))}>{p.delta==null?'–':signed(Number(p.delta))}</strong>
       {p.rating_before!=null&&p.rating_after!=null&&<small>{elo(Number(p.rating_before))} → {elo(Number(p.rating_after))}</small>}
+      {Number(p.streak_extra??0)!==0&&<small>incl. {signed(Number(p.streak_extra))} streak</small>}
      </span>
     </li>)}</ul>
     {g.games_in_round>1&&<p className="logMeta">Both games of a round are rated from everyone's rating at the start of the round. Before and after show the running total.</p>}
@@ -684,7 +690,7 @@ function ProfileScreen({me,profile,action,reload,showChances,setShowChances}:{me
   <dl className="statRow"><div><dt>Games</dt><dd>{total}</dd></div><div><dt>Wins</dt><dd>{wins}</dd></div><div><dt>Losses</dt><dd>{losses}</dd></div></dl>
   <section aria-labelledby="my-ratings-title">
    <h2 id="my-ratings-title" className="sectionTitle">Your ratings</h2>
-   <ul className="modeRows">{MODES.map(m=>{const r=ratings.find(r=>r.mode===m.id);return <li key={m.id} className="modeRow">{blue?<span className={`rowSuit ${MODE_CARD[m.id].red?'red':''}`} aria-hidden="true">{MODE_CARD[m.id].suit}</span>:<MiniModeCard mode={m.id}/>}<span className="modeText"><b>{m.name}</b><small>{r?.games||0} games · {r?.losses||0} losses</small></span><strong className="modeRowRating">{formatRating(r?.rating||1200)}</strong></li>})}</ul>
+   <ul className="modeRows">{MODES.map(m=>{const r=ratings.find(r=>r.mode===m.id);return <li key={m.id} className="modeRow">{blue?<span className={`rowSuit ${MODE_CARD[m.id].red?'red':''}`} aria-hidden="true">{MODE_CARD[m.id].suit}</span>:<MiniModeCard mode={m.id}/>}<span className="modeText"><b>{m.name}</b><small>{r?.games||0} games · {r?.losses||0} losses</small>{streakLabel(r?.loss_streak)&&<small className={`streakNote ${streakPenaltyNext(r?.loss_streak)?'warn':''}`}>{streakLabel(r?.loss_streak)}</small>}</span><strong className="modeRowRating">{formatRating(r?.rating||1200)}</strong></li>})}</ul>
   </section>
   {total>=10?<section className="stack sm" aria-labelledby="stats-title">
    <h2 id="stats-title">Statistics</h2>

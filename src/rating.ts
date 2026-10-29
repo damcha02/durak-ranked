@@ -46,3 +46,26 @@ export function ratingDeltas(participants:Participant[],loserIds:string[],k=20,t
  const bonus=new Set([...cents].sort((a,b)=>b.frac-a.frac||cmp(a.key,b.key)||cmp(a.id,b.id)).slice(0,missing).map(c=>c.id))
  return Object.fromEntries(cents.map(c=>[c.id,(c.f+(bonus.has(c.id)?1:0))/100]))
 }
+
+/** Losing-streak penalty (rule loss_streak_v1): a loss that is at least the 4th in a row in a mode costs 25% more. */
+export const STREAK_THRESHOLD=4,STREAK_FACTOR=1.25
+/**
+ * V2 deltas with the streak penalty on `penalizedIds` (a subset of the losers): each penalized
+ * loser's normal delta is multiplied by 1.25 and the extra is shared by the winners in proportion
+ * to their normal gains. Same largest-remainder rounding as ratingDeltas, so the game stays exactly
+ * zero-sum; `extra` is the part of each delta that comes from the penalty.
+ */
+export function streakDeltas(participants:Participant[],loserIds:string[],penalizedIds:string[],k=20,tieKey:(id:string)=>string=id=>id):{delta:Record<string,number>;extra:Record<string,number>}{
+ if(!penalizedIds.every(id=>loserIds.includes(id)))throw Error('Invalid streak penalty list')
+ const normal=ratingDeltas(participants,loserIds,k,tieKey)
+ const base=Object.fromEntries(participants.map(x=>[x.id,Math.round(normal[x.id]*100)]))
+ const extra=penalizedIds.reduce((s,id)=>s-base[id]*(STREAK_FACTOR-1),0),gains=participants.reduce((s,x)=>loserIds.includes(x.id)?s:s+base[x.id],0)
+ const cents=participants.map(x=>{
+  const b=base[x.id],raw=penalizedIds.includes(x.id)?b*STREAK_FACTOR:loserIds.includes(x.id)||gains<=0?b:b+extra*b/gains
+  const nano=Math.round(raw*1e9),f=Math.floor(nano/1e9);return{id:x.id,key:tieKey(x.id),b,f,frac:nano-f*1e9}
+ })
+ const missing=-cents.reduce((s,c)=>s+c.f,0)
+ const bonus=new Set([...cents].sort((a,b)=>b.frac-a.frac||cmp(a.key,b.key)||cmp(a.id,b.id)).slice(0,missing).map(c=>c.id))
+ const final=cents.map(c=>({id:c.id,c:c.f+(bonus.has(c.id)?1:0),b:c.b}))
+ return {delta:Object.fromEntries(final.map(x=>[x.id,x.c/100])),extra:Object.fromEntries(final.map(x=>[x.id,(x.c-x.b)/100]))}
+}

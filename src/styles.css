@@ -164,6 +164,8 @@ select{appearance:none;-webkit-appearance:none;padding-right:40px;background-ima
 .tableStatus.status-results{color:var(--red)}
 .tableStatus.status-lobby,.tableStatus.status-closed{color:var(--ink-soft)}
 .tableCode{color:var(--ink-soft);font-size:1rem}
+.tablePlayers{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;color:var(--ink-2);font-size:.9375rem;line-height:1.35;overflow-wrap:anywhere}
+.tableCard.back .tablePlayers{-webkit-line-clamp:2;color:var(--ink-soft);font-size:.875rem}
 .tableCard.front .button{min-height:50px;margin:0 18px 14px 0;padding:10px 12px;white-space:normal}
 .handDots{display:flex;justify-content:center;max-width:380px}
 .handDots button{width:28px;height:28px;display:grid;place-items:center;padding:0;border:0;background:none}
@@ -655,6 +657,13 @@ select{appearance:none;-webkit-appearance:none;padding-right:40px;background-ima
 .logPlayers li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
 .logName{min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:6px;overflow-wrap:anywhere}
 .lostTag{padding:1px 8px;border-radius:999px;background:var(--red-tint);color:var(--red);font-size:.75rem;font-weight:700}
+/* Losing-streak penalty (both themes): a brass tag in History, a note under the mode in Profile */
+.streakTag{display:inline-block;max-width:100%;padding:1px 8px;border-radius:999px;background:var(--brass-tint);color:var(--brass-ink);font-size:.75rem;font-weight:700;font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.logMain .logStreak{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;margin-top:3px}
+.logPlayers .streakTag{border-radius:10px;white-space:normal}
+.streakAmount{font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.modeText small.streakNote{color:var(--brass-ink);font-size:.875rem;font-weight:700}
+.modeText small.streakNote.warn{color:var(--red)}
 [data-theme=blue] .gameLog{padding:0 16px;border:0;border-radius:20px;background:#fff}
 [data-theme=blue] .logItem{border-bottom-color:#e1eaf1}
 [data-theme=blue] .logItem:last-child{border-bottom:0}
