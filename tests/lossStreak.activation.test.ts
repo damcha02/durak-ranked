@@ -5,11 +5,14 @@ import {Db,V2_MIGRATION,STREAK_MIGRATION,migrationFiles} from './sql/db'
 import {productionLike,rpcTable,rpcRound} from './sql/flows'
 
 const T=120_000
+/** Production's order: every later migration (the rating-history one, 202610290002, included) is already
+ * applied when the earlier-numbered streak migration arrives. */
 async function production({streakMigration=true}={}){
  const db=await productionLike()
  await db.applyMigration(V2_MIGRATION)
  await db.runPsqlScript('activate.sql',{commit:true}) // Elo V2, as on 2026-10-26
- for(const f of migrationFiles())if(f>V2_MIGRATION&&(streakMigration||f<STREAK_MIGRATION))await db.applyMigration(f)
+ for(const f of migrationFiles())if(f>V2_MIGRATION&&f!==STREAK_MIGRATION)await db.applyMigration(f)
+ if(streakMigration)await db.applyMigration(STREAK_MIGRATION)
  return db
 }
 const config=(db:Db)=>db.one<{streak_rule:string;streak_from:Date|null;formula:string}>(`select streak_rule,streak_from,formula from private.rating_config`)

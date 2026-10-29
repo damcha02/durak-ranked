@@ -40,8 +40,9 @@ export function freshDatabase(url:string){
  execFileSync('psql',[url,'-X','-q','-c',`create database ${name}`])
  const u=new URL(url);u.pathname=`/${name}`;const dbUrl=u.toString()
  const dir=mkdtempSync(join(tmpdir(),'durak-sql-')),stub=join(dir,'stub.sql')
- // Roles are shared by every database on the server and may exist from an earlier run.
- writeFileSync(stub,SUPABASE_STUB.replace(/create role (\w+) nologin;/g,(_,role)=>`do $$ begin create role ${role} nologin; exception when duplicate_object then null; end $$;`))
+ // Roles are shared by every database on the server and may exist from an earlier run. Test files that set up
+ // at the same time on a fresh server race to create them; the loser gets unique_violation, not duplicate_object.
+ writeFileSync(stub,SUPABASE_STUB.replace(/create role (\w+) nologin;/g,(_,role)=>`do $$ begin create role ${role} nologin; exception when duplicate_object or unique_violation then null; end $$;`))
  const apply=(file:string)=>execFileSync('psql',[dbUrl,'-X','-q','-1','-v','ON_ERROR_STOP=1','-f',file],{stdio:['ignore','ignore','pipe']})
  apply(stub)
  for(const f of migrationFiles())apply(join(MIGRATIONS,f))

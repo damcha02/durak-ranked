@@ -344,7 +344,8 @@ describe('per-game SQL formula',()=>{
 describe('activation point and migration safety',()=>{
  it('applying the migration and replaying with the rule off changes nothing',async()=>{
   const db=await productionLike()
-  for(const f of migrationFiles())if(f>=V2_MIGRATION&&f<STREAK_MIGRATION)await db.applyMigration(f)
+  // In production's order: everything else (the later-numbered rating history included) first.
+  for(const f of migrationFiles())if(f>=V2_MIGRATION&&f!==STREAK_MIGRATION)await db.applyMigration(f)
   await db.setFormula('v2');await db.rebuildAll()
   const shape=async()=>({ratings:await db.rows(`select user_id,mode,rating,games,losses from public.ratings order by mode,user_id`),
    ledger:await db.rows(`select game_id,user_id,mode,delta,recorded_at from public.rating_ledger order by mode,game_id,user_id`)})
