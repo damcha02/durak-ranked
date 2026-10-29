@@ -9,6 +9,8 @@ import {applyTheme,readTheme,saveTheme,THEMES} from './theme'
 import type {Theme} from './theme'
 import {formatChance,lossChances,readShowChances,saveShowChances} from './lossChance'
 import type {Chance} from './lossChance'
+import {RatingChart} from './RatingChart'
+import type {RatedGame} from './ratingChart'
 import type {Game,GameDetails,Group,HistoryGame,Member,Mode,Profile,Rating,TableRow,VoteTotal} from './lib'
 
 type Page='home'|'history'|'leaderboard'|'groups'|'profile'
@@ -647,7 +649,12 @@ function ProfileScreen({me,profile,action,reload,showChances,setShowChances}:{me
  useEffect(()=>{if(profile)setName(profile.username)},[profile?.username])
  useEffect(()=>{void (async()=>{const[{data:r},{count},{data:ll}]=await Promise.all([supabase.from('ratings').select('*').eq('user_id',me),supabase.from('honesty_events').select('*',{count:'exact',head:true}).eq('user_id',me),supabase.from('rating_ledger').select('game_id,delta,recorded_at,mode').eq('user_id',me).order('recorded_at',{ascending:false}).limit(200)]);setRatings((r||[]) as Rating[]);setAdmissions(count||0);setLedger((ll||[]) as {game_id:string;delta:number;recorded_at:string;mode:Mode}[])})()},[me])
  const total=ratings.reduce((s,r)=>s+r.games,0),losses=ratings.reduce((s,r)=>s+r.losses,0),wins=Math.max(0,total-losses),who=profile?.username||''
- const naturalPath=useMemo(()=>{const events=ledger.filter(l=>l.mode==='natural').slice().reverse();let rating=1200;const vals=[1200,...events.map(l=>(rating+=l.delta))];const min=Math.min(...vals)-10,max=Math.max(...vals)+10;return vals.map((v,i)=>`${10+(i/Math.max(1,vals.length-1))*300},${95-(v-min)/Math.max(1,max-min)*80}`).join(' ')},[ledger])
+ // Rating over time, one mode at a time (the most played one first), from the server's replay-ordered history.
+ const [chartMode,setChartMode]=useState<Mode|null>(null),[chart,setChart]=useState<{mode:Mode;games:RatedGame[]}|null>(null),[chartError,setChartError]=useState('')
+ useEffect(()=>{if(!chartMode&&ratings.length)setChartMode(MODES.reduce((best,m)=>(ratings.find(r=>r.mode===m.id)?.games||0)>(ratings.find(r=>r.mode===best)?.games||0)?m.id:best,'natural' as Mode))},[ratings,chartMode])
+ useEffect(()=>{if(!chartMode)return;let live=true;setChartError('')
+  rpc<RatedGame[]>('my_rating_history',{p_mode:chartMode}).then(games=>{if(live)setChart({mode:chartMode,games})}).catch(e=>{if(live)setChartError(errorMessage(e))})
+  return()=>{live=false}},[chartMode,me])
  const saveName=()=>void action(async()=>{await rpc('set_username',{p_username:name.trim()});await reload();setAccountNotice('Username updated.')})
  const saveEmail=()=>void action(async()=>{
   if(!accountEmail.trim())throw new Error('Enter an email address.')
@@ -682,7 +689,15 @@ function ProfileScreen({me,profile,action,reload,showChances,setShowChances}:{me
   {total>=10?<section className="stack sm" aria-labelledby="stats-title">
    <h2 id="stats-title">Statistics</h2>
    <dl className="statsGrid"><div><dt>Win rate</dt><dd>{total?Math.round(100*wins/total):0}%</dd></div><div><dt>Honest self-votes</dt><dd>{admissions}</dd></div><div><dt>Modes played</dt><dd>{ratings.filter(r=>r.games>0).length}</dd></div><div><dt>Games with a result</dt><dd>{total}</dd></div></dl>
-   <div className="chartCard"><h3>Durak rating over time</h3><svg viewBox="0 0 320 105" role="img" aria-label="Durak cumulative rating trend"><polyline fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={naturalPath}/></svg></div>
+   <h3 className="subTitle">Rating over time</h3>
+   {chartMode&&<ModeChips mode={chartMode} setMode={setChartMode}/>}
+   <div className="chartCard">
+    <h3>{modeInfo(chartMode||'natural').name}</h3>
+    {chartError?<p className="emptyNote" role="alert">{chartError}</p>
+    :!chart||chart.mode!==chartMode?<p className="emptyNote">Loading…</p>
+    :chart.games.length?<RatingChart games={chart.games} modeName={modeInfo(chart.mode).name}/>
+    :<p className="emptyNote">No rated {modeInfo(chart.mode).name} games yet. Your chart starts at 1,200 with your first result.</p>}
+   </div>
    <h3 className="subTitle">Recent rating changes</h3>
    <ul className="modeRows">{ledger.slice(0,8).map(entry=><li key={entry.game_id} className="modeRow"><span className="modeText"><b>{modeInfo(entry.mode).name}</b><small>{date(entry.recorded_at)}</small></span><strong className={`modeRowRating ${entry.delta<0?'lossDelta':'gainDelta'}`}>{entry.delta>=0?'+':'−'}{Math.abs(entry.delta).toFixed(1)}</strong></li>)}</ul>
   </section>:<section className="unlock" aria-labelledby="stats-title">

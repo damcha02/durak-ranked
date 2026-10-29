@@ -62,6 +62,16 @@ Run against a throwaway Supabase project; **not executed as part of artifact cre
 - A game reversed by a correction shows "Reversed after a correction vote" and ±0.00.
 - As an outsider, `select public.game_details('<game id>')` fails with "Not a participant"; `select * from rating_ledger` shows only your own games.
 
+## Rating over time (Profile → Statistics)
+
+- Apply `202610290002_rating_history.sql` before deploying the frontend.
+- The chart opens on your most-played mode; the mode chips switch it. A mode without games says so instead of drawing.
+- Elo labels on the left (whole numbers, not starting at 0); dates or times underneath in your timezone; a light grid on both.
+- The first point is 1,200; the last equals your rating for that mode on Home.
+- "Highest" shows the peak and its date (or "starting rating" if you never went above 1,200); the brass ring marks it.
+- Tap a point (or drag across the chart) on the phone: the panel above shows its date/time, Elo and change. On a computer, hover; arrow keys work after focusing the chart.
+- After a correction reverses a game, it disappears from the chart and the later points move to the replayed values.
+
 ## Table expiry
 
 - After `db push`: no "Table expiry NOT scheduled" warning; `select jobname, schedule from cron.job` lists `durak-close-inactive-tables`.

@@ -329,7 +329,28 @@ select{appearance:none;-webkit-appearance:none;padding-right:40px;background-ima
 .statsGrid dd{margin:0;font:700 1.375rem var(--serif);color:var(--ink)}
 .chartCard{padding:14px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card);color:var(--felt)}
 .chartCard h3{font-size:1rem;color:var(--ink)}
-.chartCard svg{width:100%;max-height:140px;margin-top:9px}
+/* Rating over time: Elo and time axes, a light grid that follows the theme's line colour, the peak in brass */
+.ratingChart{display:flex;flex-direction:column;gap:6px;margin-top:6px;color:var(--felt)}
+.chartPeak{display:flex;align-items:center;gap:8px;color:var(--ink-2);font-size:.9375rem}
+.chartPeak b{font-variant-numeric:tabular-nums;color:var(--ink)}
+.peakKey{flex:none;width:12px;height:12px;border:2px solid var(--brass);border-radius:50%;background:var(--card);box-shadow:inset 0 0 0 2px var(--card),inset 0 0 0 6px var(--brass)}
+.chartReadout{display:flex;align-items:baseline;justify-content:space-between;gap:10px;min-height:2.6em;padding:6px 10px;border-radius:var(--radius-sm);background:var(--sunk);color:var(--ink-soft);font-size:.875rem}
+.readoutValue{display:flex;align-items:baseline;gap:8px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.readoutValue b{font-size:1.0625rem;color:var(--ink)}
+.chartPlot{width:100%;border-radius:var(--radius-sm);touch-action:pan-y;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.chartPlot:focus-visible{outline:3px solid var(--felt);outline-offset:2px}
+.chartPlot svg{display:block;overflow:visible;cursor:crosshair}
+.chartGrid line{stroke:var(--line);stroke-width:1;opacity:.55;shape-rendering:crispEdges}
+.chartAxis{stroke:var(--line-strong);stroke-width:1;shape-rendering:crispEdges}
+.chartLabels text{fill:var(--ink-soft);font-size:12px;font-variant-numeric:tabular-nums}
+.chartLine{fill:none;stroke:currentColor;stroke-width:2.25;stroke-linejoin:round;stroke-linecap:round}
+.chartDots circle{fill:currentColor}
+.chartDots circle.start{fill:var(--card);stroke:currentColor;stroke-width:1.5}
+.chartPeakMark circle{fill:var(--card);stroke:var(--brass);stroke-width:2.5}
+.chartPeakMark circle.core{fill:var(--brass);stroke:none}
+.chartGuide{stroke:var(--ink-soft);stroke-width:1;stroke-dasharray:3 3}
+.chartSelected{fill:currentColor;stroke:var(--card);stroke-width:2}
+.chartHint{color:var(--ink-soft);font-size:.8125rem}
 .subTitle{margin-top:8px;font-size:1rem}
 .lossDelta{color:var(--red)!important}
 .gainDelta{color:var(--felt)!important}
