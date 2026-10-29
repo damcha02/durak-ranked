@@ -9,6 +9,7 @@ export const MODES:Mode[]=['natural','double_single','single_double','double_dou
 const MIGRATIONS=join(import.meta.dirname,'../../supabase/migrations')
 export const V2_MIGRATION='202610260001_elo_v2.sql'
 export const SNAPSHOT_MIGRATION='202610270001_round_rating_snapshot.sql'
+export const STREAK_MIGRATION='202610290001_loss_streak_penalty.sql'
 
 // Minimal stand-ins for what Supabase provides: roles, auth.users, auth.uid(), auth.role().
 export const SUPABASE_STUB=`
@@ -63,12 +64,12 @@ export class Db{
   }finally{await this.pg.exec('rollback')}
  }
  /**
-  * Runs one of the psql scripts in scripts/elo-v2 as psql would, minus the meta-commands:
+  * Runs one of the psql scripts in scripts/elo-v2 (or `dir/file` under scripts/) as psql would, minus the meta-commands:
   * its own begin/commit/rollback lines are replaced by one transaction that commits only
   * when `commit` is true and the whole script succeeded.
   */
  async runPsqlScript(file:string,{commit}:{commit:boolean}){
-  const body=readFileSync(join(import.meta.dirname,'../../scripts/elo-v2',file),'utf8').split('\n')
+  const body=readFileSync(join(import.meta.dirname,'../../scripts',file.includes('/')?file:`elo-v2/${file}`),'utf8').split('\n')
    .filter(l=>!l.startsWith('\\')&&!/^(begin|commit|rollback);$/.test(l.trim())).join('\n')
   await this.pg.exec('begin')
   try{await this.pg.exec(body)}catch(e){await this.pg.exec('rollback');throw e}

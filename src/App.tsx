@@ -9,6 +9,7 @@ import {applyTheme,readTheme,saveTheme,THEMES} from './theme'
 import type {Theme} from './theme'
 import {formatChance,lossChances,readShowChances,saveShowChances} from './lossChance'
 import type {Chance} from './lossChance'
+import {streakLabel,streakPenaltyNext} from './lossStreak'
 import type {Game,GameDetails,Group,HistoryGame,Member,Mode,Profile,Rating,TableRow,VoteTotal} from './lib'
 
 type Page='home'|'history'|'leaderboard'|'groups'|'profile'
@@ -519,7 +520,7 @@ function HistoryItem({game:g,me,open,toggle}:{game:HistoryGame;me:string;open:bo
  useEffect(()=>{if(!open||details)return;let live=true
   rpc<GameDetails>('game_details',{p_game:g.game_id}).then(d=>{if(live)setDetails(d)}).catch(e=>{if(live)setError(errorMessage(e))})
   return()=>{live=false}},[open,details,g.game_id])
- const card=MODE_CARD[g.mode],panel=`game-${g.game_id}`,delta=Number(g.delta)
+ const card=MODE_CARD[g.mode],panel=`game-${g.game_id}`,delta=Number(g.delta),extra=Number(g.streak_extra??0)
  const losers=g.loser_ids.map((id,i)=>id===me?'you':g.loser_names[i])
  return <li className={`logItem ${g.state}`}>
   <button className="logSummary" aria-expanded={open} aria-controls={panel} onClick={toggle}>
@@ -529,18 +530,21 @@ function HistoryItem({game:g,me,open,toggle}:{game:HistoryGame;me:string;open:bo
     <small>{dateTime(g.played_at)} · <span className="nowrap">{g.player_count} players</span></small>
     <small className="logResult">{resultText(g.state,losers)}</small>
     <small className="logElo">Elo {elo(Number(g.rating_before))} → {elo(Number(g.rating_after))}</small>
+    {g.streak_penalty&&<small className="logStreak"><span className="streakTag">{extra<0?streakLabel(g.loss_streak):extra>0?'Streak penalty share':'Losing-streak penalty'}</span>{extra!==0&&<span className="streakAmount">{signed(extra)}</span>}</small>}
    </span>
    <span className="logRating"><strong className={deltaClass(delta)} aria-label={`Rating change ${signed(delta)}`}>{signed(delta)}</strong></span>
   </button>
   {open&&<div className="logDetails" id={panel}>
    {error?<p className="fieldError" role="alert">{error}</p>:!details?<p className="logMeta">Loading…</p>:<>
     <p className="logStatus">{STATE_TEXT[details.state]||resultText(details.state,[])}{details.correction&&CORRECTION_TEXT[details.correction]?` ${CORRECTION_TEXT[details.correction]}`:''}</p>
+    {details.streak_penalty&&<p className="logMeta">Losing-streak penalty: from the 4th loss in a row in a mode, a loss costs 25% more, and the extra goes to the winners in proportion to their gains.</p>}
     <p className="logMeta">Played {dateTime(details.played_at)}{details.finalized_at&&` · result recorded ${dateTime(details.finalized_at)}`}</p>
     <ul className="logPlayers" aria-label="Players">{details.players.map(p=><li key={p.user_id}>
-     <span className="logName"><b>{p.username}{p.user_id===me&&' (you)'}</b>{p.lost&&<span className="lostTag">{details.state==='tied'?'shared loss':details.state==='void'?'voted loser':'lost'}</span>}</span>
+     <span className="logName"><b>{p.username}{p.user_id===me&&' (you)'}</b>{p.lost&&<span className="lostTag">{details.state==='tied'?'shared loss':details.state==='void'?'voted loser':'lost'}</span>}{Number(p.streak_extra??0)<0&&<span className="streakTag">{streakLabel(p.loss_streak)}</span>}</span>
      <span className="logRating">
       <strong className={deltaClass(Number(p.delta))}>{p.delta==null?'–':signed(Number(p.delta))}</strong>
       {p.rating_before!=null&&p.rating_after!=null&&<small>{elo(Number(p.rating_before))} → {elo(Number(p.rating_after))}</small>}
+      {Number(p.streak_extra??0)!==0&&<small>incl. {signed(Number(p.streak_extra))} streak</small>}
      </span>
     </li>)}</ul>
     {g.games_in_round>1&&<p className="logMeta">Both games of a round are rated from everyone's rating at the start of the round. Before and after show the running total.</p>}
@@ -679,7 +683,7 @@ function ProfileScreen({me,profile,action,reload,showChances,setShowChances}:{me
   <dl className="statRow"><div><dt>Games</dt><dd>{total}</dd></div><div><dt>Wins</dt><dd>{wins}</dd></div><div><dt>Losses</dt><dd>{losses}</dd></div></dl>
   <section aria-labelledby="my-ratings-title">
    <h2 id="my-ratings-title" className="sectionTitle">Your ratings</h2>
-   <ul className="modeRows">{MODES.map(m=>{const r=ratings.find(r=>r.mode===m.id);return <li key={m.id} className="modeRow">{blue?<span className={`rowSuit ${MODE_CARD[m.id].red?'red':''}`} aria-hidden="true">{MODE_CARD[m.id].suit}</span>:<MiniModeCard mode={m.id}/>}<span className="modeText"><b>{m.name}</b><small>{r?.games||0} games · {r?.losses||0} losses</small></span><strong className="modeRowRating">{formatRating(r?.rating||1200)}</strong></li>})}</ul>
+   <ul className="modeRows">{MODES.map(m=>{const r=ratings.find(r=>r.mode===m.id);return <li key={m.id} className="modeRow">{blue?<span className={`rowSuit ${MODE_CARD[m.id].red?'red':''}`} aria-hidden="true">{MODE_CARD[m.id].suit}</span>:<MiniModeCard mode={m.id}/>}<span className="modeText"><b>{m.name}</b><small>{r?.games||0} games · {r?.losses||0} losses</small>{streakLabel(r?.loss_streak)&&<small className={`streakNote ${streakPenaltyNext(r?.loss_streak)?'warn':''}`}>{streakLabel(r?.loss_streak)}</small>}</span><strong className="modeRowRating">{formatRating(r?.rating||1200)}</strong></li>})}</ul>
   </section>
   {total>=10?<section className="stack sm" aria-labelledby="stats-title">
    <h2 id="stats-title">Statistics</h2>

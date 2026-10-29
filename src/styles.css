@@ -636,6 +636,13 @@ select{appearance:none;-webkit-appearance:none;padding-right:40px;background-ima
 .logPlayers li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
 .logName{min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:6px;overflow-wrap:anywhere}
 .lostTag{padding:1px 8px;border-radius:999px;background:var(--red-tint);color:var(--red);font-size:.75rem;font-weight:700}
+/* Losing-streak penalty (both themes): a brass tag in History, a note under the mode in Profile */
+.streakTag{display:inline-block;max-width:100%;padding:1px 8px;border-radius:999px;background:var(--brass-tint);color:var(--brass-ink);font-size:.75rem;font-weight:700;font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.logMain .logStreak{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;margin-top:3px}
+.logPlayers .streakTag{border-radius:10px;white-space:normal}
+.streakAmount{font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.modeText small.streakNote{color:var(--brass-ink);font-size:.875rem;font-weight:700}
+.modeText small.streakNote.warn{color:var(--red)}
 [data-theme=blue] .gameLog{padding:0 16px;border:0;border-radius:20px;background:#fff}
 [data-theme=blue] .logItem{border-bottom-color:#e1eaf1}
 [data-theme=blue] .logItem:last-child{border-bottom:0}

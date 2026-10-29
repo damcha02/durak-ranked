@@ -60,6 +60,8 @@ For a jointly accepted tied loss, each tied loser incurs a reduced, half-weight 
 
 **Elo V2** (player-count-aware, K=20; see [ELO_V2_DESIGN.md](ELO_V2_DESIGN.md)) is installed behind `private.rating_config.formula`, which defaults to `'v1'`. Until it is activated, the V1 formula above stays live, unchanged.
 
+**Losing-streak penalty** (rule `loss_streak_v1`, an extension of V2; see [LOSS_STREAK.md](LOSS_STREAK.md)): from the 4th consecutive loss in a mode (across tables), a loss costs 25% more, and the extra goes to the winners in proportion to their gains. It applies only to rounds started at or after `private.rating_config.streak_from` and is off until `scripts/loss-streak/activate.sql` runs. `ratings.loss_streak` holds the current count; `rating_ledger.streak_extra` holds the part of each delta that comes from the penalty.
+
 This current implementation recalculates all rating history in a mode on every confirmed result or correction. That deliberately favors correctness and reversibility for a small alpha, but **does not scale to a large public platform**. Before launch at scale, implement incremental writes on normal finalization and targeted replay/checkpointing on corrections, and benchmark under contention. PostgreSQL advisory locks serialize rebuilds per mode.
 
 ### Trust and security
