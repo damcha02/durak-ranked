@@ -11,7 +11,7 @@ export const V2_MIGRATION='202610260001_elo_v2.sql'
 export const SNAPSHOT_MIGRATION='202610270001_round_rating_snapshot.sql'
 
 // Minimal stand-ins for what Supabase provides: roles, auth.users, auth.uid(), auth.role().
-const SUPABASE_STUB=`
+export const SUPABASE_STUB=`
 create role anon nologin; create role authenticated nologin; create role service_role nologin;
 create schema auth;
 create table auth.users(id uuid primary key default gen_random_uuid(), raw_user_meta_data jsonb not null default '{}');
@@ -27,12 +27,12 @@ export class Db{
  private tableByMode=new Map<Mode,string>()
  readonly pg:PGlite
  constructor(pg:PGlite){this.pg=pg}
- /** `before` stops at that migration file (exclusive). */
- static async create({withV2=true,before}:{withV2?:boolean;before?:string}={}){
+ /** `before` stops at that migration file (exclusive), `through` after it (inclusive). */
+ static async create({withV2=true,before,through}:{withV2?:boolean;before?:string;through?:string}={}){
   const db=new Db(new PGlite())
   await db.pg.exec(SUPABASE_STUB)
   // withV2:false is the database as it was before Elo V2 (migrations 0001–0005), so later migrations are left out too.
-  for(const f of migrationFiles())if((withV2||f<V2_MIGRATION)&&(!before||f<before))await db.applyMigration(f)
+  for(const f of migrationFiles())if((withV2||f<V2_MIGRATION)&&(!before||f<before)&&(!through||f<=through))await db.applyMigration(f)
   return db
  }
  async applyMigration(file:string){await this.pg.exec(readFileSync(join(MIGRATIONS,file),'utf8'))}
@@ -48,6 +48,19 @@ export class Db{
   const placeholders=args.map((_,i)=>`$${i+1}`).join(',')
   const r=await this.one<{v:T}>(`select public.${fn}(${placeholders}) as v`,args)
   return r.v
+ }
+ /** Calls a set-returning public RPC as the given signed-in user. */
+ async rpcRows<T=Record<string,unknown>>(uid:string,fn:string,args:unknown[]=[]){
+  await this.pg.query(`select set_config('request.jwt.claim.sub',$1,false)`,[uid])
+  return this.rows<T>(`select * from public.${fn}(${args.map((_,i)=>`$${i+1}`).join(',')})`,args)
+ }
+ /** Runs queries as the signed-in user under the `authenticated` role (RLS and grants apply), then rolls back. */
+ async asUser<T>(uid:string,fn:()=>Promise<T>):Promise<T>{
+  await this.pg.exec('begin')
+  try{
+   await this.pg.query(`select set_config('request.jwt.claim.sub',$1,true)`,[uid]);await this.pg.exec('set local role authenticated')
+   return await fn()
+  }finally{await this.pg.exec('rollback')}
  }
  /**
   * Runs one of the psql scripts in scripts/elo-v2 as psql would, minus the meta-commands:

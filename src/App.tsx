@@ -9,11 +9,12 @@ import {applyTheme,readTheme,saveTheme,THEMES} from './theme'
 import type {Theme} from './theme'
 import {formatChance,lossChances,readShowChances,saveShowChances} from './lossChance'
 import type {Chance} from './lossChance'
-import type {Game,Group,Member,Mode,Profile,Rating,TableRow,VoteTotal} from './lib'
+import type {Game,GameDetails,Group,HistoryGame,Member,Mode,Profile,Rating,TableRow,VoteTotal} from './lib'
 
-type Page='home'|'leaderboard'|'groups'|'profile'
+type Page='home'|'history'|'leaderboard'|'groups'|'profile'
 type Action=(fn:()=>Promise<unknown>)=>Promise<void>
 const formatRating=(rating:number)=>Math.round(rating).toLocaleString()
+const dateTime=(s:string)=>{const d=new Date(s);return d.toLocaleString(undefined,{month:'short',day:'numeric',...(d.getFullYear()===new Date().getFullYear()?{}:{year:'numeric'}),hour:'2-digit',minute:'2-digit'})}
 const getJoinCode=()=>new URLSearchParams(location.search).get('join')?.trim().toUpperCase() || ''
 const Stars=({compact=false}:{compact?:boolean})=><span className="stars" title="5-star reputation baseline"><Star size={compact?11:14} fill="currentColor"/> 5.0</span>
 const APP_NAME='Durak Ranked'
@@ -22,9 +23,14 @@ const MODE_CARD:Record<Mode,{abbr:string;suit:string;red:boolean}>={natural:{abb
 const CornerIndex=({mode,flip=false}:{mode:Mode;flip?:boolean})=><span className={`cornerIndex ${MODE_CARD[mode].red?'red':''} ${flip?'flip':''}`} aria-hidden="true">{MODE_CARD[mode].abbr}<br/>{MODE_CARD[mode].suit}</span>
 const MiniModeCard=({mode}:{mode:Mode})=><span className={`miniCard ${MODE_CARD[mode].red?'red':''}`} aria-hidden="true"><span className="miniIndex">{MODE_CARD[mode].abbr}</span>{MODE_CARD[mode].suit}</span>
 const Brand=()=><span className="brand"><span className="brandMark" aria-hidden="true">{'\u2660\uFE0E'}</span><span>{APP_NAME}</span></span>
-const NAV:{id:Page;label:string;suit:string;red:boolean}[]=[{id:'home',label:'Home',suit:'\u2660\uFE0E',red:false},{id:'leaderboard',label:'Rankings',suit:'\u2663\uFE0E',red:false},{id:'groups',label:'Groups',suit:'\u2665\uFE0E',red:true},{id:'profile',label:'Profile',suit:'\u2666\uFE0E',red:true}]
-const STATUS_TEXT:Record<TableRow['status'],string>={lobby:'Waiting for players',playing:'Game in progress',results:'Recording results'}
-const STATUS_ORDER:Record<TableRow['status'],number>={results:0,playing:1,lobby:2}
+const NAV:{id:Page;label:string;suit:string;red:boolean}[]=[{id:'home',label:'Home',suit:'\u2660\uFE0E',red:false},{id:'history',label:'History',suit:'\u21BA\uFE0E',red:false},{id:'leaderboard',label:'Rankings',suit:'\u2663\uFE0E',red:false},{id:'groups',label:'Groups',suit:'\u2665\uFE0E',red:true},{id:'profile',label:'Profile',suit:'\u2666\uFE0E',red:true}]
+// A closed table keeps status 'lobby' on the server; closed_at is what marks it.
+type TableStatus=TableRow['status']|'closed'
+const statusOf=(t:TableRow):TableStatus=>t.closed_at?'closed':t.status
+const STATUS_TEXT:Record<TableStatus,string>={lobby:'Waiting for players',playing:'Game in progress',results:'Recording results',closed:'Closed due to inactivity'}
+const STATUS_ORDER:Record<TableStatus,number>={results:0,playing:1,lobby:2,closed:3}
+// Closed tables stay on Home for a few days, so returning players see why their table is gone.
+const CLOSED_SHOWN_MS=3*86400000
 const greeting=()=>{const h=new Date().getHours();return h>=5&&h<12?'Good morning':h>=12&&h<18?'Good afternoon':'Good evening'}
 
 function Button({children,onClick,kind='primary',disabled=false,className='',type='button'}:{children:React.ReactNode;onClick?:()=>void;kind?:'primary'|'secondary'|'outline'|'ghost'|'danger';disabled?:boolean;className?:string;type?:'button'|'submit'}){
@@ -174,7 +180,8 @@ export default function App(){
   </div></header>
   <main className="main withNav">
    <div key={screenKey} className={`screen enter-${nav.current.dir}`}>
-   {tableId?<TableScreen key={tableId} tableId={tableId} me={user!.id} action={action} busy={busy} showChances={showChances} onLeave={()=>{setTableId(null);setPage('home')}}/>:
+   {tableId?<TableScreen key={tableId} tableId={tableId} me={user!.id} action={action} busy={busy} showChances={showChances} openTable={setTableId} openHistory={()=>go('history')} onLeave={()=>{setTableId(null);setPage('home')}}/>:
+   page==='history'?<HistoryScreen me={user!.id}/>:
    page==='home'?<HomeScreen me={user!.id} profile={profile} openTable={setTableId} openRankings={()=>setPage('leaderboard')} action={action} busy={busy}/>:
    page==='leaderboard'?<LeaderboardScreen me={user!.id}/>:
    page==='groups'?<GroupsScreen me={user!.id} action={action} busy={busy}/>:
@@ -191,7 +198,7 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
  const [loaded,setLoaded]=useState(false),[front,setFront]=useState(0)
  const blue=useBlue(),[people,setPeople]=useState<Record<string,{id:string;name:string}[]>>({}),[modeSheet,setModeSheet]=useState(false)
  const load=useCallback(async()=>{const {data:members}=await supabase.from('table_members').select('table_id').eq('user_id',me).eq('is_active',true);const ids=(members||[]).map(m=>m.table_id);const [{data:tt},{data:rr},{data:gm}]=await Promise.all([
-  ids.length?supabase.from('tables').select('*').in('id',ids).order('created_at',{ascending:false}):Promise.resolve({data:[]}),
+  ids.length?supabase.from('tables').select('*').in('id',ids).or(`closed_at.is.null,closed_at.gt."${new Date(Date.now()-CLOSED_SHOWN_MS).toISOString()}"`).order('created_at',{ascending:false}):Promise.resolve({data:[]}),
   supabase.from('ratings').select('*').eq('user_id',me),supabase.from('group_members').select('group_id').eq('user_id',me)])
  setTables((tt||[]) as TableRow[]);setRatings((rr||[]) as Rating[]);setLoaded(true)
  const groupIds=(gm||[]).map(x=>x.group_id);if(groupIds.length){const{data}=await supabase.from('friend_groups').select('*').in('id',groupIds);setGroups((data||[]) as Group[])}else setGroups([])
@@ -209,7 +216,7 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
  const create=()=>void action(async()=>{const id=await rpc<string>('create_table',{p_mode:mode,p_group:group||null});openTable(id)})
  const joinRoom=()=>void action(async()=>{if(!join.trim())throw new Error('Enter a table code');const id=await rpc<string>('join_table',{p_code:join});openTable(id)})
  // Tables that need attention first (results, then playing, then lobby); the sort is stable, so newest stays first within a status.
- const sorted=useMemo(()=>[...tables].sort((a,b)=>STATUS_ORDER[a.status]-STATUS_ORDER[b.status]),[tables])
+ const sorted=useMemo(()=>[...tables].sort((a,b)=>STATUS_ORDER[statusOf(a)]-STATUS_ORDER[statusOf(b)]),[tables])
  const hand=sorted.length,idx=hand?front%hand:0,current=sorted[idx],next=hand>1?sorted[(idx+1)%hand]:undefined
  const picked=modeInfo(mode),played=ratings.some(r=>r.games>0)
  // New players see all four mode cards; everyone else gets the compact picker behind "Change".
@@ -227,10 +234,10 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
   const cancel=()=>{stop();swipeStart.current=null}
   window.addEventListener('pointerup',up);window.addEventListener('pointercancel',cancel)
  }
- const describe=(t:TableRow)=>`${modeInfo(t.mode).name}, table ${t.code}, ${STATUS_TEXT[t.status].toLowerCase()}`
+ const describe=(t:TableRow)=>`${modeInfo(t.mode).name}, table ${t.code}, ${STATUS_TEXT[statusOf(t)].toLowerCase()}`
  const lead=blue?sorted[0]:current
- const status=lead?lead.status==='results'?'Your table is waiting for your vote.':lead.status==='playing'?'Your game is still going.':'Your table is waiting for players.':!loaded?'':played?'No open tables right now. Start one, or join a friend\'s.':'No tables yet. Pick a game to start one, or join a friend\'s.'
- const withText=(t:TableRow)=>{const others=(people[t.id]||[]).filter(p=>p.id!==me).map(p=>p.name);return people[t.id]?others.length?`With ${listNames(others)}`:'Just you so far':STATUS_TEXT[t.status]}
+ const status=lead?lead.closed_at?'Your table closed after 24 hours without activity. Start a new one whenever you play again.':lead.status==='results'?'Your table is waiting for your vote.':lead.status==='playing'?'Your game is still going.':'Your table is waiting for players.':!loaded?'':played?'No open tables right now. Start one, or join a friend\'s.':'No tables yet. Pick a game to start one, or join a friend\'s.'
+ const withText=(t:TableRow)=>{const others=(people[t.id]||[]).filter(p=>p.id!==me).map(p=>p.name);return t.closed_at?`Closed ${dateTime(t.closed_at)}`:people[t.id]?others.length?`With ${listNames(others)}`:'Just you so far':STATUS_TEXT[t.status]}
  const groupField=groups.length>0&&<label className="field">Friend group (optional)<select value={group} onChange={e=>setGroup(e.target.value)}><option value="">No group</option>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
  const joinSection=<section aria-labelledby="join-title">
   <h2 id="join-title" className="sectionTitle">Join a table</h2>
@@ -246,11 +253,11 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
   {lead&&<section className="stack sm" aria-labelledby="tables-title">
    <div className="sectionHeading"><h2 id="tables-title" className="listLabel">Your tables</h2><button className="iconButton" aria-label="Refresh tables" title="Refresh tables" onClick={()=>void load()}><RefreshCw size={18}/></button></div>
    <div className="summaryCard">
-    <div className="summaryTop"><span className={`statusChip status-${lead.status}`}>{STATUS_TEXT[lead.status]}</span>{people[lead.id]&&<span className="avatarStack" aria-hidden="true">{people[lead.id].slice(0,4).map(p=><Avatar key={p.id} id={p.id} name={p.name} me={me} size="sm"/>)}</span>}</div>
+    <div className="summaryTop"><span className={`statusChip status-${statusOf(lead)}`}>{STATUS_TEXT[statusOf(lead)]}</span>{people[lead.id]&&<span className="avatarStack" aria-hidden="true">{people[lead.id].slice(0,4).map(p=><Avatar key={p.id} id={p.id} name={p.name} me={me} size="sm"/>)}</span>}</div>
     <div><h3 className="summaryTitle">{modeInfo(lead.mode).name}</h3><p className="summaryMeta">Table <span className="mono">{lead.code}</span> · {withText(lead)}</p></div>
-    <Button className="wide" onClick={()=>openTable(lead.id)}>Return to table</Button>
+    <Button className="wide" kind={lead.closed_at?'outline':'primary'} onClick={()=>openTable(lead.id)}>{lead.closed_at?'View closed table':'Return to table'}</Button>
    </div>
-   {sorted.length>1&&<div><h3 className="listLabel">Other tables</h3><ul className="rowList">{sorted.slice(1).map(t=><li key={t.id}><button className="listRow" onClick={()=>openTable(t.id)}><span className="rowText"><b>{modeInfo(t.mode).name}</b><small>Table <span className="mono">{t.code}</span> · {STATUS_TEXT[t.status]}</small></span><span className="chevron" aria-hidden="true">›</span></button></li>)}</ul></div>}
+   {sorted.length>1&&<div><h3 className="listLabel">Other tables</h3><ul className="rowList">{sorted.slice(1).map(t=><li key={t.id}><button className="listRow" onClick={()=>openTable(t.id)}><span className="rowText"><b>{modeInfo(t.mode).name}</b><small>Table <span className="mono">{t.code}</span> · {STATUS_TEXT[statusOf(t)]}</small></span><span className="chevron" aria-hidden="true">›</span></button></li>)}</ul></div>}
   </section>}
   <section className="stack sm" aria-labelledby="create-title">
    <h2 id="create-title">Start a table</h2>
@@ -273,11 +280,11 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
    {current&&<section aria-labelledby="tables-title">
     <div className="sectionHeading"><h2 id="tables-title">Your tables</h2><span className="handMeta">{hand>1&&<span>Swipe · {idx+1} of {hand}</span>}<button className="iconButton" aria-label="Refresh tables" title="Refresh tables" onClick={()=>void load()}><RefreshCw size={18}/></button></span></div>
     <div className="hand" onPointerDown={e=>startSwipe(e.clientX)} onClickCapture={e=>{if(swiped.current){swiped.current=false;e.preventDefault();e.stopPropagation()}}}>
-     {next&&<button className="tableCard back" aria-label={`Show ${describe(next)}`} onClick={()=>setFront((idx+1)%hand)}><CornerIndex mode={next.mode}/><span className="tableName">{modeInfo(next.mode).name}</span><span>{next.code}</span><span>{STATUS_TEXT[next.status]}</span></button>}
+     {next&&<button className="tableCard back" aria-label={`Show ${describe(next)}`} onClick={()=>setFront((idx+1)%hand)}><CornerIndex mode={next.mode}/><span className="tableName">{modeInfo(next.mode).name}</span><span>{next.code}</span><span>{STATUS_TEXT[statusOf(next)]}</span></button>}
      <div className="tableCard front" key={current.id}>
       <CornerIndex mode={current.mode}/><CornerIndex mode={current.mode} flip/>
-      <div className="tableCardBody"><span className={`tableStatus status-${current.status}`}>{STATUS_TEXT[current.status]}</span><h3>{modeInfo(current.mode).name}</h3><span className="tableCode">Table {current.code}</span></div>
-      <Button onClick={()=>openTable(current.id)}>Return to table</Button>
+      <div className="tableCardBody"><span className={`tableStatus status-${statusOf(current)}`}>{STATUS_TEXT[statusOf(current)]}</span><h3>{modeInfo(current.mode).name}</h3><span className="tableCode">Table {current.code}</span></div>
+      <Button kind={current.closed_at?'outline':'primary'} onClick={()=>openTable(current.id)}>{current.closed_at?'View closed table':'Return to table'}</Button>
      </div>
     </div>
     {hand>1&&<div className="handDots">{sorted.map((t,i)=><button key={t.id} className={i===idx?'on':''} aria-label={`Show ${describe(t)}`} aria-current={i===idx||undefined} onClick={()=>setFront(i)}/>)}</div>}
@@ -302,7 +309,7 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
  </div>
 }
 
-function TableScreen({tableId,me,action,busy,showChances,onLeave}:{tableId:string;me:string;action:Action;busy:boolean;showChances:boolean;onLeave:()=>void}){
+function TableScreen({tableId,me,action,busy,showChances,openTable,openHistory,onLeave}:{tableId:string;me:string;action:Action;busy:boolean;showChances:boolean;openTable:(id:string)=>void;openHistory:()=>void;onLeave:()=>void}){
  const [table,setTable]=useState<TableRow|null>(null),[members,setMembers]=useState<Member[]>([]),[profiles,setProfiles]=useState<Record<string,Profile>>({}),[players,setPlayers]=useState<string[]>([]),[games,setGames]=useState<Game[]>([]),[totals,setTotals]=useState<VoteTotal[]>([]),[historyGames,setHistoryGames]=useState<Game[]>([]),[cases,setCases]=useState<{id:string;game_id:string;state:string;created_at:string}[]>([]),[yesCounts,setYesCounts]=useState<Record<string,number>>({}),[now,setNow]=useState(Date.now()),[showQR,setShowQR]=useState(false),[mySelections,setMySelections]=useState<Record<string,string>>({}),[showHistory,setShowHistory]=useState(false),[ballots,setBallots]=useState<Record<string,{voter_id:string;nominee_id:string}[]>>({})
  const [displayNow, setDisplayNow] = useState(Date.now())
  const blue=useBlue(),[shareNote,setShareNote]=useState('')
@@ -365,13 +372,14 @@ function TableScreen({tableId,me,action,busy,showChances,onLeave}:{tableId:strin
  const cast=(game:string,nominee:string)=>void action(async()=>{await rpc('cast_vote',{p_game:game,p_nominee:nominee});setMySelections(s=>({...s,[game]:nominee}));await load()})
  const respond=(game:string,accept:boolean)=>void action(async()=>{await rpc('respond_to_tie',{p_game:game,p_accept:accept});await load()})
  const leave=()=>void action(async()=>{await rpc('leave_table',{p_table:tableId});onLeave()})
+ const newTable=()=>void action(async()=>{if(!table)return;openTable(await rpc<string>('create_table',{p_mode:table.mode,p_group:table.group_id}))})
  const promote=(id:string)=>void action(async()=>{await rpc('transfer_host',{p_table:tableId,p_new_host:id});await load()})
  const restart=(id:string)=>void action(async()=>{await rpc('restart_unresolved',{p_game:id});await load()})
  const openCorrection=(id:string)=>void action(async()=>{const cid=await rpc<string>('request_reversal',{p_game:id});await rpc('vote_reversal',{p_case:cid,p_approve:true});await load()})
  const correctionVote=(cid:string,approve:boolean)=>void action(async()=>{await rpc('vote_reversal',{p_case:cid,p_approve:approve});await load()})
  const info=table?modeInfo(table.mode):MODES[0]
  if(!table)return <div className="loading">Loading table…</div>
- const seats=table.status==='lobby'?Math.max(0,info.min-members.length):0,card=MODE_CARD[table.mode]
+ const closed=Boolean(table.closed_at),seats=table.status==='lobby'&&!closed?Math.max(0,info.min-members.length):0,card=MODE_CARD[table.mode]
  const secondsLeft=activeGame?.deadline?Math.max(0,Math.ceil((new Date(activeGame.deadline).getTime()-displayNow)/1000)):30
  const tiedNames=activeGame?activeGame.loser_ids.map(name).join(' and '):''
  const nominees=activeGame?players.filter(id=>!activeGame.allowed_nominees||activeGame.allowed_nominees.includes(id)):[]
@@ -384,19 +392,26 @@ function TableScreen({tableId,me,action,busy,showChances,onLeave}:{tableId:strin
   {blue?<>
    <button className="backLink" onClick={onLeave}><span aria-hidden="true">‹</span> Home</button>
    <div className="summaryCard">
-    <span className={`statusChip status-${table.status}`}>{STATUS_TEXT[table.status]}</span>
+    <span className={`statusChip status-${statusOf(table)}`}>{STATUS_TEXT[statusOf(table)]}</span>
     <div><h1 className="summaryTitle">{info.name}</h1><p className="summaryMeta">Table <span className="mono">{table.code}</span> · {info.detail.split(' · ').slice(0,2).join(' · ')}</p></div>
-    {table.status!=='results'&&<Button kind="outline" className="wide" onClick={()=>setShowQR(true)}>Invite / QR</Button>}
+    {table.status!=='results'&&!closed&&<Button kind="outline" className="wide" onClick={()=>setShowQR(true)}>Invite / QR</Button>}
    </div>
-   <Sheet open={showQR&&table.status!=='results'} title="Invite friends" onClose={()=>{setShowQR(false);setShareNote('')}}>
+   <Sheet open={showQR&&table.status!=='results'&&!closed} title="Invite friends" onClose={()=>{setShowQR(false);setShareNote('')}}>
     <div className="inviteSheet"><div className="qrInner"><QRCodeSVG value={invite} size={184} includeMargin/></div><div className="codeLarge">{table.code}</div><p>Friends can scan this, type the code, or open the link.</p><Button className="wide" onClick={()=>void share()}>{shareNote||'Share invite link'}</Button></div>
    </Sheet>
   </>:<>
-   <div className="lobbyHero"><span className={`heroCard ${card.red?'red':''}`} aria-hidden="true"><span className="heroIndex">{card.abbr}<br/>{card.suit}</span>{card.suit}</span><div><h1>{info.name}</h1><p>Table {table.code} · {STATUS_TEXT[table.status]}</p><p className="heroDetail">{info.detail} · <span className="nowrap">{info.min}–{info.max} players</span></p></div></div>
-   {table.status!=='results'&&<Button kind="outline" className="wide inviteButton" onClick={()=>setShowQR(s=>!s)}>{showQR?'Hide invite':'Invite / QR'}</Button>}
-   {showQR&&table.status!=='results'&&<section className="card qrCard" aria-label="Invite"><div className="qrInner"><QRCodeSVG value={invite} size={184} includeMargin/></div><p>Scan to join this table, or type the code</p><div className="codeLarge">{table.code}</div><Button kind="secondary" onClick={()=>void share()}><Copy size={15}/> {shareNote||'Share link'}</Button></section>}
+   <div className="lobbyHero"><span className={`heroCard ${card.red?'red':''}`} aria-hidden="true"><span className="heroIndex">{card.abbr}<br/>{card.suit}</span>{card.suit}</span><div><h1>{info.name}</h1><p>Table {table.code} · {STATUS_TEXT[statusOf(table)]}</p><p className="heroDetail">{info.detail} · <span className="nowrap">{info.min}–{info.max} players</span></p></div></div>
+   {table.status!=='results'&&!closed&&<Button kind="outline" className="wide inviteButton" onClick={()=>setShowQR(s=>!s)}>{showQR?'Hide invite':'Invite / QR'}</Button>}
+   {showQR&&table.status!=='results'&&!closed&&<section className="card qrCard" aria-label="Invite"><div className="qrInner"><QRCodeSVG value={invite} size={184} includeMargin/></div><p>Scan to join this table, or type the code</p><div className="codeLarge">{table.code}</div><Button kind="secondary" onClick={()=>void share()}><Copy size={15}/> {shareNote||'Share link'}</Button></section>}
   </>}
-  {table.status!=='results'&&<section aria-labelledby="players-title">
+  {closed&&<section className="closedNotice" role="status" aria-labelledby="closed-title">
+   <h2 id="closed-title">Table closed due to inactivity</h2>
+   <p>Nothing happened at this table for 24 hours, so it closed{table.closed_at?` on ${dateTime(table.closed_at)}`:''}. Nobody can join it or start a game here any more. Every result and rating is kept.</p>
+   <Button className="wide" onClick={newTable} disabled={busy}>Start a new {info.name} table</Button>
+   <Button kind="outline" className="wide" onClick={openHistory}>See your game history</Button>
+   <button className="leaveLink" onClick={leave} disabled={busy}>Remove from your tables <LogOut size={14}/></button>
+  </section>}
+  {table.status!=='results'&&!closed&&<section aria-labelledby="players-title">
    {blue?<div className="sectionHeading"><h2 id="players-title">Players</h2><span className="countText">{members.length} of {info.max}{refresh}</span></div>
    :<div className="sectionHeading"><h2 id="players-title">Players · {members.length} of {info.max}</h2>{refresh}</div>}
    {blue?<ul className="rowList">
@@ -452,12 +467,12 @@ function TableScreen({tableId,me,action,busy,showChances,onLeave}:{tableId:strin
     <p className="voteNote">{activeGame.state==='awaiting'?'The timer starts with the first vote.':'Totals are public; who voted for whom stays hidden until the result is final. You can change your vote.'}</p>
    </>:activeGame?<p className="voteRules">Game {activeGame.slot} opens once the earlier game has a result.</p>:null}
    {games.some(g=>FINAL.includes(g.state))&&<ol className="roundResults" aria-label="Results so far">{games.filter(g=>FINAL.includes(g.state)).map(g=><li key={g.id}><ResultRow game={g} name={name} restart={()=>restart(g.id)} busy={busy}/></li>)}</ol>}
-   {games.some(g=>g.state==='unresolved')&&<div className="hint"><Clock3 size={17}/> Games without a result can be voted on again before the next round.</div>}
+   {games.some(g=>g.state==='unresolved')&&<div className="hint"><Clock3 size={17}/> Games without a result can be voted on again later. The table stays open until they have one.</div>}
   </section>}
   {table.status==='lobby'&&historyGames.length>0&&<section className="card historyCard">
    <h2><button className="historyToggle" aria-expanded={showHistory} aria-controls="history-list" onClick={()=>setShowHistory(s=>!s)}>Recent results <ChevronDown size={18} className={showHistory?'flip':''} aria-hidden="true"/></button></h2>
    {showHistory&&<ul className="historyList" id="history-list">{historyGames.filter(g=>FINAL.includes(g.state)).slice(0,12).map(g=><li key={g.id} className="historyItem">
-    <ResultRow game={g} name={name} restart={()=>restart(g.id)} busy={busy}/>
+    <ResultRow game={g} name={name} restart={closed?undefined:()=>restart(g.id)} busy={busy}/>
     {ballots[g.id]?.length>0&&<p className="ballots"><span className="ballotsLabel">Votes</span>{ballots[g.id].map(v=><span key={v.voter_id}>{name(v.voter_id)} → {name(v.nominee_id)}</span>)}</p>}
     {['confirmed','tied'].includes(g.state)&&g.finalized_at&&Date.now()-new Date(g.finalized_at).getTime()<86400000&&<button className="linkButton" onClick={()=>openCorrection(g.id)}>Request correction</button>}
     {cases.filter(c=>c.game_id===g.id&&c.state==='open').map(c=><div className="correction" key={c.id}><span>Correction vote · {yesCounts[c.id]||0} {yesCounts[c.id]===1?'approval':'approvals'}</span><Button kind="secondary" onClick={()=>correctionVote(c.id,true)}>Approve</Button><Button kind="ghost" onClick={()=>correctionVote(c.id,false)}>Reject</Button></div>)}
@@ -466,8 +481,70 @@ function TableScreen({tableId,me,action,busy,showChances,onLeave}:{tableId:strin
  </div>
 }
 const FINAL:Game['state'][]=['confirmed','tied','unresolved','void']
-function ResultRow({game,name,restart,busy}:{game:Game;name:(id:string)=>string;restart:()=>void;busy:boolean}){
- return <div className={`resultRow ${game.state}`}><span className="resultGame">Game {game.slot}</span><span className="resultText">{game.state==='confirmed'?<><b>{name(game.loser_ids[0])}</b> lost</>:game.state==='tied'?<>Shared loss: <b>{game.loser_ids.map(name).join(', ')}</b></>:game.state==='unresolved'?'No result':game.state==='void'?'Reversed after a correction vote':'Waiting for a result'}</span>{game.state==='unresolved'&&<button className="linkButton" disabled={busy} onClick={restart}>Vote again</button>}</div>
+// Without restart (a closed table, which never has a game without a result), there is no "Vote again".
+function ResultRow({game,name,restart,busy}:{game:Game;name:(id:string)=>string;restart?:()=>void;busy:boolean}){
+ return <div className={`resultRow ${game.state}`}><span className="resultGame">Game {game.slot}</span><span className="resultText">{game.state==='confirmed'?<><b>{name(game.loser_ids[0])}</b> lost</>:game.state==='tied'?<>Shared loss: <b>{game.loser_ids.map(name).join(', ')}</b></>:game.state==='unresolved'?'No result':game.state==='void'?'Reversed after a correction vote':'Waiting for a result'}</span>{game.state==='unresolved'&&restart&&<button className="linkButton" disabled={busy} onClick={restart}>Vote again</button>}</div>
+}
+
+// Personal game history: every result the player took part in, from the server's ledger (nothing is re-rated here).
+const HISTORY_PAGE=20
+const signed=(d:number)=>`${d>0?'+':d<0?'\u2212':'\u00B1'}${Math.abs(d).toFixed(2)}`
+const elo=(r:number)=>r.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})
+const deltaClass=(d:number)=>d>0?'gainDelta':d<0?'lossDelta':''
+const capitalize=(s:string)=>s.charAt(0).toUpperCase()+s.slice(1)
+const resultText=(state:Game['state'],losers:string[])=>state==='confirmed'?`${capitalize(losers[0]||'someone')} lost`:state==='tied'?`Shared loss: ${listNames(losers)}`:state==='void'?'Reversed after a correction vote':state==='unresolved'?'No result':'Waiting for a result'
+const STATE_TEXT:Partial<Record<Game['state'],string>>={confirmed:'Confirmed result.',tied:'Shared loss, accepted by everyone tied.',void:'Reversed after a correction vote: this game no longer counts for ratings.',unresolved:'No result: the vote ended without a clear loser, so ratings did not change.'}
+const CORRECTION_TEXT:Record<string,string>={open:'A correction vote is open.',rejected:'A correction was requested and rejected.',expired:'A correction request expired.'}
+
+function HistoryScreen({me}:{me:string}){
+ const [games,setGames]=useState<HistoryGame[]>([]),[loading,setLoading]=useState(true),[more,setMore]=useState(false),[open,setOpen]=useState<string|null>(null),[error,setError]=useState('')
+ const fetchPage=useCallback(async(before:string|null)=>{
+  setLoading(true);setError('')
+  try{const rows=await rpc<HistoryGame[]>('my_game_history',{p_before:before,p_limit:HISTORY_PAGE});setGames(g=>before?[...g,...rows]:rows);setMore(rows.length===HISTORY_PAGE)}
+  catch(e){setError(errorMessage(e))}finally{setLoading(false)}
+ },[])
+ useEffect(()=>{void fetchPage(null)},[fetchPage,me])
+ return <div className="stack page pageEntry">
+  <header className="pageHead"><h1>History</h1><p>Your games in every mode, newest first. Tap a game to see everyone's rating change.</p></header>
+  {error&&<p className="emptyNote" role="alert">{error}</p>}
+  {games.length?<ol className="gameLog">{games.map(g=><HistoryItem key={g.game_id} game={g} me={me} open={open===g.game_id} toggle={()=>setOpen(o=>o===g.game_id?null:g.game_id)}/>)}</ol>
+  :loading?<p className="emptyNote">Loading…</p>:!error&&<p className="emptyNote">No games yet. A game shows up here once its vote is final.</p>}
+  {more&&<Button kind="outline" className="wide" disabled={loading} onClick={()=>void fetchPage(games[games.length-1].game_id)}>{loading?'Loading…':'Show older games'}</Button>}
+ </div>
+}
+function HistoryItem({game:g,me,open,toggle}:{game:HistoryGame;me:string;open:boolean;toggle:()=>void}){
+ const [details,setDetails]=useState<GameDetails|null>(null),[error,setError]=useState('')
+ useEffect(()=>{if(!open||details)return;let live=true
+  rpc<GameDetails>('game_details',{p_game:g.game_id}).then(d=>{if(live)setDetails(d)}).catch(e=>{if(live)setError(errorMessage(e))})
+  return()=>{live=false}},[open,details,g.game_id])
+ const card=MODE_CARD[g.mode],panel=`game-${g.game_id}`,delta=Number(g.delta)
+ const losers=g.loser_ids.map((id,i)=>id===me?'you':g.loser_names[i])
+ return <li className={`logItem ${g.state}`}>
+  <button className="logSummary" aria-expanded={open} aria-controls={panel} onClick={toggle}>
+   <span className={`logSuit ${card.red?'red':''}`} aria-hidden="true">{card.suit}</span>
+   <span className="logMain">
+    <b>{modeInfo(g.mode).name}{g.games_in_round>1&&<span className="logGame"> · Game {g.slot} of {g.games_in_round}</span>}</b>
+    <small>{dateTime(g.played_at)} · <span className="nowrap">{g.player_count} players</span></small>
+    <small className="logResult">{resultText(g.state,losers)}</small>
+    <small className="logElo">Elo {elo(Number(g.rating_before))} → {elo(Number(g.rating_after))}</small>
+   </span>
+   <span className="logRating"><strong className={deltaClass(delta)} aria-label={`Rating change ${signed(delta)}`}>{signed(delta)}</strong></span>
+  </button>
+  {open&&<div className="logDetails" id={panel}>
+   {error?<p className="fieldError" role="alert">{error}</p>:!details?<p className="logMeta">Loading…</p>:<>
+    <p className="logStatus">{STATE_TEXT[details.state]||resultText(details.state,[])}{details.correction&&CORRECTION_TEXT[details.correction]?` ${CORRECTION_TEXT[details.correction]}`:''}</p>
+    <p className="logMeta">Played {dateTime(details.played_at)}{details.finalized_at&&` · result recorded ${dateTime(details.finalized_at)}`}</p>
+    <ul className="logPlayers" aria-label="Players">{details.players.map(p=><li key={p.user_id}>
+     <span className="logName"><b>{p.username}{p.user_id===me&&' (you)'}</b>{p.lost&&<span className="lostTag">{details.state==='tied'?'shared loss':details.state==='void'?'voted loser':'lost'}</span>}</span>
+     <span className="logRating">
+      <strong className={deltaClass(Number(p.delta))}>{p.delta==null?'–':signed(Number(p.delta))}</strong>
+      {p.rating_before!=null&&p.rating_after!=null&&<small>{elo(Number(p.rating_before))} → {elo(Number(p.rating_after))}</small>}
+     </span>
+    </li>)}</ul>
+    {g.games_in_round>1&&<p className="logMeta">Both games of a round are rated from everyone's rating at the start of the round. Before and after show the running total.</p>}
+   </>}
+  </div>}
+ </li>
 }
 
 // Game-mode switch shared by Rankings and Groups: one chip per mode, with its suit.

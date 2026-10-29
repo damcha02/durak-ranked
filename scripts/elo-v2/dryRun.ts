@@ -3,7 +3,7 @@
 // to production; the only input is the export file.
 import {readFileSync} from 'node:fs'
 import {join} from 'node:path'
-import {Db,MODES,type Mode} from '../../tests/sql/db.ts'
+import {Db,MODES,V2_MIGRATION,type Mode} from '../../tests/sql/db.ts'
 
 type Rows=Record<string,unknown>[]
 export type Export={meta:Record<string,unknown>;functions:{name:string;definition:string}[]}&Record<typeof DATA[number],Rows>
@@ -30,7 +30,8 @@ export async function exportFrom(db:Db){
  return results.filter(r=>r.rows.length===1&&r.fields.length===1).map(r=>JSON.stringify(Object.values(r.rows[0])[0])).join('\n')
 }
 async function load(ex:Export){
- const db=await Db.create()
+ // Production as it was when V2 was activated: the schema up to and including the V2 migration.
+ const db=await Db.create({through:V2_MIGRATION})
  await db.pg.exec(`set session_replication_role=replica`) // historical rows as-is: no triggers, no FK re-checks
  await db.pg.query(`insert into auth.users(id) select (x->>'id')::uuid from jsonb_array_elements($1::jsonb) x`,[JSON.stringify(ex.profiles)])
  for(const t of DATA)await db.pg.query(`insert into public.${t} select * from jsonb_populate_recordset(null::public.${t},$1::jsonb)`,[JSON.stringify(ex[t])])

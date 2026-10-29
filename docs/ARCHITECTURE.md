@@ -29,7 +29,9 @@
 - `round_games`: slot 1 or 2 (for parallel modes), state, server-authoritative voting deadline, winners implied by snapshot minus losers.
 - `game_votes` / `vote_totals`: ballots protected by RLS until result is final; public tallies available to the round participants.
 - `tie_responses`: acceptance of reduced shared loss, or a constrained runoff; tie response window defaults to 30 seconds.
-- `ratings` / `rating_ledger`: four independent ratings, initially 1200; transactions create deterministic per-result deltas.
+- `ratings` / `rating_ledger`: four independent ratings, initially 1200; transactions create deterministic per-result deltas. The ledger is readable only by the player it belongs to and the players of that game (migration `202610280001`).
+- Game history (History tab): `public.my_game_history` (20 per page, newest first in replay order) and `public.game_details` (participants only) read `round_games` and `rating_ledger`. Elo before/after is 1200 plus the player's ledger deltas summed in replay order (rounds by `started_at, id`, games by slot), so it always ends at `ratings.rating`. Both games of a parallel round are rated from the start-of-round rating; their before/after values are the running total. Void and unresolved games show a change of 0.
+- `tables.last_activity_at` / `tables.closed_at`: automatic expiry of idle lobbies after 24 hours, scheduled hourly with pg_cron. A table with an unfinished game (anything but confirmed, tied or void, so including an unresolved vote) never closes. See [TABLE_EXPIRY.md](TABLE_EXPIRY.md).
 - `reversal_cases` / `reversal_votes`: 24-hour reversal by strict majority of locked original participants; corrected result becomes void.
 - `honesty_events`: verified self-admission events; no automatic dishonesty judgment from a minority vote.
 
@@ -42,7 +44,7 @@
 5. All tied candidates must explicitly accept shared partial loss; otherwise a 30-second runoff restricted to tied candidates opens. Tie acceptances have a 30s timeout, after which a runoff starts.
 6. Then Game 2 becomes eligible (where applicable). Game 1 results count even if Game 2 unresolved.
 7. Expired timers are evaluated on the server by `advance_expired` called by live clients. **The initial version has no always-on server scheduler for expiring votes.** State converges on the next participant reconnect. For strict prompt timing even with no connected devices, add a scheduled server-side resolver/Edge Function.
-8. Manual `restart_unresolved` permitted until the next physical round starts. A round result must be confirmed before Elo is booked.
+8. Manual `restart_unresolved` permitted whenever the table is between rounds, also after later rounds (migration `202610240005`); the late result is rated in its own round's place by the full replay. A round result must be confirmed before Elo is booked.
 
 ### Rating formula
 

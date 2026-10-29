@@ -52,3 +52,20 @@ Run against a throwaway Supabase project; **not executed as part of artifact cre
 - Start a Single Double round: the estimates stay the same after Game 1 is confirmed and during Game 2.
 - After the round, the lobby shows estimates from the updated ratings.
 - Profile → Appearance → turn off "Show losing chances": the lobby looks as before; reload keeps it off; turn it on again.
+
+## Game history
+
+- Apply `202610280001_game_history.sql` and `202610280002_table_expiry.sql` before deploying the frontend.
+- History tab: games newest first; parallel rounds show "Game 2 of 2" above "Game 1 of 2"; "Show older games" appears after 20 games.
+- The newest game's "after" value in each mode equals the rating on Home/Profile.
+- Open a game: every player, the loser(s), each player's change and before → after.
+- A game reversed by a correction shows "Reversed after a correction vote" and ±0.00.
+- As an outsider, `select public.game_details('<game id>')` fails with "Not a participant"; `select * from rating_ledger` shows only your own games.
+
+## Table expiry
+
+- After `db push`: no "Table expiry NOT scheduled" warning; `select jobname, schedule from cron.job` lists `durak-close-inactive-tables`.
+- An idle lobby shows "Table closed due to inactivity" within an hour after 24 idle hours; joining by code or link says it closed; "Start a new … table" works.
+- A table whose last vote ended without a result stays open past 24 hours; "Vote again" still works days later, and the table closes 24–25 hours after that vote is decided.
+- A table left in the middle of a vote stays open; after the vote resolves it gets a fresh 24 hours.
+
