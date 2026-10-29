@@ -116,10 +116,12 @@ Use the same connection string as for the Elo V2 scripts; psql prompts for the p
 when nobody is playing.
 
 1. **Check the state:** `psql "<connection>" -X -f scripts/elo-v2/status.sql`. `formula` must be `v2`.
-2. **Apply the migrations.** Run `npx supabase db push --dry-run`. It must list only the migrations not yet
-   applied: `202610280001_game_history.sql` and `202610280002_table_expiry.sql` if they are still pending,
-   and `202610290001_loss_streak_penalty.sql`. Then run `npx supabase db push`. The streak migration is
-   inert, so ratings do not change.
+2. **Apply the migration.** Production already has `202610290002_rating_history.sql`, so the earlier-numbered
+   streak migration needs `--include-all` (plain `db push` refuses a file older than the newest applied one).
+   Run `npx supabase db push --linked --include-all --dry-run`. It must list only
+   `202610290001_loss_streak_penalty.sql`. Then run `npx supabase db push --linked --include-all`. The migration
+   is inert, so ratings do not change. Applying it after `202610290002` gives the same schema as name order;
+   `tests/integration.test.ts` checks this. Never use `migration repair` to get around an ordering error.
 3. **Deploy the frontend:** `npm run build`, then the usual `wrangler pages deploy`. Until activation, every
    count is 0 and no streak UI appears.
 4. **Rehearse the activation:** `psql "<connection>" -X -v ON_ERROR_STOP=1 -f scripts/loss-streak/activate.sql`.
