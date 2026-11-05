@@ -15,9 +15,15 @@ export async function rpcRound(db:Db,tid:string,players:string[],losers:(string|
  for(const [i,game] of games.entries()){
   const loser=losers[i]
   if(loser){for(const voter of players.slice(0,Math.floor(players.length/2)+1))await db.rpc(voter,'cast_vote',[game,loser])}
-  else{await db.rpc(players[0],'cast_vote',[game,players[1]]);await expire(db,game);await db.rpc(players[0],'advance_expired',[game])}
+  else await legacyUnresolved(db,game)
  }
  return games
+}
+/** A game with no result as it existed before unresolved games were discarded (migration 202611050002):
+ * the vote ended without a loser. Built directly, because the app no longer produces them. */
+export async function legacyUnresolved(db:Db,game:string){
+ await db.pg.query(`update public.round_games set state='unresolved',finalized_at=now(),deadline=null where id=$1`,[game])
+ await db.pg.query(`select private.advance_round($1)`,[game])
 }
 export const expire=(db:Db,game:string)=>db.pg.query(`update public.round_games set deadline=now()-interval '1 second' where id=$1`,[game])
 /** Two-way tie in a game of 4+ players, accepted by both tied players. */

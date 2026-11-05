@@ -15,11 +15,11 @@ export const MODES: {id:Mode;name:string;detail:string;min:number;max:number;gam
 export const modeInfo=(m:Mode)=>MODES.find(x=>x.id===m) || MODES[0]
 export const date=(s:string)=>new Date(s).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})
 export type Profile={id:string;username:string;honesty_credit:number;created_at:string}
-// closed_at: set by the server once an idle lobby has had no activity for 24 hours; a closed table is final.
-export type TableRow={id:string;code:string;mode:Mode;group_id:string|null;host_id:string;status:'lobby'|'playing'|'results';current_round_id:string|null;created_at:string;last_activity_at:string;closed_at:string|null}
+// closed_at: set by the server once an idle lobby has had no activity for 2 hours; a closed table is final.
+export type TableRow={id:string;code:string;mode:Mode;group_id:string|null;host_id:string;status:'lobby'|'playing'|'results';current_round_id:string|null;created_at:string;last_activity_at:string;closed_at:string|null;closed_reason:'inactivity'|'host'|null}
 export type Member={table_id:string;user_id:string;is_active:boolean;joined_at:string;profiles?:Profile}
 export type Round={id:string;table_id:string;started_at:string;state:string;started_by:string}
-export type Game={id:string;round_id:string;slot:number;state:'awaiting'|'voting'|'tie_offer'|'confirmed'|'tied'|'unresolved'|'void';deadline:string|null;loser_ids:string[];allowed_nominees:string[]|null;finalized_at:string|null}
+export type Game={id:string;round_id:string;slot:number;state:'awaiting'|'voting'|'tie_offer'|'confirmed'|'tied'|'unresolved'|'void';deadline:string|null;loser_ids:string[];allowed_nominees:string[]|null;finalized_at:string|null;was_reopened?:boolean}
 // loss_streak: consecutive losses in the mode since the losing-streak penalty was activated (0 before; undefined until the migration is applied).
 export type Rating={user_id:string;mode:Mode;rating:number;games:number;losses:number;loss_streak?:number}
 export type VoteTotal={game_id:string;nominee_id:string;votes:number}

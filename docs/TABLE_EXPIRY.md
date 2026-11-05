@@ -1,7 +1,29 @@
 # Automatic table expiry
 
-A lobby that has had no meaningful activity for 24 hours is closed by the server. Migration:
-`supabase/migrations/202610280002_table_expiry.sql`.
+A table that has had no meaningful activity for **2 hours** is closed by the server. Migrations:
+`supabase/migrations/202610280002_table_expiry.sql` (original, 24 hours) and
+`supabase/migrations/202611050001_table_controls.sql` (2 hours, stuck games, host controls).
+
+## Host controls and stuck games (202611050001)
+
+- **Stuck game**: a round that was started but has no result yet (playing, or waiting for votes /
+  in a vote or tie offer) no longer keeps a table open. After 2 hours without activity the job
+  deletes the round and closes the table. A round with any result (`confirmed`, `tied`, `void`,
+  `unresolved`) or a reopened vote (`round_games.was_reopened`) is never cancelled, because
+  that would erase a rated result; those tables behave as described below.
+- **`cancel_round(table)`**: the host stops the current round (same rule). The round, its games
+  and votes are deleted; nothing is rated; the table is back in the lobby and stays open.
+- **`delete_table(table)`**: the host deletes the table. A table that never recorded a game is
+  deleted outright. Otherwise it is closed for good (`closed_reason = 'host'`) and every member
+  is deactivated so nobody sees it; games, ratings and history are kept. Unresolved games do not
+  block this. A running round is stopped first; if it has a result (or a reopened vote) the host
+  must finish it first.
+- **`kick_member(table, user)`**: the host removes another player, in the lobby only. They can
+  rejoin with the code (there is no ban).
+- `closed_reason` is `'inactivity'` or `'host'`.
+
+The rest of this page describes the original rules; read "24 hours" as 2 hours and "hourly" as
+every 10 minutes.
 
 ## Rules
 
@@ -30,7 +52,7 @@ A lobby that has had no meaningful activity for 24 hours is closed by the server
   they can leave it. Nothing is deleted: members, rounds, games, votes, ratings, the
   ledger and corrections stay as they were. History and corrections within 24 hours of a
   result keep working.
-- The job runs hourly, so a lobby closes between 24 and 25 hours after its last activity.
+- The job runs every 10 minutes, so a table closes between 2 hours and 2 hours 10 minutes after its last activity.
 
 Existing tables, when the migration is applied, start from their latest recorded activity
 (creation, last update, last join, round start, result, vote or tie response). Lobbies that were
@@ -45,7 +67,7 @@ where g.state = 'unresolved';
 ## Scheduling (Supabase Cron / pg_cron)
 
 The migration installs `pg_cron` and schedules the job `durak-close-inactive-tables` for
-minute 7 of every hour (`7 * * * *`). It runs `select private.close_inactive_tables()`.
+every 10 minutes (`*/10 * * * *`). It runs `select private.close_inactive_tables()`.
 
 If `pg_cron` cannot be installed (for example, Cron is not enabled for the project), the migration
 still applies and prints:
@@ -59,7 +81,7 @@ or run in the SQL editor:
 
 ```sql
 create extension if not exists pg_cron with schema pg_catalog;
-select cron.schedule('durak-close-inactive-tables', '7 * * * *', 'select private.close_inactive_tables()');
+select cron.schedule('durak-close-inactive-tables', '*/10 * * * *', 'select private.close_inactive_tables()');
 ```
 
 Check it:

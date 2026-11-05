@@ -19,7 +19,7 @@ describe.skipIf(!URL_)('table expiry with concurrent sessions (real PostgreSQL)'
 
  const user=async(name:string)=>admin.ok(`insert into auth.users(raw_user_meta_data) values(jsonb_build_object('username','${name}')) returning id`)
  const as=(s:PsqlSession,uid:string)=>s.ok(`select set_config('request.jwt.claim.sub','${uid}',false)`)
- /** A lobby of three players whose last activity was 25 hours ago. */
+ /** A lobby of three players whose last activity was 3 hours ago. */
  async function staleTable(prefix:string){
   await cleanup(admin) // tables left idle by earlier scenarios must not count here
   const ids=[await user(`${prefix}_a`),await user(`${prefix}_b`),await user(`${prefix}_c`)]
@@ -27,7 +27,7 @@ describe.skipIf(!URL_)('table expiry with concurrent sessions (real PostgreSQL)'
   const tid=await admin.ok(`select public.create_table('natural',null)`)
   const code=await admin.ok(`select code from public.tables where id='${tid}'`)
   for(const id of ids.slice(1)){await as(admin,id);await admin.ok(`select public.join_table('${code}')`)}
-  await admin.ok(`update public.tables set last_activity_at=now()-interval '25 hours' where id='${tid}'`)
+  await admin.ok(`update public.tables set last_activity_at=now()-interval '3 hours' where id='${tid}'`)
   return {tid,code,ids}
  }
  const closedAt=(tid:string)=>admin.ok(`select coalesce(closed_at::text,'open') from public.tables where id='${tid}'`)
@@ -82,16 +82,14 @@ describe.skipIf(!URL_)('table expiry with concurrent sessions (real PostgreSQL)'
   expect(await within(cleanup(b),2000)).toBe('0')
   await a.ok('commit');await a.ok(`select public.begin_results('${tid}')`)
   const game=await admin.ok(`select g.id from public.round_games g join public.tables t on t.current_round_id=g.round_id where t.id='${tid}'`)
-  await admin.ok(`update public.tables set last_activity_at=now()-interval '25 hours' where id='${tid}'`)
-  expect(await cleanup(b)).toBe('0') // results pending
   // One vote is recorded; the second (a majority of three: it decides) is in flight while cleanup runs.
   await as(a,ids[0]);await a.ok(`select public.cast_vote('${game}','${ids[2]}')`)
-  await admin.ok(`update public.tables set last_activity_at=now()-interval '25 hours' where id='${tid}'`)
+  await admin.ok(`update public.tables set last_activity_at=now()-interval '3 hours' where id='${tid}'`)
   await as(a,ids[1]);await a.ok('begin');await a.ok(`select public.cast_vote('${game}','${ids[2]}')`)
   expect(await within(cleanup(b),2000)).toBe('0')
   await a.ok('commit')
   expect(await admin.ok(`select status from public.tables where id='${tid}'`)).toBe('lobby')
-  expect(await cleanup(b)).toBe('0') // the result started a fresh 24 hours
+  expect(await cleanup(b)).toBe('0') // the result started a fresh 2 hours
   expect(await closedAt(tid)).toBe('open')
   await invariants()
  },T)
@@ -105,11 +103,11 @@ describe.skipIf(!URL_)('table expiry with concurrent sessions (real PostgreSQL)'
   await admin.ok(`update public.round_games set deadline=now()-interval '1 second' where id='${game}'`)
   await admin.ok(`select public.advance_expired('${game}')`)
   expect(await admin.ok(`select state from public.round_games where id='${game}'`)).toBe('unresolved')
-  await admin.ok(`update public.tables set last_activity_at=now()-interval '25 hours' where id='${t.tid}'`)
+  await admin.ok(`update public.tables set last_activity_at=now()-interval '3 hours' where id='${t.tid}'`)
   return {...t,game}
  }
 
- it('never closes a table whose unresolved vote is being reopened or decided, and closes it 24 hours after the result',async()=>{
+ it('never closes a table whose unresolved vote is being reopened or decided, and closes it 2 hours after the result',async()=>{
   const {tid,ids:[x,y,z],game}=await unresolvedTable('u'),a=session(),b=session()
   expect(await cleanup(b)).toBe('0') // unresolved: stays open
   // Reopening is in flight while cleanup runs: cleanup neither waits nor closes.
@@ -118,14 +116,14 @@ describe.skipIf(!URL_)('table expiry with concurrent sessions (real PostgreSQL)'
   await a.ok('commit')
   expect(await admin.ok(`select status from public.tables where id='${tid}'`)).toBe('results')
   // The deciding vote is in flight while cleanup runs.
-  await admin.ok(`update public.tables set last_activity_at=now()-interval '25 hours' where id='${tid}'`)
+  await admin.ok(`update public.tables set last_activity_at=now()-interval '3 hours' where id='${tid}'`)
   await as(a,x);await a.ok(`select public.cast_vote('${game}','${z}')`)
   await as(a,y);await a.ok('begin');await a.ok(`select public.cast_vote('${game}','${z}')`)
   expect(await within(cleanup(b),2000)).toBe('0')
   await a.ok('commit')
   expect(await admin.ok(`select state from public.round_games where id='${game}'`)).toBe('confirmed')
-  expect(await cleanup(b)).toBe('0') // the result started a fresh 24 hours
-  await admin.ok(`update public.tables set last_activity_at=now()-interval '25 hours' where id='${tid}'`)
+  expect(await cleanup(b)).toBe('0') // the result started a fresh 2 hours
+  await admin.ok(`update public.tables set last_activity_at=now()-interval '3 hours' where id='${tid}'`)
   expect(await cleanup(b)).toBe('1')
   await invariants()
  },T)
@@ -166,7 +164,7 @@ describe.skipIf(!URL_)('table expiry with concurrent sessions (real PostgreSQL)'
     for(let k=0;k<12;k++){
      const t=tables[(i+k)%tables.length]
      await step(s,`select public.join_table('${t.code}')`)
-     await step(s,`update public.tables set last_activity_at=now()-interval '25 hours' where id='${t.tid}'`)
+     await step(s,`update public.tables set last_activity_at=now()-interval '3 hours' where id='${t.tid}'`)
      await step(s,k%3?`select public.leave_table('${t.tid}')`:`select public.start_round('${t.tid}')`)
     }
    }),

@@ -89,6 +89,6 @@ Run against a throwaway Supabase project; **not executed as part of artifact cre
 
 - After `db push`: no "Table expiry NOT scheduled" warning; `select jobname, schedule from cron.job` lists `durak-close-inactive-tables`.
 - An idle lobby shows "Table closed due to inactivity" within an hour after 24 idle hours; joining by code or link says it closed; "Start a new … table" works.
-- A table whose last vote ended without a result stays open past 24 hours; "Vote again" still works days later, and the table closes 24–25 hours after that vote is decided.
-- A table left in the middle of a vote stays open; after the vote resolves it gets a fresh 24 hours.
+- A table whose last vote ended without a result stays open past 2 hours; "Vote again" still works days later, and the table closes 2 hours after that vote is decided.
+- A table left in the middle of a vote stays open; after the vote resolves it gets a fresh 2 hours. A game started by mistake and never finished is cancelled and its table closed after 2 hours; the host can stop it sooner ("Stop this game"), delete the table, or "Remove" a player in the lobby.
 

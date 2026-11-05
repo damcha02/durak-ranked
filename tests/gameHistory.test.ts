@@ -177,7 +177,7 @@ describe('participant-only access',()=>{
 })
 
 describe('voting flow coverage',()=>{
- it('omits games still being voted on',async()=>{
+ it('omits games still being voted on, and a vote without a verdict leaves no trace',async()=>{
   const db=await v2(),[a,b,c]=await db.users('alice','bob','carol')
   const tid=await rpcTable(db,'natural',[a,b,c])
   await db.rpc(a,'start_round',[tid]);await db.rpc(a,'begin_results',[tid])
@@ -185,6 +185,7 @@ describe('voting flow coverage',()=>{
   await db.rpc(a,'cast_vote',[id,b])
   expect(await history(db,a)).toEqual([])
   await expire(db,id);await db.rpc(a,'advance_expired',[id])
-  expect((await history(db,a)).map(r=>r.state)).toEqual(['unresolved'])
+  expect(await history(db,a)).toEqual([])
+  expect((await db.one<{n:number}>(`select count(*)::int n from public.round_games`)).n).toBe(0)
  },T)
 })

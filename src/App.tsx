@@ -1,7 +1,7 @@
 import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState} from 'react'
 import type {Session} from '@supabase/supabase-js'
 import {QRCodeSVG} from 'qrcode.react'
-import {ArrowRight,ChevronDown,Clock3,Copy,Crown,LogOut,RefreshCw,ShieldCheck,Star,X} from 'lucide-react'
+import {ArrowRight,ChevronDown,Clock3,Copy,Crown,LogOut,RefreshCw,ShieldCheck,Star,Trash2,X} from 'lucide-react'
 import {configured,date,errorMessage,MODES,modeInfo,rpc,supabase} from './lib'
 import {isEmailIdentifier,isUsername} from './authValidation'
 import {signInByUsername} from './usernameSignIn'
@@ -12,9 +12,11 @@ import type {Chance} from './lossChance'
 import {RatingChart} from './RatingChart'
 import type {RatedGame} from './ratingChart'
 import {streakLabel,streakPenaltyNext} from './lossStreak'
-import type {Game,GameDetails,Group,HistoryGame,Member,Mode,Profile,Rating,TableRow,VoteTotal} from './lib'
+import type {Game,GameDetails,HistoryGame,Member,Mode,Profile,Rating,TableRow,VoteTotal} from './lib'
 
-type Page='home'|'history'|'leaderboard'|'groups'|'profile'
+type Page='home'|'history'|'leaderboard'|'friends'|'profile'
+// Players appear in the rankings only after this many games in the mode.
+const MIN_RANKED_GAMES=5
 type Action=(fn:()=>Promise<unknown>)=>Promise<void>
 const formatRating=(rating:number)=>Math.round(rating).toLocaleString()
 const dateTime=(s:string)=>{const d=new Date(s);return d.toLocaleString(undefined,{month:'short',day:'numeric',...(d.getFullYear()===new Date().getFullYear()?{}:{year:'numeric'}),hour:'2-digit',minute:'2-digit'})}
@@ -26,7 +28,7 @@ const MODE_CARD:Record<Mode,{abbr:string;suit:string;red:boolean}>={natural:{abb
 const CornerIndex=({mode,flip=false}:{mode:Mode;flip?:boolean})=><span className={`cornerIndex ${MODE_CARD[mode].red?'red':''} ${flip?'flip':''}`} aria-hidden="true">{MODE_CARD[mode].abbr}<br/>{MODE_CARD[mode].suit}</span>
 const MiniModeCard=({mode}:{mode:Mode})=><span className={`miniCard ${MODE_CARD[mode].red?'red':''}`} aria-hidden="true"><span className="miniIndex">{MODE_CARD[mode].abbr}</span>{MODE_CARD[mode].suit}</span>
 const Brand=()=><span className="brand"><span className="brandMark" aria-hidden="true">{'\u2660\uFE0E'}</span><span>{APP_NAME}</span></span>
-const NAV:{id:Page;label:string;suit:string;red:boolean}[]=[{id:'home',label:'Home',suit:'\u2660\uFE0E',red:false},{id:'history',label:'History',suit:'\u21BA\uFE0E',red:false},{id:'leaderboard',label:'Rankings',suit:'\u2663\uFE0E',red:false},{id:'groups',label:'Groups',suit:'\u2665\uFE0E',red:true},{id:'profile',label:'Profile',suit:'\u2666\uFE0E',red:true}]
+const NAV:{id:Page;label:string;suit:string;red:boolean}[]=[{id:'home',label:'Home',suit:'\u2660\uFE0E',red:false},{id:'history',label:'History',suit:'\u21BA\uFE0E',red:false},{id:'leaderboard',label:'Rankings',suit:'\u2663\uFE0E',red:false},{id:'friends',label:'Friends',suit:'\u2665\uFE0E',red:true},{id:'profile',label:'Profile',suit:'\u2666\uFE0E',red:true}]
 // A closed table keeps status 'lobby' on the server; closed_at is what marks it.
 type TableStatus=TableRow['status']|'closed'
 const statusOf=(t:TableRow):TableStatus=>t.closed_at?'closed':t.status
@@ -187,7 +189,7 @@ export default function App(){
    page==='history'?<HistoryScreen me={user!.id}/>:
    page==='home'?<HomeScreen me={user!.id} profile={profile} openTable={setTableId} openRankings={()=>setPage('leaderboard')} action={action} busy={busy}/>:
    page==='leaderboard'?<LeaderboardScreen me={user!.id}/>:
-   page==='groups'?<GroupsScreen me={user!.id} action={action} busy={busy}/>:
+   page==='friends'?<FriendsScreen me={user!.id} action={action} busy={busy}/>:
    <ProfileScreen me={user!.id} profile={profile} action={action} reload={reloadProfile} showChances={showChances} setShowChances={setShowChances}/>}
    </div>
   </main>
@@ -197,14 +199,13 @@ export default function App(){
 }
 
 function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;profile:Profile|null;openTable:(id:string)=>void;openRankings:()=>void;action:Action;busy:boolean}){
- const[mode,setMode]=useState<Mode>('natural'),[expanded,setExpanded]=useState(false),[join,setJoin]=useState(''),[tables,setTables]=useState<TableRow[]>([]),[ratings,setRatings]=useState<Rating[]>([]),[groups,setGroups]=useState<Group[]>([]),[group,setGroup]=useState('')
+ const[mode,setMode]=useState<Mode>('natural'),[expanded,setExpanded]=useState(false),[join,setJoin]=useState(''),[tables,setTables]=useState<TableRow[]>([]),[ratings,setRatings]=useState<Rating[]>([])
  const [loaded,setLoaded]=useState(false),[front,setFront]=useState(0)
  const blue=useBlue(),[people,setPeople]=useState<Record<string,{id:string;name:string}[]>>({}),[modeSheet,setModeSheet]=useState(false)
- const load=useCallback(async()=>{const {data:members}=await supabase.from('table_members').select('table_id').eq('user_id',me).eq('is_active',true);const ids=(members||[]).map(m=>m.table_id);const [{data:tt},{data:rr},{data:gm}]=await Promise.all([
+ const load=useCallback(async()=>{const {data:members}=await supabase.from('table_members').select('table_id').eq('user_id',me).eq('is_active',true);const ids=(members||[]).map(m=>m.table_id);const [{data:tt},{data:rr}]=await Promise.all([
   ids.length?supabase.from('tables').select('*').in('id',ids).or(`closed_at.is.null,closed_at.gt."${new Date(Date.now()-CLOSED_SHOWN_MS).toISOString()}"`).order('created_at',{ascending:false}):Promise.resolve({data:[]}),
-  supabase.from('ratings').select('*').eq('user_id',me),supabase.from('group_members').select('group_id').eq('user_id',me)])
+  supabase.from('ratings').select('*').eq('user_id',me)])
  setTables((tt||[]) as TableRow[]);setRatings((rr||[]) as Rating[]);setLoaded(true)
- const groupIds=(gm||[]).map(x=>x.group_id);if(groupIds.length){const{data}=await supabase.from('friend_groups').select('*').in('id',groupIds);setGroups((data||[]) as Group[])}else setGroups([])
  // Both themes name the players at each table ("With Masha and Grisha"), so it also loads who sits at each table.
  if(ids.length){
   const{data:seated}=await supabase.from('table_members').select('table_id,user_id').in('table_id',ids).eq('is_active',true).order('joined_at')
@@ -216,7 +217,7 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
  }
  },[me])
  useEffect(()=>{void load();const id=setInterval(()=>void load(),12000);return()=>clearInterval(id)},[load])
- const create=()=>void action(async()=>{const id=await rpc<string>('create_table',{p_mode:mode,p_group:group||null});openTable(id)})
+ const create=()=>void action(async()=>{const id=await rpc<string>('create_table',{p_mode:mode,p_group:null});openTable(id)})
  const joinRoom=()=>void action(async()=>{if(!join.trim())throw new Error('Enter a table code');const id=await rpc<string>('join_table',{p_code:join});openTable(id)})
  // Tables that need attention first (results, then playing, then lobby); the sort is stable, so newest stays first within a status.
  const sorted=useMemo(()=>[...tables].sort((a,b)=>STATUS_ORDER[statusOf(a)]-STATUS_ORDER[statusOf(b)]),[tables])
@@ -239,11 +240,10 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
  }
  const describe=(t:TableRow)=>`${modeInfo(t.mode).name}, table ${t.code}, ${STATUS_TEXT[statusOf(t)].toLowerCase()}`
  const lead=blue?sorted[0]:current
- const status=lead?lead.closed_at?'Your table closed after 24 hours without activity. Start a new one whenever you play again.':lead.status==='results'?'Your table is waiting for your vote.':lead.status==='playing'?'Your game is still going.':'Your table is waiting for players.':!loaded?'':played?'No open tables right now. Start one, or join a friend\'s.':'No tables yet. Pick a game to start one, or join a friend\'s.'
+ const status=lead?lead.closed_at?'Your table closed after 2 hours without activity. Start a new one whenever you play again.':lead.status==='results'?'Your table is waiting for your vote.':lead.status==='playing'?'Your game is still going.':'Your table is waiting for players.':!loaded?'':played?'No open tables right now. Start one, or join a friend\'s.':'No tables yet. Pick a game to start one, or join a friend\'s.'
  // Card theme: just the players, under the table code (the card already shows the status).
  const playersText=(t:TableRow)=>{if(!people[t.id])return '';const others=people[t.id].filter(p=>p.id!==me).map(p=>p.name);return others.length?`With ${listNames(others)}`:'Just you so far'}
  const withText=(t:TableRow)=>{const others=(people[t.id]||[]).filter(p=>p.id!==me).map(p=>p.name);return t.closed_at?`Closed ${dateTime(t.closed_at)}`:people[t.id]?others.length?`With ${listNames(others)}`:'Just you so far':STATUS_TEXT[t.status]}
- const groupField=groups.length>0&&<label className="field">Friend group (optional)<select value={group} onChange={e=>setGroup(e.target.value)}><option value="">No group</option>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
  const joinSection=<section aria-labelledby="join-title">
   <h2 id="join-title" className="sectionTitle">Join a table</h2>
   <form onSubmit={e=>{e.preventDefault();joinRoom()}}>
@@ -267,7 +267,6 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
   <section className="stack sm" aria-labelledby="create-title">
    <h2 id="create-title">Start a table</h2>
    <button className="modeButton" aria-haspopup="dialog" aria-label={`Game mode: ${picked.name}. Change`} onClick={()=>setModeSheet(true)}><span className="modeButtonMain"><SuitBox mode={mode}/><span className="rowText"><b>{picked.name}</b><small>{picked.detail} · <span className="nowrap">{picked.min}–{picked.max} players</span></small></span></span><span className="modeButtonAction" aria-hidden="true">Change</span></button>
-   {groupField}
    <Button onClick={create} disabled={busy} className="wide">Create table</Button>
   </section>
   {joinSection}
@@ -300,8 +299,7 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
      <div className={`startPanel ${showModes?'open':''}`}>
       {showModes?<div className="modeGrid" role="group" aria-label="Game mode" ref={modeGrid}>{MODES.map(m=><button key={m.id} aria-pressed={mode===m.id} className={`modeCard ${mode===m.id?'on':''} ${MODE_CARD[m.id].red?'red':''}`} onClick={()=>pickMode(m.id)}><CornerIndex mode={m.id}/>{mode===m.id&&<span className="chosen" aria-hidden="true">✓ Selected</span>}<span className="modeSuit" aria-hidden="true">{MODE_CARD[m.id].suit}</span><span className="modeName">{m.name}</span><span className="modeDetail">{m.detail}<br/><span className="nowrap">{m.min}–{m.max} players</span></span></button>)}</div>
       :<div className="modeSummary"><MiniModeCard mode={mode}/><div className="modeText"><b>{picked.name}</b><small>{picked.detail} · <span className="nowrap">{picked.min}–{picked.max} players</span></small></div><button ref={changeButton} className="linkButton" aria-label={`Change game mode, currently ${picked.name}`} onClick={()=>setExpanded(true)}>Change</button></div>}
-      {groupField}
-      <Button onClick={create} disabled={busy} className="wide">Create {picked.name} table</Button>
+         <Button onClick={create} disabled={busy} className="wide">Create {picked.name} table</Button>
      </div>
     </section>
     {joinSection}
@@ -315,7 +313,7 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
 }
 
 function TableScreen({tableId,me,action,busy,showChances,openTable,openHistory,onLeave}:{tableId:string;me:string;action:Action;busy:boolean;showChances:boolean;openTable:(id:string)=>void;openHistory:()=>void;onLeave:()=>void}){
- const [table,setTable]=useState<TableRow|null>(null),[members,setMembers]=useState<Member[]>([]),[profiles,setProfiles]=useState<Record<string,Profile>>({}),[players,setPlayers]=useState<string[]>([]),[games,setGames]=useState<Game[]>([]),[totals,setTotals]=useState<VoteTotal[]>([]),[historyGames,setHistoryGames]=useState<Game[]>([]),[cases,setCases]=useState<{id:string;game_id:string;state:string;created_at:string}[]>([]),[yesCounts,setYesCounts]=useState<Record<string,number>>({}),[now,setNow]=useState(Date.now()),[showQR,setShowQR]=useState(false),[mySelections,setMySelections]=useState<Record<string,string>>({}),[showHistory,setShowHistory]=useState(false),[ballots,setBallots]=useState<Record<string,{voter_id:string;nominee_id:string}[]>>({})
+ const [table,setTable]=useState<TableRow|null>(null),[members,setMembers]=useState<Member[]>([]),[profiles,setProfiles]=useState<Record<string,Profile>>({}),[players,setPlayers]=useState<string[]>([]),[games,setGames]=useState<Game[]>([]),[totals,setTotals]=useState<VoteTotal[]>([]),[historyGames,setHistoryGames]=useState<Game[]>([]),[cases,setCases]=useState<{id:string;game_id:string;state:string;created_at:string}[]>([]),[yesCounts,setYesCounts]=useState<Record<string,number>>({}),[now,setNow]=useState(Date.now()),[showQR,setShowQR]=useState(false),[mySelections,setMySelections]=useState<Record<string,string>>({}),[showHistory,setShowHistory]=useState(false),[ballots,setBallots]=useState<Record<string,{voter_id:string;nominee_id:string}[]>>({}),[myFriends,setMyFriends]=useState<{id:string;name:string}[]>([])
  const [displayNow, setDisplayNow] = useState(Date.now())
  const blue=useBlue(),[shareNote,setShareNote]=useState('')
  // Ratings behind the losing-chance estimate, tagged with the round they belong to (null = lobby preview).
@@ -328,12 +326,14 @@ function TableScreen({tableId,me,action,busy,showChances,openTable,openHistory,o
 
     return () => window.clearInterval(timer)
   }, [])
+ const leaveRef=useRef(onLeave);leaveRef.current=onLeave
  const load=useCallback(async()=>{
-  const{data:tt,error:te}=await supabase.from('tables').select('*').eq('id',tableId).single();if(te)throw te;const t=tt as TableRow;setTable(t)
+  const{data:tt,error:te}=await supabase.from('tables').select('*').eq('id',tableId).single();if(te?.code==='PGRST116'){leaveRef.current();return}if(te)throw te;const t=tt as TableRow;setTable(t)
   const[{data:mm},{data:allR}]=await Promise.all([
    supabase.from('table_members').select('*').eq('table_id',tableId).eq('is_active',true).order('joined_at'),
    supabase.from('rounds').select('id').eq('table_id',tableId).order('started_at',{ascending:false}).limit(12)
   ]);setMembers((mm||[]) as Member[])
+  if(t.host_id===me&&t.status==='lobby'&&!t.closed_at){const{data:ff}=await supabase.from('friendships').select('user_a,user_b').eq('status','accepted');const fids=(ff||[]).map(f=>f.user_a===me?f.user_b:f.user_a);if(fids.length){const{data:pp}=await supabase.from('profiles').select('id,username').in('id',fids);setMyFriends(((pp||[]) as {id:string;username:string}[]).map(p=>({id:p.id,name:p.username})).sort((x,y)=>x.name.localeCompare(y.name)))}else setMyFriends([])}
   const rids=(allR||[]).map(r=>r.id),seated=(mm||[]).map(m=>m.user_id),none=Promise.resolve({data:[],error:null})
   const [{data:rp},{data:gg},{data:historic},chanceRows]=await Promise.all([
     t.current_round_id?supabase.from('round_players').select('user_id').eq('round_id',t.current_round_id):Promise.resolve({data:[]}),
@@ -352,7 +352,7 @@ function TableScreen({tableId,me,action,busy,showChances,openTable,openHistory,o
   const histIds=(historic||[]).map(g=>g.id);if(histIds.length){
    const {data:vv}=await supabase.from('game_votes').select('game_id,voter_id,nominee_id').in('game_id',histIds);
    const votesByGame:Record<string,{voter_id:string;nominee_id:string}[]>={};for(const v of vv||[])(votesByGame[v.game_id] ||= []).push({voter_id:v.voter_id,nominee_id:v.nominee_id});setBallots(votesByGame);const{data:cc}=await supabase.from('reversal_cases').select('*').in('game_id',histIds);setCases((cc||[]) as typeof cases);const cs=(cc||[]).filter(c=>c.state==='open').map(c=>c.id);if(cs.length){const{data:vv}=await supabase.from('reversal_votes').select('case_id,approve').in('case_id',cs);const counts:Record<string,number>={};for(const v of vv||[])if(v.approve)counts[v.case_id]=(counts[v.case_id]||0)+1;setYesCounts(counts)}else setYesCounts({})}else setCases([])
- },[tableId])
+ },[tableId,me])
  useEffect(()=>{void load().catch(console.error);const timer=setInterval(()=>{setNow(Date.now());void load().catch(console.error)},4500);
   const channel=supabase.channel(`table-${tableId}`)
    .on('postgres_changes',{event:'*',schema:'public',table:'tables',filter:`id=eq.${tableId}`},()=>void load())
@@ -377,12 +377,18 @@ function TableScreen({tableId,me,action,busy,showChances,openTable,openHistory,o
  const cast=(game:string,nominee:string)=>void action(async()=>{await rpc('cast_vote',{p_game:game,p_nominee:nominee});setMySelections(s=>({...s,[game]:nominee}));await load()})
  const respond=(game:string,accept:boolean)=>void action(async()=>{await rpc('respond_to_tie',{p_game:game,p_accept:accept});await load()})
  const leave=()=>void action(async()=>{await rpc('leave_table',{p_table:tableId});onLeave()})
- const newTable=()=>void action(async()=>{if(!table)return;openTable(await rpc<string>('create_table',{p_mode:table.mode,p_group:table.group_id}))})
- const promote=(id:string)=>void action(async()=>{await rpc('transfer_host',{p_table:tableId,p_new_host:id});await load()})
+ const newTable=()=>void action(async()=>{if(!table)return;openTable(await rpc<string>('create_table',{p_mode:table.mode,p_group:null}))})
+ const addFriend=(id:string)=>void action(async()=>{await rpc('add_friend_to_table',{p_table:tableId,p_friend:id});await load()})
+const stopGame=()=>{if(!window.confirm('Stop this game? Nothing is recorded and everyone goes back to the table.'))return;void action(async()=>{await rpc('cancel_round',{p_table:tableId});await load()})}
+const removeTable=()=>{if(!window.confirm('Delete this table for everyone? Players will no longer see it. Recorded results and ratings are kept.'))return;void action(async()=>{await rpc('delete_table',{p_table:tableId});onLeave()})}
+const kick=(id:string,who:string)=>{if(!window.confirm(`Remove ${who} from the table?`))return;void action(async()=>{await rpc('kick_member',{p_table:tableId,p_user:id});await load()})}
+const promote=(id:string)=>void action(async()=>{await rpc('transfer_host',{p_table:tableId,p_new_host:id});await load()})
  const restart=(id:string)=>void action(async()=>{await rpc('restart_unresolved',{p_game:id});await load()})
  const openCorrection=(id:string)=>void action(async()=>{const cid=await rpc<string>('request_reversal',{p_game:id});await rpc('vote_reversal',{p_case:cid,p_approve:true});await load()})
  const correctionVote=(cid:string,approve:boolean)=>void action(async()=>{await rpc('vote_reversal',{p_case:cid,p_approve:approve});await load()})
  const info=table?modeInfo(table.mode):MODES[0]
+// Same rule as the server: a game with no result, not reopened, can be stopped.
+const canStop=games.length>0&&games.every(g=>['awaiting','voting','tie_offer'].includes(g.state)&&!g.was_reopened)
  if(!table)return <div className="loading">Loading table…</div>
  const closed=Boolean(table.closed_at),seats=table.status==='lobby'&&!closed?Math.max(0,info.min-members.length):0,card=MODE_CARD[table.mode]
  const secondsLeft=activeGame?.deadline?Math.max(0,Math.ceil((new Date(activeGame.deadline).getTime()-displayNow)/1000)):30
@@ -411,7 +417,7 @@ function TableScreen({tableId,me,action,busy,showChances,openTable,openHistory,o
   </>}
   {closed&&<section className="closedNotice" role="status" aria-labelledby="closed-title">
    <h2 id="closed-title">Table closed due to inactivity</h2>
-   <p>Nothing happened at this table for 24 hours, so it closed{table.closed_at?` on ${dateTime(table.closed_at)}`:''}. Nobody can join it or start a game here any more. Every result and rating is kept.</p>
+   <p>Nothing happened at this table for 2 hours, so it closed{table.closed_at?` on ${dateTime(table.closed_at)}`:''}. Nobody can join it or start a game here any more. Every result and rating is kept.</p>
    <Button className="wide" onClick={newTable} disabled={busy}>Start a new {info.name} table</Button>
    <Button kind="outline" className="wide" onClick={openHistory}>See your game history</Button>
    <button className="leaveLink" onClick={leave} disabled={busy}>Remove from your tables <LogOut size={14}/></button>
@@ -424,6 +430,7 @@ function TableScreen({tableId,me,action,busy,showChances,openTable,openHistory,o
      <Avatar id={m.user_id} name={who} me={me} size="md"/>
      <span className="rowText"><b>{who}{mine&&<span className="youChip">you</span>}</b>{chances?.[m.user_id]&&<ChanceLine chance={chances[m.user_id]}/>}{host&&<small><Crown className="hostIcon" size={13} aria-hidden="true"/> Host</small>}</span>
      {table.status==='lobby'&&table.host_id===me&&!mine&&<button className="linkButton" disabled={busy} aria-label={`Make ${who} the host`} onClick={()=>promote(m.user_id)}>Make host</button>}
+     {table.status==='lobby'&&table.host_id===me&&!mine&&<button className="linkButton danger" disabled={busy} aria-label={`Remove ${who} from the table`} onClick={()=>kick(m.user_id,who)}>Remove</button>}
      <span className="rowRep" title="5-star reputation baseline">★ 5.0</span>
     </li>})}
     {seats>0&&<li><button className="playerRow waiting" aria-label="Waiting for someone to join. Show the invite" onClick={()=>setShowQR(true)}><span className="tintAvatar md empty" aria-hidden="true"/><span>Waiting for someone to join…</span></button></li>}
@@ -436,12 +443,14 @@ function TableScreen({tableId,me,action,busy,showChances,openTable,openHistory,o
      {chances?.[m.user_id]&&<ChanceLine chance={chances[m.user_id]}/>}
      <span className="seatMeta"><span title="5-star reputation baseline">★ 5.0</span>{host&&' · host'}</span>
      {table.status==='lobby'&&table.host_id===me&&!mine&&<button className="seatAction" disabled={busy} aria-label={`Make ${who} the host`} onClick={()=>promote(m.user_id)}>Make host</button>}
+     {table.status==='lobby'&&table.host_id===me&&!mine&&<button className="seatAction danger" disabled={busy} aria-label={`Remove ${who} from the table`} onClick={()=>kick(m.user_id,who)}>Remove</button>}
     </li>})}
     {Array.from({length:seats},(_,i)=><li key={`empty-${i}`} className="seatSlot"><button className="seat empty" aria-label="Empty seat, show the invite QR code" onClick={()=>setShowQR(true)}>Empty seat</button></li>)}
    </ul>}
+   {table.status==='lobby'&&table.host_id===me&&(()=>{const here=new Set(members.map(m=>m.user_id)),avail=myFriends.filter(f=>!here.has(f.id));return avail.length>0&&<section className="card" aria-label="Add friends"><h3 className="listLabel">Add friends</h3><ul className="rowList">{avail.map(f=><li key={f.id} className="playerRow"><span className="rowText"><b>{f.name}</b></span><Button kind="secondary" disabled={busy||members.length>=info.max} onClick={()=>addFriend(f.id)}>Add</Button></li>)}</ul></section>})()}
    {chanceNote}
-   {table.status==='lobby'&&<div className="lobbyFooter"><p>{members.length<info.min?`Need ${info.min-members.length} more player${info.min-members.length===1?'':'s'} to start`:'Everyone ready? Deal the cards.'}</p><Button onClick={play} disabled={busy||members.length<info.min} className="wide">Start new game</Button><button className="leaveLink" onClick={leave} disabled={busy}>Leave table <LogOut size={14}/></button></div>}
-   {table.status==='playing'&&<div className="lobbyFooter"><div className="hint"><ShieldCheck size={18}/> All players are locked into this round. You can close your phone while playing.</div><Button onClick={finishPlay} disabled={busy} className="wide">Cards finished — record results <ArrowRight size={17}/></Button></div>}
+   {table.status==='lobby'&&<div className="lobbyFooter"><p>{members.length<info.min?`Need ${info.min-members.length} more player${info.min-members.length===1?'':'s'} to start`:'Everyone ready? Deal the cards.'}</p><Button onClick={play} disabled={busy||members.length<info.min} className="wide">Start new game</Button><button className="leaveLink" onClick={leave} disabled={busy}>Leave table <LogOut size={14}/></button>{table.host_id===me&&<button className="leaveLink" onClick={removeTable} disabled={busy}>Delete table <Trash2 size={14}/></button>}</div>}
+   {table.status==='playing'&&<div className="lobbyFooter"><div className="hint"><ShieldCheck size={18}/> All players are locked into this round. You can close your phone while playing.</div><Button onClick={finishPlay} disabled={busy} className="wide">Cards finished — record results <ArrowRight size={17}/></Button>{table.host_id===me&&canStop&&<button className="leaveLink" onClick={stopGame} disabled={busy}>Started by mistake? Stop this game <X size={14}/></button>}</div>}
   </section>}
   {table.status==='results'&&<section className="voting" aria-labelledby="vote-title">
    <div className="voteHead">
@@ -472,6 +481,7 @@ function TableScreen({tableId,me,action,busy,showChances,openTable,openHistory,o
     <p className="voteNote">{activeGame.state==='awaiting'?'The timer starts with the first vote.':'Totals are public; who voted for whom stays hidden until the result is final. You can change your vote.'}</p>
    </>:activeGame?<p className="voteRules">Game {activeGame.slot} opens once the earlier game has a result.</p>:null}
    {games.some(g=>FINAL.includes(g.state))&&<ol className="roundResults" aria-label="Results so far">{games.filter(g=>FINAL.includes(g.state)).map(g=><li key={g.id}><ResultRow game={g} name={name} restart={()=>restart(g.id)} busy={busy}/></li>)}</ol>}
+   {table.host_id===me&&canStop&&<button className="leaveLink" onClick={stopGame} disabled={busy}>Started by mistake? Stop this game <X size={14}/></button>}
    {games.some(g=>g.state==='unresolved')&&<div className="hint"><Clock3 size={17}/> Games without a result can be voted on again later. The table stays open until they have one.</div>}
   </section>}
   {table.status==='lobby'&&historyGames.length>0&&<section className="card historyCard">
@@ -589,61 +599,48 @@ function Standings({ratings,names,me,mode}:{ratings:Rating[];names:Record<string
 
 function LeaderboardScreen({me}:{me:string}){
  const [mode,setMode]=useState<Mode>('natural'),[ratings,setRatings]=useState<Rating[]>([]),[users,setUsers]=useState<Record<string,Profile>>({}),[loading,setLoading]=useState(true)
- useEffect(()=>{let live=true;setLoading(true);void (async()=>{const{data,error}=await supabase.from('ratings').select('*').eq('mode',mode).order('rating',{ascending:false}).limit(100);if(error)throw error;const scores=(data||[]) as Rating[];const{data:p}=scores.length?await supabase.from('profiles').select('*').in('id',scores.map(r=>r.user_id)):{data:[]};if(live){setRatings(scores);setUsers(Object.fromEntries(((p||[]) as Profile[]).map(x=>[x.id,x])));setLoading(false)}})().catch(console.error);return()=>{live=false}},[mode])
+ useEffect(()=>{let live=true;setLoading(true);void (async()=>{const{data,error}=await supabase.from('ratings').select('*').eq('mode',mode).gte('games',MIN_RANKED_GAMES).order('rating',{ascending:false}).limit(100);if(error)throw error;const scores=(data||[]) as Rating[];const{data:p}=scores.length?await supabase.from('profiles').select('*').in('id',scores.map(r=>r.user_id)):{data:[]};if(live){setRatings(scores);setUsers(Object.fromEntries(((p||[]) as Profile[]).map(x=>[x.id,x])));setLoading(false)}})().catch(console.error);return()=>{live=false}},[mode])
  const names=useMemo(()=>Object.fromEntries(Object.values(users).map(u=>[u.id,u.username])),[users])
  return <div className="stack page pageEntry">
-  <header className="pageHead"><h1>Rankings</h1><p>Everyone starts at 1,200, and each game mode has its own standings.</p></header>
+  <header className="pageHead"><h1>Rankings</h1><p>Everyone starts at 1,200, and each game mode has its own standings. You appear after {MIN_RANKED_GAMES} games in a mode.</p></header>
   <ModeChips mode={mode} setMode={setMode}/>
-  <section aria-label={`${modeInfo(mode).name} standings`}>{loading?<p className="emptyNote">Loading…</p>:ratings.length===0?<p className="emptyNote">No ranked {modeInfo(mode).name} games yet. Start a table and play the first one.</p>:<Standings ratings={ratings} names={names} me={me} mode={mode}/>}</section>
+  <section aria-label={`${modeInfo(mode).name} standings`}>{loading?<p className="emptyNote">Loading…</p>:ratings.length===0?<p className="emptyNote">Nobody has played {MIN_RANKED_GAMES} {modeInfo(mode).name} games yet. Start a table and play.</p>:<Standings ratings={ratings} names={names} me={me} mode={mode}/>}</section>
  </div>
 }
 
-function GroupsScreen({me,action,busy}:{me:string;action:Action;busy:boolean}){
- const [groupName,setGroupName]=useState(''),[joinCode,setJoinCode]=useState(''),[groups,setGroups]=useState<Group[]>([]),[selected,setSelected]=useState<string>(''),[memberIds,setMemberIds]=useState<string[]>([]),[mode,setMode]=useState<Mode>('natural'),[ranked,setRanked]=useState<{profile:Profile;rating:Rating}[]>([])
- const load=useCallback(async()=>{const{data:mm}=await supabase.from('group_members').select('group_id').eq('user_id',me);const ids=(mm||[]).map(x=>x.group_id);if(!ids.length){setGroups([]);return}const{data:gg}=await supabase.from('friend_groups').select('*').in('id',ids);setGroups((gg||[]) as Group[]);setSelected(s=>s||ids[0])},[me])
- useEffect(()=>{void load()},[load])
- useEffect(()=>{if(!selected)return;void (async()=>{const{data:gm}=await supabase.from('group_members').select('user_id').eq('group_id',selected);const ids=(gm||[]).map(x=>x.user_id);setMemberIds(ids);if(!ids.length){setRanked([]);return}const[{data:rr},{data:pp}]=await Promise.all([supabase.from('ratings').select('*').in('user_id',ids).eq('mode',mode).order('rating',{ascending:false}),supabase.from('profiles').select('*').in('id',ids)]);const pm=Object.fromEntries(((pp||[]) as Profile[]).map(x=>[x.id,x]));setRanked(((rr||[]) as Rating[]).map(r=>({profile:pm[r.user_id],rating:r})).filter(x=>x.profile))})()},[selected,mode])
- const create=()=>void action(async()=>{const id=await rpc<string>('create_friend_group',{p_name:groupName});setSelected(id);setGroupName('');await load()})
- const join=()=>void action(async()=>{const id=await rpc<string>('join_friend_group',{p_code:joinCode});setSelected(id);setJoinCode('');await load()})
- const current=groups.find(g=>g.id===selected),names=Object.fromEntries(ranked.map(x=>[x.profile.id,x.profile.username]))
- // Blue theme lists every group with its members ("You, Masha and Grisha"), so it loads member names for all of them.
- const blue=useBlue(),[groupPeople,setGroupPeople]=useState<Record<string,{id:string;name:string}[]>>({})
- useEffect(()=>{if(!blue||!groups.length)return;let live=true;void (async()=>{
-  const{data:gm}=await supabase.from('group_members').select('group_id,user_id').in('group_id',groups.map(g=>g.id))
-  const userIds=[...new Set((gm||[]).map(x=>x.user_id))]
-  const{data:pp}=userIds.length?await supabase.from('profiles').select('id,username').in('id',userIds):{data:[]}
-  const nm=Object.fromEntries(((pp||[]) as {id:string;username:string}[]).map(p=>[p.id,p.username]))
-  const byGroup:Record<string,{id:string;name:string}[]>={};for(const x of gm||[])(byGroup[x.group_id]||=[]).push({id:x.user_id,name:nm[x.user_id]||'Player'})
-  if(live)setGroupPeople(byGroup)
- })().catch(console.error);return()=>{live=false}},[blue,groups])
- const memberLine=(id:string)=>{const list=groupPeople[id];if(!list)return '';const others=list.filter(p=>p.id!==me).map(p=>p.name);return listNames(list.some(p=>p.id===me)?['You',...others]:others)}
+function FriendsScreen({me,action,busy}:{me:string;action:Action;busy:boolean}){
+ type Row={other:string;status:'pending'|'accepted';mine:boolean}
+ const [rows,setRows]=useState<Row[]>([]),[names,setNames]=useState<Record<string,string>>({}),[name,setName]=useState(''),[mode,setMode]=useState<Mode>('natural'),[ranked,setRanked]=useState<Rating[]>([])
+ const load=useCallback(async()=>{
+  const{data}=await supabase.from('friendships').select('*');const rs:Row[]=(data||[]).map(f=>({other:f.user_a===me?f.user_b:f.user_a,status:f.status,mine:f.requested_by===me}));setRows(rs)
+  const ids=rs.map(r=>r.other);if(ids.length){const{data:pp}=await supabase.from('profiles').select('id,username').in('id',ids);setNames(Object.fromEntries(((pp||[]) as {id:string;username:string}[]).map(p=>[p.id,p.username])))}
+ },[me])
+ useEffect(()=>{void load().catch(console.error)},[load])
+ const friendIds=rows.filter(r=>r.status==='accepted').map(r=>r.other),key=friendIds.join(',')
+ // Standings among you and your friends: same rating and the same minimum number of games as the global rankings.
+ useEffect(()=>{let live=true;void (async()=>{const{data}=await supabase.from('ratings').select('*').in('user_id',[me,...friendIds]).eq('mode',mode).gte('games',MIN_RANKED_GAMES).order('rating',{ascending:false});if(live)setRanked((data||[]) as Rating[])})().catch(console.error);return()=>{live=false}},[me,mode,key])
+ const label=(id:string)=>id===me?'You':names[id]||'Player'
+ const allNames={...names,[me]:'You'}
+ const add=()=>void action(async()=>{await rpc('send_friend_request',{p_username:name.trim()});setName('');await load()})
+ const respond=(id:string,accept:boolean)=>void action(async()=>{await rpc('respond_friend_request',{p_user:id,p_accept:accept});await load()})
+ const remove=(id:string)=>{if(!window.confirm(`Remove ${label(id)} from your friends?`))return;void action(async()=>{await rpc('remove_friend',{p_user:id});await load()})}
+ const incoming=rows.filter(r=>r.status==='pending'&&!r.mine),sent=rows.filter(r=>r.status==='pending'&&r.mine),accepted=rows.filter(r=>r.status==='accepted')
  return <div className="stack page pageEntry">
-  <header className="pageHead"><h1>{blue?'Groups':'Friend groups'}</h1><p>A private leaderboard for the people you play with.</p></header>
-  {blue&&groups.length>0&&<ul className="listCard">{groups.map(g=><li key={g.id}><button className={`listRow ${g.id===selected?'on':''}`} aria-pressed={g.id===selected} onClick={()=>setSelected(g.id)}><span className="rowText"><b>{g.name}</b><small>{memberLine(g.id)||' '}</small></span><span className="chevron" aria-hidden="true">›</span></button></li>)}</ul>}
-  {current&&<section className="stack sm groupDetail" aria-labelledby="group-title">
-   {!blue&&groups.length>1&&<label className="field">Group<select value={selected} onChange={e=>setSelected(e.target.value)}>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>}
-   <div className="groupHead">{!blue&&<span className="inviteCard" aria-hidden="true">{current.code.slice(0,4)}<br/>{current.code.slice(4)}</span>}<div><h2 id="group-title">{current.name}</h2><p>Code <strong className="inviteCode">{current.code}</strong> · {memberIds.length} {memberIds.length===1?'member':'members'}</p></div></div>
-   <ModeChips mode={mode} setMode={setMode}/>
-   {ranked.length?<Standings ratings={ranked.map(x=>x.rating)} names={names} me={me} mode={mode}/>:<p className="emptyNote">No ratings in this mode yet.</p>}
-   <p className="fieldHint">Share the code so friends can join. Standings use each member's overall rating for this mode.</p>
-  </section>}
-  <div className="groupForms">
-   <section aria-labelledby="new-group-title">
-    <h2 id="new-group-title" className="sectionTitle">Start a group</h2>
-    <form onSubmit={e=>{e.preventDefault();if(groupName.trim().length>=2)create()}}>
-     <label className="field" htmlFor="group-name">Group name</label>
-     <div className="joinRow"><input id="group-name" placeholder="Thursday regulars" maxLength={60} value={groupName} onChange={e=>setGroupName(e.target.value)}/><Button type="submit" disabled={busy||groupName.trim().length<2}>Create</Button></div>
-    </form>
-   </section>
-   <section aria-labelledby="join-group-title">
-    <h2 id="join-group-title" className="sectionTitle">Join a group</h2>
-    <form onSubmit={e=>{e.preventDefault();if(joinCode.trim())join()}}>
-     <label className="field" htmlFor="group-code">Group code</label>
-     <div className="joinRow"><input id="group-code" className="codeInput" placeholder="8 characters" maxLength={8} autoComplete="off" autoCapitalize="characters" autoCorrect="off" spellCheck={false} enterKeyHint="go" aria-describedby="group-code-hint" value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())}/><Button type="submit" kind="outline" disabled={busy||!joinCode.trim()}>Join</Button></div>
-     <p id="group-code-hint" className="fieldHint">Ask a member for the group's code.</p>
-    </form>
-   </section>
-  </div>
+  <header className="pageHead"><h1>Friends</h1><p>Add friends once, then seat them at your table in one tap. No code or QR needed.</p></header>
+  <section aria-labelledby="add-friend-title">
+   <h2 id="add-friend-title" className="sectionTitle">Add a friend</h2>
+   <form onSubmit={e=>{e.preventDefault();if(name.trim())add()}}>
+    <label className="field" htmlFor="friend-name">Their username</label>
+    <div className="joinRow"><input id="friend-name" placeholder="username" maxLength={22} autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={name} onChange={e=>setName(e.target.value)}/><Button type="submit" disabled={busy||!name.trim()}>Send request</Button></div>
+   </form>
+  </section>
+  {incoming.length>0&&<section aria-labelledby="requests-title"><h2 id="requests-title" className="listLabel">Requests</h2><ul className="rowList">{incoming.map(r=><li key={r.other} className="playerRow"><span className="rowText"><b>{label(r.other)}</b><small>wants to be friends</small></span><Button kind="secondary" disabled={busy} onClick={()=>respond(r.other,true)}>Accept</Button><Button kind="ghost" disabled={busy} onClick={()=>respond(r.other,false)}>Decline</Button></li>)}</ul></section>}
+  <section aria-labelledby="friends-title">
+   <h2 id="friends-title" className="listLabel">Your friends</h2>
+   {accepted.length?<ul className="rowList">{accepted.map(r=><li key={r.other} className="playerRow"><span className="rowText"><b>{label(r.other)}</b></span><button className="linkButton danger" disabled={busy} onClick={()=>remove(r.other)}>Remove</button></li>)}</ul>:<p className="emptyNote">No friends yet. Send a request by username.</p>}
+   {sent.length>0&&<><h3 className="listLabel">Waiting for them</h3><ul className="rowList">{sent.map(r=><li key={r.other} className="playerRow"><span className="rowText"><b>{label(r.other)}</b><small>request sent</small></span><button className="linkButton" disabled={busy} onClick={()=>remove(r.other)}>Cancel</button></li>)}</ul></>}
+  </section>
+  {accepted.length>0&&<section aria-label="Standings among friends"><h2 className="listLabel">Standings with friends</h2><ModeChips mode={mode} setMode={setMode}/>{ranked.length?<Standings ratings={ranked} names={allNames} me={me} mode={mode}/>:<p className="emptyNote">Nobody here has played {MIN_RANKED_GAMES} {modeInfo(mode).name} games yet.</p>}</section>}
  </div>
 }
 

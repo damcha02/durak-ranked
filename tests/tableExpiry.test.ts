@@ -17,10 +17,10 @@ async function v2(){const db=await Db.create();await db.setFormula('v2');return 
 async function table(db:Db,n=3){const players=await db.users(...['alice','bob','carol','dave','erin'].slice(0,n));return {players,tid:await rpcTable(db,'natural',players)}}
 
 describe('lobby expiry',()=>{
- it('closes a lobby after 24 hours without activity, not before',async()=>{
+ it('closes a lobby after 2 hours without activity, not before',async()=>{
   const db=await v2(),{tid}=await table(db)
-  await idle(db,tid,23.5);expect(await cleanup(db)).toBe(0);expect((await state(db,tid)).closed_at).toBeNull()
-  await idle(db,tid,24.01);expect(await cleanup(db)).toBe(1)
+  await idle(db,tid,1.9);expect(await cleanup(db)).toBe(0);expect((await state(db,tid)).closed_at).toBeNull()
+  await idle(db,tid,2.01);expect(await cleanup(db)).toBe(1)
   const s=await state(db,tid)
   expect(s.closed_at).not.toBeNull();expect(s.status).toBe('lobby')
  },T)
@@ -71,11 +71,14 @@ describe('what counts as activity',()=>{
   await idle(db,tid,30);await db.rpc(b,'respond_to_tie',[game,true]);expect(await isFresh(db,tid)).toBe(true)
   await idle(db,tid,30);await db.rpc(c,'respond_to_tie',[game,false]);expect(await isFresh(db,tid)).toBe(true)
   expect((await gamesOf(db,tid))[0].state).toBe('voting') // runoff between bob and carol
-  // No result -> unresolved; reopening the vote counts; the final result counts.
+  // The runoff ends without a verdict: the game is discarded and the table is back in the lobby.
   await expire(db,game);await db.rpc(a,'advance_expired',[game])
   expect((await state(db,tid)).status).toBe('lobby')
-  await idle(db,tid,30);await db.rpc(a,'restart_unresolved',[game]);expect(await isFresh(db,tid)).toBe(true)
-  for(const v of [a,b,c])await db.rpc(v,'cast_vote',[game,c])
+  expect(await isFresh(db,tid)).toBe(true)
+  // Reopening an old vote (legacy unresolved game) counts as activity.
+  const [old]=await rpcRound(db,tid,[a,b,c],[null])
+  await idle(db,tid,30);await db.rpc(a,'restart_unresolved',[old]);expect(await isFresh(db,tid)).toBe(true)
+  for(const v of [a,b,c])await db.rpc(v,'cast_vote',[old,c])
   // A result on its own (no vote in the same call): 2 of 4 votes, decided when the deadline is evaluated.
   await db.rpc(a,'start_round',[tid]);await db.rpc(a,'begin_results',[tid])
   const [{id:next}]=await gamesOf(db,tid)
@@ -102,22 +105,20 @@ describe('what counts as activity',()=>{
 })
 
 describe('unfinished games keep a table open',()=>{
- it('never closes a table while a game is being played, voted on, or tied',async()=>{
+ it('leaves a table alone while a game is under way, and cancels the stuck round after 2 hours (see tableControls.test.ts)',async()=>{
   const db=await v2(),{players:[a,b,c,d],tid}=await table(db,4)
-  await db.rpc(a,'start_round',[tid])
-  await idle(db,tid,72);expect(await cleanup(db)).toBe(0) // playing
-  await db.rpc(a,'begin_results',[tid])
-  await idle(db,tid,72);expect(await cleanup(db)).toBe(0) // awaiting a vote
+  await db.rpc(a,'start_round',[tid]);await db.rpc(a,'begin_results',[tid])
   const [{id:game}]=await gamesOf(db,tid)
   await db.rpc(a,'cast_vote',[game,b]);await db.rpc(b,'cast_vote',[game,b]);await db.rpc(c,'cast_vote',[game,c]);await db.rpc(d,'cast_vote',[game,c])
-  await idle(db,tid,72);expect(await cleanup(db)).toBe(0) // voting, deadline long gone but never evaluated
   await expire(db,game);await db.rpc(a,'advance_expired',[game])
   expect((await gamesOf(db,tid))[0].state).toBe('tie_offer')
-  await idle(db,tid,72);expect(await cleanup(db)).toBe(0) // tie offer
-  expect((await state(db,tid)).closed_at).toBeNull()
+  await idle(db,tid,1.9);expect(await cleanup(db)).toBe(0)
+  await idle(db,tid,2.1);expect(await cleanup(db)).toBe(1)
+  expect(await state(db,tid)).toMatchObject({status:'lobby',current_round_id:null})
+  expect((await state(db,tid)).closed_at).not.toBeNull()
  },T)
 
- it('protects a parallel round until both games are resolved, then gives a fresh 24 hours',async()=>{
+ it('protects a parallel round until both games are resolved, then gives a fresh 2 hours',async()=>{
   const db=await v2(),players=await db.users('alice','bob','carol'),[a,b,c]=players
   const tid=await rpcTable(db,'single_double',players)
   await db.rpc(a,'start_round',[tid]);await db.rpc(a,'begin_results',[tid])
@@ -128,8 +129,8 @@ describe('unfinished games keep a table open',()=>{
   for(const v of [a,b])await db.rpc(v,'cast_vote',[g2,a]) // resolved after 100 idle hours
   expect((await state(db,tid)).status).toBe('lobby');expect(await isFresh(db,tid)).toBe(true)
   expect(await cleanup(db)).toBe(0)
-  await idle(db,tid,23.9);expect(await cleanup(db)).toBe(0)
-  await idle(db,tid,24.1);expect(await cleanup(db)).toBe(1)
+  await idle(db,tid,1.9);expect(await cleanup(db)).toBe(0)
+  await idle(db,tid,2.1);expect(await cleanup(db)).toBe(1)
  },T)
 
 })
@@ -139,11 +140,11 @@ describe('a game without a result keeps a table open until it is resolved',()=>{
  /** Ratings, ledger and every game record, compared after a full replay of all modes. */
  const replayed=async(db:Db)=>{const live=await db.ratingState();await db.rebuildAll();expect(await db.ratingState()).toEqual(live)}
 
- it('keeps an unresolved vote open for days, lets it be reopened and resolved, then closes 24 hours later',async()=>{
+ it('keeps an unresolved vote open for days, lets it be reopened and resolved, then closes 2 hours later',async()=>{
   const db=await v2(),{players:[a,b,c],tid}=await table(db)
   const [game]=await rpcRound(db,tid,[a,b,c],[null])
   expect(await stateOf(db,game)).toBe('unresolved');expect((await state(db,tid)).status).toBe('lobby')
-  await idle(db,tid,24.1);expect(await cleanup(db)).toBe(0)
+  await idle(db,tid,2.1);expect(await cleanup(db)).toBe(0)
   await idle(db,tid,24*7);expect(await cleanup(db)).toBe(0)
   expect((await state(db,tid)).closed_at).toBeNull()
   // A week later the players reopen the vote and decide it.
@@ -152,18 +153,19 @@ describe('a game without a result keeps a table open until it is resolved',()=>{
   for(const v of [a,b])await db.rpc(v,'cast_vote',[game,c])
   expect(await stateOf(db,game)).toBe('confirmed')
   expect((await state(db,tid)).status).toBe('lobby');expect(await isFresh(db,tid)).toBe(true)
-  await idle(db,tid,23.9);expect(await cleanup(db)).toBe(0)
-  await idle(db,tid,24.1);expect(await cleanup(db)).toBe(1)
+  await idle(db,tid,1.9);expect(await cleanup(db)).toBe(0)
+  await idle(db,tid,2.1);expect(await cleanup(db)).toBe(1)
   await replayed(db)
  },T)
 
- it('a vote reopened and left unresolved again still keeps the table open',async()=>{
+ it('a reopened vote that ends without a verdict is discarded, so the table can expire',async()=>{
   const db=await v2(),{players:[a,b,c],tid}=await table(db)
   const [game]=await rpcRound(db,tid,[a,b,c],[null])
   await idle(db,tid,48);await db.rpc(a,'restart_unresolved',[game])
   await db.rpc(a,'cast_vote',[game,b]);await expire(db,game);await db.rpc(a,'advance_expired',[game])
-  expect(await stateOf(db,game)).toBe('unresolved')
-  await idle(db,tid,48);expect(await cleanup(db)).toBe(0)
+  expect(await db.one(`select id from public.round_games where id=$1`,[game])).toBeUndefined()
+  expect((await state(db,tid)).status).toBe('lobby')
+  await idle(db,tid,2.1);expect(await cleanup(db)).toBe(1)
  },T)
 
  it('protects game 2 of a parallel round while it is unresolved, even after game 1 has a loser',async()=>{
@@ -175,8 +177,8 @@ describe('a game without a result keeps a table open until it is resolved',()=>{
   await db.rpc(a,'restart_unresolved',[g2])
   for(const v of [a,b])await db.rpc(v,'cast_vote',[g2,b])
   expect(await stateOf(db,g2)).toBe('confirmed');expect(await isFresh(db,tid)).toBe(true)
-  await idle(db,tid,23.9);expect(await cleanup(db)).toBe(0)
-  await idle(db,tid,24.1);expect(await cleanup(db)).toBe(1)
+  await idle(db,tid,1.9);expect(await cleanup(db)).toBe(0)
+  await idle(db,tid,2.1);expect(await cleanup(db)).toBe(1)
   await replayed(db)
  },T)
 
@@ -189,7 +191,7 @@ describe('a game without a result keeps a table open until it is resolved',()=>{
   expect(await stateOf(db,g1)).toBe('confirmed')
   await idle(db,tid,50);expect(await cleanup(db)).toBe(0) // game 2 still has no result
   await db.rpc(c,'restart_unresolved',[g2]);for(const v of [b,c])await db.rpc(v,'cast_vote',[g2,b])
-  await idle(db,tid,24.1);expect(await cleanup(db)).toBe(1)
+  await idle(db,tid,2.1);expect(await cleanup(db)).toBe(1)
   await replayed(db)
  },T)
 
@@ -206,14 +208,14 @@ describe('a game without a result keeps a table open until it is resolved',()=>{
   expect(historyAfter.map(g=>g.game_id)).toEqual(historyBefore.map(g=>g.game_id))
   expect(historyAfter.find(g=>g.game_id===old)?.state).toBe('confirmed')
   expect(Number(historyAfter[0].rating_after)).toBe(Number((await db.ratings('natural'))[a].rating))
-  await idle(db,tid,24.1);expect(await cleanup(db)).toBe(1)
+  await idle(db,tid,2.1);expect(await cleanup(db)).toBe(1)
  },T)
 
  it('a reversed (void) game is final and does not keep the table open',async()=>{
   const db=await v2(),{players:[a,b,c],tid}=await table(db)
   const [game]=await rpcRound(db,tid,[a,b,c],[a])
   await rpcCorrection(db,game,[b,c],true);expect(await stateOf(db,game)).toBe('void')
-  await idle(db,tid,24.1);expect(await cleanup(db)).toBe(1)
+  await idle(db,tid,2.1);expect(await cleanup(db)).toBe(1)
  },T)
 
  it('skipping such a table changes nothing: results, ratings, ledger, corrections and history',async()=>{
@@ -270,7 +272,7 @@ describe('a closed table',()=>{
   const {tables:t1,...rest1}=before.records,{tables:t2,...rest2}=after
   expect(rest2).toEqual(rest1)
   // Only closed_at (and the simulated idle time) differ on the table row.
-  const strip=(rows:unknown)=>(rows as Record<string,unknown>[]).map(({closed_at:_c,last_activity_at:_l,...r})=>r)
+  const strip=(rows:unknown)=>(rows as Record<string,unknown>[]).map(({closed_at:_c,closed_reason:_r,last_activity_at:_l,...r})=>r)
   expect(strip(t2)).toEqual(strip(t1))
   expect(await db.rpcRows(a,'my_game_history',[null,20])).toEqual(before.history)
   // A correction within 24 hours of the result still works on a closed table (history stays correctable).

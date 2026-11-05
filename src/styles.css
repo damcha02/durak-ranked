@@ -676,3 +676,5 @@ select{appearance:none;-webkit-appearance:none;padding-right:40px;background-ima
 .closedNotice .leaveLink{align-self:center;margin-top:0}
 [data-theme=blue] .closedNotice{border:0;border-radius:22px;background:#fff;box-shadow:var(--shadow-card)}
 
+
+.linkButton.danger,.seatAction.danger{color:var(--red)}
