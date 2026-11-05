@@ -1,7 +1,8 @@
 import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState} from 'react'
 import type {Session} from '@supabase/supabase-js'
 import {QRCodeSVG} from 'qrcode.react'
-import {ArrowRight,ChevronDown,Clock3,Copy,Crown,LogOut,RefreshCw,ShieldCheck,Star,Trash2,X} from 'lucide-react'
+import jsQR from 'jsqr'
+import {ArrowRight,Camera,ChevronDown,Clock3,Copy,Crown,LogOut,RefreshCw,ShieldCheck,Star,Trash2,X} from 'lucide-react'
 import {configured,date,errorMessage,MODES,modeInfo,rpc,supabase} from './lib'
 import {isEmailIdentifier,isUsername} from './authValidation'
 import {signInByUsername} from './usernameSignIn'
@@ -43,6 +44,50 @@ function Button({children,onClick,kind='primary',disabled=false,className='',typ
 }
 // Two looks share every screen: "cards" (card stock, corner indices) and "blue" (the light-blue prototype).
 // Where the layouts differ, components branch on useBlue(); data loading and actions are shared.
+// Friend relations, so any name in the app can offer "Add friend" (see PlayerName).
+type Rel='none'|'friend'|'sent'|'incoming'
+const FriendCtx=createContext<{me:string;rel:(id:string)=>Rel;pick:(id:string,name:string)=>void}>({me:'',rel:()=>'none',pick:()=>{}})
+/** A player's name; tapping another player's name opens the add-friend sheet. */
+function PlayerName({id,name}:{id:string;name:string}){
+ const f=useContext(FriendCtx)
+ if(!id||id===f.me)return <>{name}</>
+ return <button type="button" className="nameLink" onClick={e=>{e.stopPropagation();f.pick(id,name)}}>{name}</button>
+}
+/** The table code inside a scanned QR: an invite link (?join=CODE) or the bare 8-character code. */
+function codeFromScan(text:string){
+ try{const c=new URL(text).searchParams.get('join');if(c&&/^[A-Za-z0-9]{8}$/.test(c))return c.toUpperCase()}catch{/* not a URL */}
+ const t=text.trim();return /^[A-Za-z0-9]{8}$/.test(t)?t.toUpperCase():null
+}
+/** Opens the back camera and reports the first table code it sees. Mount it only while scanning: unmounting stops the camera. */
+function QrScanner({onCode}:{onCode:(code:string)=>void}){
+ const video=useRef<HTMLVideoElement>(null),cb=useRef(onCode),[err,setErr]=useState('')
+ cb.current=onCode
+ useEffect(()=>{
+  let stop=false,stream:MediaStream|null=null,raf=0
+  const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d',{willReadFrequently:true})
+  void (async()=>{
+   try{
+    if(!navigator.mediaDevices?.getUserMedia||!ctx)throw new Error('unsupported')
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}})
+    if(stop){stream.getTracks().forEach(t=>t.stop());return}
+    const v=video.current;if(!v)return;v.srcObject=stream;await v.play()
+    const tick=()=>{
+     if(stop)return
+     if(v.readyState>=2&&v.videoWidth){
+      const k=Math.min(1,640/v.videoWidth);canvas.width=Math.round(v.videoWidth*k);canvas.height=Math.round(v.videoHeight*k)
+      ctx.drawImage(v,0,0,canvas.width,canvas.height)
+      const img=ctx.getImageData(0,0,canvas.width,canvas.height),hit=jsQR(img.data,img.width,img.height),code=hit&&codeFromScan(hit.data)
+      if(code){stop=true;cb.current(code);return}
+     }
+     raf=requestAnimationFrame(tick)
+    }
+    tick()
+   }catch(e){setErr(e instanceof Error&&e.message==='unsupported'?'This browser cannot open the camera here. Type the code instead.':'Camera access was blocked. Allow the camera for this site, or type the code instead.')}
+  })()
+  return()=>{stop=true;cancelAnimationFrame(raf);stream?.getTracks().forEach(t=>t.stop())}
+ },[])
+ return err?<p className="emptyNote" role="alert">{err}</p>:<div className="scanner"><video ref={video} muted playsInline aria-label="Camera view"/><p className="fieldHint">Point the camera at the QR code on the host's screen.</p></div>
+}
 const ThemeContext=createContext<{theme:Theme;setTheme:(t:Theme)=>void}>({theme:'blue',setTheme:()=>{}})
 const useBlue=()=>useContext(ThemeContext).theme==='blue'
 // Soft avatar tints for the blue theme, picked from the user id so each player keeps one colour; you are always the action tint.
@@ -156,6 +201,7 @@ export default function App(){
  const [session,setSession]=useState<Session|null>(null),[loading,setLoading]=useState(true),[profile,setProfile]=useState<Profile|null>(null)
  const [page,setPage]=useState<Page>('home'),[tableId,setTableId]=useState<string|null>(null),[message,setMessage]=useState<string|null>(null),[busy,setBusy]=useState(false)
  const [joinCode,setJoinCode]=useState(getJoinCode())
+ const [friendRows,setFriendRows]=useState<{other:string;status:'pending'|'accepted';mine:boolean}[]>([]),[person,setPerson]=useState<{id:string;name:string}|null>(null)
  const [theme,setThemeState]=useState<Theme>(readTheme)
  const [showChances,setShowChancesState]=useState(readShowChances)
  const setShowChances=(show:boolean)=>{setShowChancesState(show);saveShowChances(show)}
@@ -166,12 +212,15 @@ export default function App(){
  useEffect(()=>{if(user){void reloadProfile().catch(e=>setMessage(errorMessage(e))) }else setProfile(null)},[user?.id,reloadProfile])
  useEffect(()=>{if(!joinCode||!user)return;const c=joinCode;setJoinCode('');void (async()=>{try{setBusy(true);const id=await rpc<string>('join_table',{p_code:c});setTableId(id);history.replaceState(null,'',location.pathname)}catch(e){setMessage(errorMessage(e))}finally{setBusy(false)}})()},[user?.id,joinCode])
  useEffect(()=>{window.scrollTo(0,0)},[page,tableId])
+ const loadFriends=useCallback(async()=>{if(!user)return;const{data}=await supabase.from('friendships').select('*');setFriendRows((data||[]).map(f=>({other:f.user_a===user.id?f.user_b:f.user_a,status:f.status,mine:f.requested_by===user.id})))},[user?.id])
+ useEffect(()=>{void loadFriends().catch(console.error)},[loadFriends])
+ const friendCtx=useMemo(()=>({me:user?.id||'',rel:(id:string):Rel=>{const r=friendRows.find(x=>x.other===id);return !r?'none':r.status==='accepted'?'friend':r.mine?'sent':'incoming'},pick:(id:string,name:string)=>{setPerson({id,name});void loadFriends().catch(console.error)}}),[user?.id,friendRows,loadFriends])
  const action:Action=async fn=>{if(busy)return;setBusy(true);setMessage(null);try{await fn()}catch(e){setMessage(errorMessage(e))}finally{setBusy(false)}}
  // Screen transitions: opening a table moves forward, leaving it moves back, switching tabs crossfades (CSS decides how each theme animates).
  const screenKey=tableId?`table-${tableId}`:page,depth=tableId?2:1
  const nav=useRef({key:screenKey,depth,dir:'fade'})
  if(nav.current.key!==screenKey)nav.current={key:screenKey,depth,dir:depth>nav.current.depth?'forward':depth<nav.current.depth?'back':'fade'}
- const themed=(content:React.ReactNode)=><ThemeContext.Provider value={themeValue}>{content}</ThemeContext.Provider>
+ const themed=(content:React.ReactNode)=><ThemeContext.Provider value={themeValue}><FriendCtx.Provider value={friendCtx}>{content}</FriendCtx.Provider></ThemeContext.Provider>
  if(!configured)return themed(<div className="setup"><Brand/><h1>Connect your backend</h1><p>Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> to a <code>.env</code> file, then restart Vite.</p><p className="muted">See README.md for the complete Supabase setup.</p></div>)
  if(loading)return themed(<div className="loading" role="status"><Brand/><p>Loading {APP_NAME}…</p></div>)
  if(!session)return themed(<AuthScreen joinCode={joinCode}/>)
@@ -194,6 +243,15 @@ export default function App(){
    </div>
   </main>
   <NavTabs className="bottomNav" page={tableId?'home':page} go={go}/>
+  <Sheet open={Boolean(person)} title={person?.name||'Player'} onClose={()=>setPerson(null)}>
+   {person&&(()=>{const rel=friendCtx.rel(person.id),act=(fn:()=>Promise<unknown>)=>void action(async()=>{await fn();await loadFriends()})
+    return <div className="stack sm">
+     {rel==='friend'&&<p>{person.name} is your friend.</p>}
+     {rel==='sent'&&<p>You asked {person.name} to be friends. Waiting for them to accept.</p>}
+     {rel==='incoming'&&<><p>{person.name} wants to be your friend.</p><Button className="wide" disabled={busy} onClick={()=>act(()=>rpc('respond_friend_request',{p_user:person.id,p_accept:true}))}>Accept</Button></>}
+     {rel==='none'&&<Button className="wide" disabled={busy} onClick={()=>act(()=>rpc('send_friend_request',{p_username:person.name}))}>Add {person.name} as a friend</Button>}
+    </div>})()}
+  </Sheet>
   {message&&<div className="toast" role="alert">{message}<button aria-label="Dismiss message" onClick={()=>setMessage(null)}><X size={16}/></button></div>}
  </div>)
 }
@@ -219,6 +277,8 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
  useEffect(()=>{void load();const id=setInterval(()=>void load(),12000);return()=>clearInterval(id)},[load])
  const create=()=>void action(async()=>{const id=await rpc<string>('create_table',{p_mode:mode,p_group:null});openTable(id)})
  const joinRoom=()=>void action(async()=>{if(!join.trim())throw new Error('Enter a table code');const id=await rpc<string>('join_table',{p_code:join});openTable(id)})
+ const [scanning,setScanning]=useState(false)
+ const scanned=(code:string)=>{setScanning(false);setJoin(code);void action(async()=>{openTable(await rpc<string>('join_table',{p_code:code}))})}
  // Tables that need attention first (results, then playing, then lobby); the sort is stable, so newest stays first within a status.
  const sorted=useMemo(()=>[...tables].sort((a,b)=>STATUS_ORDER[statusOf(a)]-STATUS_ORDER[statusOf(b)]),[tables])
  const hand=sorted.length,idx=hand?front%hand:0,current=sorted[idx],next=hand>1?sorted[(idx+1)%hand]:undefined
@@ -251,6 +311,8 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
    <div className="joinRow"><input id="join-code" className="codeInput" placeholder="8 characters" maxLength={8} autoComplete="off" autoCapitalize="characters" autoCorrect="off" spellCheck={false} enterKeyHint="go" aria-describedby="join-hint" value={join} onChange={e=>setJoin(e.target.value.toUpperCase())}/><Button type="submit" kind="outline" disabled={busy||!join.trim()}>Join</Button></div>
    <p id="join-hint" className="fieldHint">Type the 8-character code from the host, or scan the QR code on their phone.</p>
   </form>
+  <Button kind="secondary" className="wide scanButton" onClick={()=>setScanning(true)}><Camera size={16}/> Scan QR code</Button>
+  <Sheet open={scanning} title="Scan QR code" onClose={()=>setScanning(false)}>{scanning&&<QrScanner onCode={scanned}/>}</Sheet>
  </section>
  const greetingBlock=<section className="greeting"><h1>{greeting()}, {profile?.username||'friend'}</h1>{status&&<p>{status}</p>}</section>
  if(blue)return <div className="stack home pageEntry">
@@ -428,7 +490,7 @@ const canStop=games.length>0&&games.every(g=>['awaiting','voting','tie_offer'].i
    {blue?<ul className="rowList">
     {members.map(m=>{const host=m.user_id===table.host_id,mine=m.user_id===me,who=name(m.user_id);return <li key={m.user_id} className="playerRow">
      <Avatar id={m.user_id} name={who} me={me} size="md"/>
-     <span className="rowText"><b>{who}{mine&&<span className="youChip">you</span>}</b>{chances?.[m.user_id]&&<ChanceLine chance={chances[m.user_id]}/>}{host&&<small><Crown className="hostIcon" size={13} aria-hidden="true"/> Host</small>}</span>
+     <span className="rowText"><b><PlayerName id={m.user_id} name={who}/>{mine&&<span className="youChip">you</span>}</b>{chances?.[m.user_id]&&<ChanceLine chance={chances[m.user_id]}/>}{host&&<small><Crown className="hostIcon" size={13} aria-hidden="true"/> Host</small>}</span>
      {table.status==='lobby'&&table.host_id===me&&!mine&&<button className="linkButton" disabled={busy} aria-label={`Make ${who} the host`} onClick={()=>promote(m.user_id)}>Make host</button>}
      {table.status==='lobby'&&table.host_id===me&&!mine&&<button className="linkButton danger" disabled={busy} aria-label={`Remove ${who} from the table`} onClick={()=>kick(m.user_id,who)}>Remove</button>}
      <span className="rowRep" title="5-star reputation baseline">★ 5.0</span>
@@ -439,7 +501,7 @@ const canStop=games.length>0&&games.every(g=>['awaiting','voting','tie_offer'].i
      {host&&<Crown className="seatCrown" size={16} aria-hidden="true"/>}
      {mine&&<span className="seatYou">you</span>}
      <span className="seatInitials" aria-hidden="true">{who.slice(0,2).toUpperCase()}</span>
-     <b className="seatName" title={who}>{who}</b>
+     <b className="seatName" title={who}><PlayerName id={m.user_id} name={who}/></b>
      {chances?.[m.user_id]&&<ChanceLine chance={chances[m.user_id]}/>}
      <span className="seatMeta"><span title="5-star reputation baseline">★ 5.0</span>{host&&' · host'}</span>
      {table.status==='lobby'&&table.host_id===me&&!mine&&<button className="seatAction" disabled={busy} aria-label={`Make ${who} the host`} onClick={()=>promote(m.user_id)}>Make host</button>}
@@ -498,7 +560,7 @@ const canStop=games.length>0&&games.every(g=>['awaiting','voting','tie_offer'].i
 const FINAL:Game['state'][]=['confirmed','tied','unresolved','void']
 // Without restart (a closed table, which never has a game without a result), there is no "Vote again".
 function ResultRow({game,name,restart,busy}:{game:Game;name:(id:string)=>string;restart?:()=>void;busy:boolean}){
- return <div className={`resultRow ${game.state}`}><span className="resultGame">Game {game.slot}</span><span className="resultText">{game.state==='confirmed'?<><b>{name(game.loser_ids[0])}</b> lost</>:game.state==='tied'?<>Shared loss: <b>{game.loser_ids.map(name).join(', ')}</b></>:game.state==='unresolved'?'No result':game.state==='void'?'Reversed after a correction vote':'Waiting for a result'}</span>{game.state==='unresolved'&&restart&&<button className="linkButton" disabled={busy} onClick={restart}>Vote again</button>}</div>
+ return <div className={`resultRow ${game.state}`}><span className="resultGame">Game {game.slot}</span><span className="resultText">{game.state==='confirmed'?<><b><PlayerName id={game.loser_ids[0]} name={name(game.loser_ids[0])}/></b> lost</>:game.state==='tied'?<>Shared loss: <b>{game.loser_ids.map((id,i)=><span key={id}>{i>0&&', '}<PlayerName id={id} name={name(id)}/></span>)}</b></>:game.state==='unresolved'?'No result':game.state==='void'?'Reversed after a correction vote':'Waiting for a result'}</span>{game.state==='unresolved'&&restart&&<button className="linkButton" disabled={busy} onClick={restart}>Vote again</button>}</div>
 }
 
 // Personal game history: every result the player took part in, from the server's ledger (nothing is re-rated here).
@@ -552,7 +614,7 @@ function HistoryItem({game:g,me,open,toggle}:{game:HistoryGame;me:string;open:bo
     {details.streak_penalty&&<p className="logMeta">Losing-streak penalty: from the 4th loss in a row in a mode, a loss costs 25% more, and the extra goes to the winners in proportion to their gains.</p>}
     <p className="logMeta">Played {dateTime(details.played_at)}{details.finalized_at&&` · result recorded ${dateTime(details.finalized_at)}`}</p>
     <ul className="logPlayers" aria-label="Players">{details.players.map(p=><li key={p.user_id}>
-     <span className="logName"><b>{p.username}{p.user_id===me&&' (you)'}</b>{p.lost&&<span className="lostTag">{details.state==='tied'?'shared loss':details.state==='void'?'voted loser':'lost'}</span>}{Number(p.streak_extra??0)<0&&<span className="streakTag">{streakLabel(p.loss_streak)}</span>}</span>
+     <span className="logName"><b><PlayerName id={p.user_id} name={p.username}/>{p.user_id===me&&' (you)'}</b>{p.lost&&<span className="lostTag">{details.state==='tied'?'shared loss':details.state==='void'?'voted loser':'lost'}</span>}{Number(p.streak_extra??0)<0&&<span className="streakTag">{streakLabel(p.loss_streak)}</span>}</span>
      <span className="logRating">
       <strong className={deltaClass(Number(p.delta))}>{p.delta==null?'–':signed(Number(p.delta))}</strong>
       {p.rating_before!=null&&p.rating_after!=null&&<small>{elo(Number(p.rating_before))} → {elo(Number(p.rating_after))}</small>}
@@ -576,7 +638,7 @@ function Standings({ratings,names,me,mode}:{ratings:Rating[];names:Record<string
  if(useBlue())return <ol className="listCard">{ratings.map((r,i)=><li key={r.user_id} className={`rankRow ${r.user_id===me?'mine':''}`}>
   <span className="position" aria-hidden="true">{i+1}</span>
   <Avatar id={r.user_id} name={who(r)} me={me}/>
-  <span className="rowText"><b>{who(r)}{r.user_id===me&&' (you)'}</b><small>{r.games} games · {r.losses} losses</small></span>
+  <span className="rowText"><b><PlayerName id={r.user_id} name={who(r)}/>{r.user_id===me&&' (you)'}</b><small>{r.games} games · {r.losses} losses</small></span>
   <span className="rowValue">{formatRating(r.rating)}</span>
  </li>)}</ol>
  return <>
@@ -584,14 +646,14 @@ function Standings({ratings,names,me,mode}:{ratings:Rating[];names:Record<string
    <span className={`cornerIndex ${card.red?'red':''}`} aria-hidden="true">{i+1}<br/>{card.suit}</span>
    {r.user_id===me&&<span className="seatYou">you</span>}
    <span className="seatInitials" aria-hidden="true">{who(r).slice(0,2).toUpperCase()}</span>
-   <b className="seatName" title={who(r)}>{who(r)}</b>
+   <b className="seatName" title={who(r)}><PlayerName id={r.user_id} name={who(r)}/></b>
    <span className="podiumRating">{formatRating(r.rating)}</span>
    <span className="seatMeta">{r.games} {r.games===1?'game':'games'}</span>
   </li>)}</ol>
   {ratings.length>3&&<ol className="rankList" start={4}>{ratings.slice(3).map((r,i)=><li key={r.user_id} className={`rankRow ${r.user_id===me?'mine':''}`}>
    <span className="position" aria-hidden="true">{i+4}</span>
    <span className="playerAvatar" aria-hidden="true">{who(r).slice(0,2).toUpperCase()}</span>
-   <span className="rankName"><strong>{who(r)}{r.user_id===me&&<span className="youTag">you</span>}</strong><small>{r.games} games · {r.losses} losses</small></span>
+   <span className="rankName"><strong><PlayerName id={r.user_id} name={who(r)}/>{r.user_id===me&&<span className="youTag">you</span>}</strong><small>{r.games} games · {r.losses} losses</small></span>
    <span className="rankScore">{formatRating(r.rating)}</span>
   </li>)}</ol>}
  </>

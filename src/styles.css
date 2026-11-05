@@ -678,3 +678,9 @@ select{appearance:none;-webkit-appearance:none;padding-right:40px;background-ima
 
 
 .linkButton.danger,.seatAction.danger{color:var(--red)}
+
+.nameLink{padding:0;border:0;background:none;color:inherit;font:inherit;font-weight:inherit;text-align:inherit;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+.nameLink:hover{text-decoration-style:solid}
+.scanner{display:flex;flex-direction:column;gap:8px}
+.scanner video{width:100%;max-height:50vh;object-fit:cover;border-radius:12px;background:#000}
+.scanButton{margin-top:8px}
