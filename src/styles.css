@@ -684,3 +684,10 @@ select{appearance:none;-webkit-appearance:none;padding-right:40px;background-ima
 .scanner{display:flex;flex-direction:column;gap:8px}
 .scanner video{width:100%;max-height:50vh;object-fit:cover;border-radius:12px;background:#000}
 .scanButton{margin-top:8px}
+
+/* Pull-down to refresh (see PullToRefresh.tsx) */
+.pullIndicator{position:fixed;top:env(safe-area-inset-top,0px);left:50%;z-index:100;width:36px;height:36px;border-radius:50%;background:var(--surface,#fff);box-shadow:0 2px 10px rgba(0,0,0,.18);display:grid;place-items:center;pointer-events:none}
+.pullIndicator span{width:18px;height:18px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;opacity:.7}
+.pullIndicator.spinning span{animation:pullSpin .7s linear infinite}
+@keyframes pullSpin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.pullIndicator.spinning span{animation-duration:1.6s}}
