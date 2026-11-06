@@ -18,6 +18,7 @@ import type {Game,GameDetails,HistoryGame,Member,Mode,Profile,Rating,TableRow,Vo
 type Page='home'|'history'|'leaderboard'|'friends'|'profile'
 // Players appear in the rankings only after this many games in the mode.
 const MIN_RANKED_GAMES=5
+const MIN_FRIEND_GAMES=2 // friends standings also show players still short of the ranking minimum
 type Action=(fn:()=>Promise<unknown>)=>Promise<void>
 const formatRating=(rating:number)=>Math.round(rating).toLocaleString()
 const dateTime=(s:string)=>{const d=new Date(s);return d.toLocaleString(undefined,{month:'short',day:'numeric',...(d.getFullYear()===new Date().getFullYear()?{}:{year:'numeric'}),hour:'2-digit',minute:'2-digit'})}
@@ -638,7 +639,7 @@ function Standings({ratings,names,me,mode}:{ratings:Rating[];names:Record<string
  if(useBlue())return <ol className="listCard">{ratings.map((r,i)=><li key={r.user_id} className={`rankRow ${r.user_id===me?'mine':''}`}>
   <span className="position" aria-hidden="true">{i+1}</span>
   <Avatar id={r.user_id} name={who(r)} me={me}/>
-  <span className="rowText"><b><PlayerName id={r.user_id} name={who(r)}/>{r.user_id===me&&' (you)'}</b><small>{r.games} games · {r.losses} losses</small></span>
+  <span className="rowText"><b><PlayerName id={r.user_id} name={who(r)}/>{r.user_id===me&&' (you)'}</b><small>{r.games} games · {r.losses} losses{r.games<MIN_RANKED_GAMES&&' · provisional'}</small></span>
   <span className="rowValue">{formatRating(r.rating)}</span>
  </li>)}</ol>
  return <>
@@ -648,12 +649,12 @@ function Standings({ratings,names,me,mode}:{ratings:Rating[];names:Record<string
    <span className="seatInitials" aria-hidden="true">{who(r).slice(0,2).toUpperCase()}</span>
    <b className="seatName" title={who(r)}><PlayerName id={r.user_id} name={who(r)}/></b>
    <span className="podiumRating">{formatRating(r.rating)}</span>
-   <span className="seatMeta">{r.games} {r.games===1?'game':'games'}</span>
+   <span className="seatMeta">{r.games} {r.games===1?'game':'games'}{r.games<MIN_RANKED_GAMES&&' · provisional'}</span>
   </li>)}</ol>
   {ratings.length>3&&<ol className="rankList" start={4}>{ratings.slice(3).map((r,i)=><li key={r.user_id} className={`rankRow ${r.user_id===me?'mine':''}`}>
    <span className="position" aria-hidden="true">{i+4}</span>
    <span className="playerAvatar" aria-hidden="true">{who(r).slice(0,2).toUpperCase()}</span>
-   <span className="rankName"><strong><PlayerName id={r.user_id} name={who(r)}/>{r.user_id===me&&<span className="youTag">you</span>}</strong><small>{r.games} games · {r.losses} losses</small></span>
+   <span className="rankName"><strong><PlayerName id={r.user_id} name={who(r)}/>{r.user_id===me&&<span className="youTag">you</span>}</strong><small>{r.games} games · {r.losses} losses{r.games<MIN_RANKED_GAMES&&' · provisional'}</small></span>
    <span className="rankScore">{formatRating(r.rating)}</span>
   </li>)}</ol>}
  </>
@@ -680,7 +681,7 @@ function FriendsScreen({me,action,busy}:{me:string;action:Action;busy:boolean}){
  useEffect(()=>{void load().catch(console.error)},[load])
  const friendIds=rows.filter(r=>r.status==='accepted').map(r=>r.other),key=friendIds.join(',')
  // Standings among you and your friends: same rating and the same minimum number of games as the global rankings.
- useEffect(()=>{let live=true;void (async()=>{const{data}=await supabase.from('ratings').select('*').in('user_id',[me,...friendIds]).eq('mode',mode).gte('games',MIN_RANKED_GAMES).order('rating',{ascending:false});if(live)setRanked((data||[]) as Rating[])})().catch(console.error);return()=>{live=false}},[me,mode,key])
+ useEffect(()=>{let live=true;void (async()=>{const{data}=await supabase.from('ratings').select('*').in('user_id',[me,...friendIds]).eq('mode',mode).gte('games',MIN_FRIEND_GAMES).order('rating',{ascending:false});if(live)setRanked((data||[]) as Rating[])})().catch(console.error);return()=>{live=false}},[me,mode,key])
  const label=(id:string)=>id===me?'You':names[id]||'Player'
  const allNames={...names,[me]:'You'}
  const add=()=>void action(async()=>{await rpc('send_friend_request',{p_username:name.trim()});setName('');await load()})
@@ -702,7 +703,7 @@ function FriendsScreen({me,action,busy}:{me:string;action:Action;busy:boolean}){
    {accepted.length?<ul className="rowList">{accepted.map(r=><li key={r.other} className="playerRow"><span className="rowText"><b>{label(r.other)}</b></span><button className="linkButton danger" disabled={busy} onClick={()=>remove(r.other)}>Remove</button></li>)}</ul>:<p className="emptyNote">No friends yet. Send a request by username.</p>}
    {sent.length>0&&<><h3 className="listLabel">Waiting for them</h3><ul className="rowList">{sent.map(r=><li key={r.other} className="playerRow"><span className="rowText"><b>{label(r.other)}</b><small>request sent</small></span><button className="linkButton" disabled={busy} onClick={()=>remove(r.other)}>Cancel</button></li>)}</ul></>}
   </section>
-  {accepted.length>0&&<section aria-label="Standings among friends"><h2 className="listLabel">Standings with friends</h2><ModeChips mode={mode} setMode={setMode}/>{ranked.length?<Standings ratings={ranked} names={allNames} me={me} mode={mode}/>:<p className="emptyNote">Nobody here has played {MIN_RANKED_GAMES} {modeInfo(mode).name} games yet.</p>}</section>}
+  {accepted.length>0&&<section aria-label="Standings among friends"><h2 className="listLabel">Standings with friends</h2><ModeChips mode={mode} setMode={setMode}/>{ranked.length?<Standings ratings={ranked} names={allNames} me={me} mode={mode}/>:<p className="emptyNote">Nobody here has played {MIN_FRIEND_GAMES} {modeInfo(mode).name} games yet.</p>}</section>}
  </div>
 }
 
