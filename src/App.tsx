@@ -375,29 +375,33 @@ function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;p
  </div>
 }
 
+// The vote countdown ticks on its own, once per second on the second boundary, so only this number re-renders.
+function VoteTimer({deadline}:{deadline:string}){
+ const end=new Date(deadline).getTime(),left=()=>Math.max(0,Math.ceil((end-Date.now())/1000))
+ const [secs,setSecs]=useState(left)
+ useEffect(()=>{let t=0
+  const tick=()=>{const s=left();setSecs(s);if(s>0)t=window.setTimeout(tick,((end-Date.now())%1000)||1000)}
+  tick();return()=>clearTimeout(t)
+ },[end])
+ return <div className={`voteTimer ${secs<=10?'low':''}`} role="timer" aria-label={`${secs} seconds left`}><b>{secs}</b><span>sec</span></div>
+}
 function TableScreen({tableId,me,action,busy,showChances,openTable,openHistory,onLeave}:{tableId:string;me:string;action:Action;busy:boolean;showChances:boolean;openTable:(id:string)=>void;openHistory:()=>void;onLeave:()=>void}){
- const [table,setTable]=useState<TableRow|null>(null),[members,setMembers]=useState<Member[]>([]),[profiles,setProfiles]=useState<Record<string,Profile>>({}),[players,setPlayers]=useState<string[]>([]),[games,setGames]=useState<Game[]>([]),[totals,setTotals]=useState<VoteTotal[]>([]),[historyGames,setHistoryGames]=useState<Game[]>([]),[cases,setCases]=useState<{id:string;game_id:string;state:string;created_at:string}[]>([]),[yesCounts,setYesCounts]=useState<Record<string,number>>({}),[now,setNow]=useState(Date.now()),[showQR,setShowQR]=useState(false),[mySelections,setMySelections]=useState<Record<string,string>>({}),[showHistory,setShowHistory]=useState(false),[ballots,setBallots]=useState<Record<string,{voter_id:string;nominee_id:string}[]>>({}),[myFriends,setMyFriends]=useState<{id:string;name:string}[]>([])
- const [displayNow, setDisplayNow] = useState(Date.now())
+ const [table,setTable]=useState<TableRow|null>(null),[members,setMembers]=useState<Member[]>([]),[profiles,setProfiles]=useState<Record<string,Profile>>({}),[players,setPlayers]=useState<string[]>([]),[games,setGames]=useState<Game[]>([]),[totals,setTotals]=useState<VoteTotal[]>([]),[historyGames,setHistoryGames]=useState<Game[]>([]),[cases,setCases]=useState<{id:string;game_id:string;state:string;created_at:string}[]>([]),[yesCounts,setYesCounts]=useState<Record<string,number>>({}),[showQR,setShowQR]=useState(false),[mySelections,setMySelections]=useState<Record<string,string>>({}),[showHistory,setShowHistory]=useState(false),[ballots,setBallots]=useState<Record<string,{voter_id:string;nominee_id:string}[]>>({}),[myFriends,setMyFriends]=useState<{id:string;name:string}[]>([])
+ // Ids the realtime listeners watch (comma-joined, so an unchanged set does not resubscribe).
+ const [watchRounds,setWatchRounds]=useState(''),[watchGames,setWatchGames]=useState(''),[watchHistory,setWatchHistory]=useState('')
  const blue=useBlue(),[shareNote,setShareNote]=useState('')
  // Ratings behind the losing-chance estimate, tagged with the round they belong to (null = lobby preview).
  const [chanceInput,setChanceInput]=useState<{round:string|null;ratings:Record<string,number|null>}|null>(null)
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setDisplayNow(Date.now())
-    }, 250)
-
-    return () => window.clearInterval(timer)
-  }, [])
  const leaveRef=useRef(onLeave);leaveRef.current=onLeave
- const load=useCallback(async()=>{
+ const fetchTable=useCallback(async()=>{
   const{data:tt,error:te}=await supabase.from('tables').select('*').eq('id',tableId).single();if(te?.code==='PGRST116'){leaveRef.current();return}if(te)throw te;const t=tt as TableRow;setTable(t)
   const[{data:mm},{data:allR}]=await Promise.all([
    supabase.from('table_members').select('*').eq('table_id',tableId).eq('is_active',true).order('joined_at'),
    supabase.from('rounds').select('id').eq('table_id',tableId).order('started_at',{ascending:false}).limit(12)
   ]);setMembers((mm||[]) as Member[])
   if(t.host_id===me&&t.status==='lobby'&&!t.closed_at){const{data:ff}=await supabase.from('friendships').select('user_a,user_b').eq('status','accepted');const fids=(ff||[]).map(f=>f.user_a===me?f.user_b:f.user_a);if(fids.length){const{data:pp}=await supabase.from('profiles').select('id,username').in('id',fids);setMyFriends(((pp||[]) as {id:string;username:string}[]).map(p=>({id:p.id,name:p.username})).sort((x,y)=>x.name.localeCompare(y.name)))}else setMyFriends([])}
-  const rids=(allR||[]).map(r=>r.id),seated=(mm||[]).map(m=>m.user_id),none=Promise.resolve({data:[],error:null})
+  const rids=(allR||[]).map(r=>r.id);setWatchRounds(rids.join(','))
+  const seated=(mm||[]).map(m=>m.user_id),none=Promise.resolve({data:[],error:null})
   const [{data:rp},{data:gg},{data:historic},chanceRows]=await Promise.all([
     t.current_round_id?supabase.from('round_players').select('user_id').eq('round_id',t.current_round_id):Promise.resolve({data:[]}),
     t.current_round_id?supabase.from('round_games').select('*').eq('round_id',t.current_round_id).order('slot'):Promise.resolve({data:[]}),
@@ -411,26 +415,45 @@ function TableScreen({tableId,me,action,busy,showChances,openTable,openHistory,o
   setPlayers((rp||[]).map(x=>x.user_id));setGames((gg||[]) as Game[]);setHistoryGames((historic||[]) as Game[])
   const allIds=[...(mm||[]).map(m=>m.user_id),...(rp||[]).map(p=>p.user_id),...(historic||[]).flatMap(g=>g.loser_ids)];
   if(allIds.length){const{data:people}=await supabase.from('profiles').select('*').in('id',[...new Set(allIds)]);setProfiles(Object.fromEntries(((people||[]) as Profile[]).map(p=>[p.id,p])))}
-  const gameIds=(gg||[]).map(g=>g.id);if(gameIds.length){const{data:voteData}=await supabase.from('vote_totals').select('*').in('game_id',gameIds);setTotals((voteData||[]) as VoteTotal[])}else setTotals([])
+  const gameIds=(gg||[]).map(g=>g.id);setWatchGames(gameIds.join(','));setWatchHistory((historic||[]).map(g=>g.id).join(','));if(gameIds.length){const{data:voteData}=await supabase.from('vote_totals').select('*').in('game_id',gameIds);setTotals((voteData||[]) as VoteTotal[])}else setTotals([])
   const histIds=(historic||[]).map(g=>g.id);if(histIds.length){
    const {data:vv}=await supabase.from('game_votes').select('game_id,voter_id,nominee_id').in('game_id',histIds);
    const votesByGame:Record<string,{voter_id:string;nominee_id:string}[]>={};for(const v of vv||[])(votesByGame[v.game_id] ||= []).push({voter_id:v.voter_id,nominee_id:v.nominee_id});setBallots(votesByGame);const{data:cc}=await supabase.from('reversal_cases').select('*').in('game_id',histIds);setCases((cc||[]) as typeof cases);const cs=(cc||[]).filter(c=>c.state==='open').map(c=>c.id);if(cs.length){const{data:vv}=await supabase.from('reversal_votes').select('case_id,approve').in('case_id',cs);const counts:Record<string,number>={};for(const v of vv||[])if(v.approve)counts[v.case_id]=(counts[v.case_id]||0)+1;setYesCounts(counts)}else setYesCounts({})}else setCases([])
  },[tableId,me])
- useEffect(()=>{void load().catch(console.error);const timer=setInterval(()=>{setNow(Date.now());void load().catch(console.error)},4500);
-  const channel=supabase.channel(`table-${tableId}`)
-   .on('postgres_changes',{event:'*',schema:'public',table:'tables',filter:`id=eq.${tableId}`},()=>void load())
-   .on('postgres_changes',{event:'*',schema:'public',table:'table_members',filter:`table_id=eq.${tableId}`},()=>void load())
-   .on('postgres_changes',{event:'*',schema:'public',table:'round_games'},()=>void load())
-   .on('postgres_changes',{event:'*',schema:'public',table:'vote_totals'},()=>void load())
-   .on('postgres_changes',{event:'*',schema:'public',table:'reversal_cases'},()=>void load()).subscribe();
-  const visibility=()=>{if(document.visibilityState==='visible')void load()};document.addEventListener('visibilitychange',visibility)
-  return()=>{clearInterval(timer);document.removeEventListener('visibilitychange',visibility);void supabase.removeChannel(channel)}
- },[load,tableId])
+ // One fetch at a time: a call made while one is running waits for it plus one fresh rerun, so slow
+ // mobile connections do not stack up overlapping fetches (and every caller still sees fresh data).
+ const inFlight=useRef<Promise<void>|null>(null),again=useRef(false)
+ const load=useCallback(():Promise<void>=>{
+  if(inFlight.current){again.current=true;return inFlight.current}
+  const run=async()=>{try{do{again.current=false;await fetchTable()}while(again.current)}finally{inFlight.current=null}}
+  return inFlight.current=run()
+ },[fetchTable])
+ // Realtime does the live updates; the poll is only a safety net, skipped while the app is in the background.
+ useEffect(()=>{void load().catch(console.error);const timer=setInterval(()=>{if(document.visibilityState==='visible')void load().catch(console.error)},15000)
+  const visibility=()=>{if(document.visibilityState==='visible')void load().catch(console.error)};document.addEventListener('visibilitychange',visibility)
+  return()=>{clearInterval(timer);document.removeEventListener('visibilitychange',visibility)}
+ },[load])
+ // Listen only to this table's rows. A burst of changes (one vote touches several rows) becomes one reload.
+ useEffect(()=>{let debounce=0
+  const kick=()=>{clearTimeout(debounce);debounce=window.setTimeout(()=>void load().catch(console.error),300)}
+  const ch=supabase.channel(`table-${tableId}-${Math.random().toString(36).slice(2)}`)
+   .on('postgres_changes',{event:'*',schema:'public',table:'tables',filter:`id=eq.${tableId}`},kick)
+   .on('postgres_changes',{event:'*',schema:'public',table:'table_members',filter:`table_id=eq.${tableId}`},kick)
+  if(watchRounds)ch.on('postgres_changes',{event:'*',schema:'public',table:'round_games',filter:`round_id=in.(${watchRounds})`},kick)
+  if(watchGames)ch.on('postgres_changes',{event:'*',schema:'public',table:'vote_totals',filter:`game_id=in.(${watchGames})`},kick)
+  if(watchHistory)ch.on('postgres_changes',{event:'*',schema:'public',table:'reversal_cases',filter:`game_id=in.(${watchHistory})`},kick)
+  ch.subscribe()
+  return()=>{clearTimeout(debounce);void supabase.removeChannel(ch)}
+ },[tableId,watchRounds,watchGames,watchHistory,load])
  const activeGame=games.find(g=>!['confirmed','tied','unresolved','void'].includes(g.state))
  const pendingBefore=activeGame&&games.some(g=>g.slot<activeGame.slot&&!['confirmed','tied','unresolved','void'].includes(g.state))
- useEffect(()=>{if(!activeGame||!['voting','tie_offer'].includes(activeGame.state)||!activeGame.deadline)return;
-  if(new Date(activeGame.deadline).getTime()<=now+1500)void rpc('advance_expired',{p_game:activeGame.id}).then(load).catch(console.error)
- },[activeGame?.id,activeGame?.deadline,activeGame?.state,now,load])
+ // When the vote deadline passes, ask the server to resolve it; retry every few seconds until the game's state moves on.
+ useEffect(()=>{if(!activeGame||!['voting','tie_offer'].includes(activeGame.state)||!activeGame.deadline)return
+  const id=activeGame.id;let retry=0
+  const advance=()=>void rpc('advance_expired',{p_game:id}).then(load).catch(console.error)
+  const first=window.setTimeout(()=>{advance();retry=window.setInterval(advance,3000)},Math.max(0,new Date(activeGame.deadline).getTime()-Date.now()+300))
+  return()=>{clearTimeout(first);clearInterval(retry)}
+ },[activeGame?.id,activeGame?.deadline,activeGame?.state,load])
  const name=(id:string)=>profiles[id]?.username||`Player ${id.slice(0,4)}`
  const invite=table?`${location.origin}${location.pathname}?join=${table.code}`:''
  const share=async()=>{if(navigator.share){try{await navigator.share({title:`Join my table on ${APP_NAME}`,text:`Join my Durak table on ${APP_NAME} with code ${table?.code}.`,url:invite});return}catch{/* copy fallback */}}
@@ -454,7 +477,6 @@ const promote=(id:string)=>void action(async()=>{await rpc('transfer_host',{p_ta
 const canStop=games.length>0&&games.every(g=>['awaiting','voting','tie_offer'].includes(g.state)&&!g.was_reopened)
  if(!table)return <div className="loading">Loading table…</div>
  const closed=Boolean(table.closed_at),seats=table.status==='lobby'&&!closed?Math.max(0,info.min-members.length):0,card=MODE_CARD[table.mode]
- const secondsLeft=activeGame?.deadline?Math.max(0,Math.ceil((new Date(activeGame.deadline).getTime()-displayNow)/1000)):30
  const tiedNames=activeGame?activeGame.loser_ids.map(name).join(' and '):''
  const nominees=activeGame?players.filter(id=>!activeGame.allowed_nominees||activeGame.allowed_nominees.includes(id)):[]
  // Lobby: a live preview for the current members. Playing: fixed at the round's start, the same for both games of a parallel round.
@@ -518,7 +540,7 @@ const canStop=games.length>0&&games.every(g=>['awaiting','voting','tie_offer'].i
   {table.status==='results'&&<section className="voting" aria-labelledby="vote-title">
    <div className="voteHead">
     <div>{games.length>1&&activeGame&&<p className="voteGame">Game {activeGame.slot} of {games.length}</p>}<h2 id="vote-title">{!activeGame?'Results':pendingBefore?'One game at a time':activeGame.state==='tie_offer'?'It\'s a tie':'Who lost?'}</h2></div>
-    {activeGame&&!pendingBefore&&(activeGame.deadline?<div className={`voteTimer ${secondsLeft<=10?'low':''}`} role="timer" aria-label={`${secondsLeft} seconds left`}><b>{secondsLeft}</b><span>sec</span></div>:<div className="voteTimer idle" aria-label="The 30-second timer starts with the first vote"><b>30</b><span>sec</span></div>)}
+    {activeGame&&!pendingBefore&&(activeGame.deadline?<VoteTimer deadline={activeGame.deadline}/>:<div className="voteTimer idle" aria-label="The 30-second timer starts with the first vote"><b>30</b><span>sec</span></div>)}
    </div>
    {activeGame&&!pendingBefore?activeGame.state==='tie_offer'?<>
     {blue?<ul className="rowList">{activeGame.loser_ids.map(id=><li key={id} className="playerRow"><Avatar id={id} name={name(id)} me={me} size="md"/><span className="rowText"><b>{name(id)}{id===me&&<span className="youChip">you</span>}</b><small>Tied</small></span></li>)}</ul>
