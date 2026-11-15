@@ -691,3 +691,14 @@ select{appearance:none;-webkit-appearance:none;padding-right:40px;background-ima
 .pullIndicator.spinning span{animation:pullSpin .7s linear infinite}
 @keyframes pullSpin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.pullIndicator.spinning span{animation-duration:1.6s}}
+.chartMeta{font-family:var(--sans);font-size:.8125rem;font-weight:400;color:var(--ink-soft)}
+
+/* Bottom sheet in the cards theme (player card, QR scanner): a sheet of card stock sliding up over a dimmed table.
+   The blue theme's [data-theme=blue] rules above are more specific and keep their own look. */
+.scrim{position:fixed;inset:0;z-index:30;background:rgba(31,28,25,.42);opacity:0;pointer-events:none;transition:opacity .3s ease}
+.scrim.open{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:31;max-width:560px;max-height:90dvh;margin:0 auto;overflow-y:auto;overscroll-behavior:contain;padding:10px 20px calc(24px + env(safe-area-inset-bottom,0px));border:1px solid var(--line);border-bottom:0;border-radius:16px 16px 0 0;background:var(--card);box-shadow:0 -6px 24px rgba(31,28,25,.18);transform:translateY(105%);visibility:hidden;transition:transform .35s cubic-bezier(.2,.8,.2,1),visibility 0s linear .35s}
+.sheet.open{transform:none;visibility:visible;transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.sheetGrip{display:block;width:40px;height:5px;margin:0 auto 12px;border-radius:3px;background:var(--line)}
+.sheetHead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+@media(prefers-reduced-motion:reduce){.sheet,.scrim{transition:none}}

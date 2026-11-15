@@ -247,7 +247,7 @@ export default function App(){
   <Sheet open={Boolean(person)} title={person?.name||'Player'} onClose={()=>setPerson(null)}>
    {person&&(()=>{const rel=friendCtx.rel(person.id),act=(fn:()=>Promise<unknown>)=>void action(async()=>{await fn();await loadFriends()})
     return <div className="stack sm">
-     {rel==='friend'&&<p>{person.name} is your friend.</p>}
+     {rel==='friend'&&<FriendStats key={person.id} id={person.id} name={person.name}/>}
      {rel==='sent'&&<p>You asked {person.name} to be friends. Waiting for them to accept.</p>}
      {rel==='incoming'&&<><p>{person.name} wants to be your friend.</p><Button className="wide" disabled={busy} onClick={()=>act(()=>rpc('respond_friend_request',{p_user:person.id,p_accept:true}))}>Accept</Button></>}
      {rel==='none'&&<Button className="wide" disabled={busy} onClick={()=>act(()=>rpc('send_friend_request',{p_username:person.name}))}>Add {person.name} as a friend</Button>}
@@ -255,6 +255,31 @@ export default function App(){
   </Sheet>
   {message&&<div className="toast" role="alert">{message}<button aria-label="Dismiss message" onClick={()=>setMessage(null)}><X size={16}/></button></div>}
  </div>)
+}
+
+// A friend's ratings and Elo chart, shown in the player sheet. The chart opens on the mode they play most.
+function FriendStats({id,name}:{id:string;name:string}){
+ const [ratings,setRatings]=useState<Rating[]|null>(null),[mode,setMode]=useState<Mode|null>(null),[chart,setChart]=useState<{mode:Mode;games:RatedGame[]}|null>(null),[error,setError]=useState('')
+ useEffect(()=>{let live=true
+  void supabase.from('ratings').select('*').eq('user_id',id).then(({data,error})=>{if(!live)return;if(error){setError(errorMessage(error));return}
+   const rs=(data||[]) as Rating[];setRatings(rs)
+   setMode(MODES.reduce((best,m)=>(rs.find(r=>r.mode===m.id)?.games||0)>(rs.find(r=>r.mode===best)?.games||0)?m.id:best,'natural' as Mode))})
+  return()=>{live=false}},[id])
+ useEffect(()=>{if(!mode)return;let live=true;setError('')
+  rpc<RatedGame[]>('friend_rating_history',{p_user:id,p_mode:mode}).then(games=>{if(live)setChart({mode,games})}).catch(e=>{if(live)setError(errorMessage(e))})
+  return()=>{live=false}},[id,mode])
+ const r=mode?ratings?.find(x=>x.mode===mode):undefined,info=modeInfo(mode||'natural')
+ return <div className="stack sm">
+  <p>{name} is your friend.</p>
+  {mode&&<ModeChips mode={mode} setMode={setMode}/>}
+  <div className="chartCard">
+   <h3>{info.name}{r&&r.games>0&&<small className="chartMeta"> · {formatRating(r.rating)} Elo · {r.games} {r.games===1?'game':'games'} · {r.losses} {r.losses===1?'loss':'losses'}</small>}</h3>
+   {error?<p className="emptyNote" role="alert">{error}</p>
+   :!chart||chart.mode!==mode?<p className="emptyNote">Loading…</p>
+   :chart.games.length?<RatingChart games={chart.games} modeName={info.name}/>
+   :<p className="emptyNote">{name} has no rated {info.name} games yet.</p>}
+  </div>
+ </div>
 }
 
 function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;profile:Profile|null;openTable:(id:string)=>void;openRankings:()=>void;action:Action;busy:boolean}){
@@ -722,7 +747,7 @@ function FriendsScreen({me,action,busy}:{me:string;action:Action;busy:boolean}){
   {incoming.length>0&&<section aria-labelledby="requests-title"><h2 id="requests-title" className="listLabel">Requests</h2><ul className="rowList">{incoming.map(r=><li key={r.other} className="playerRow"><span className="rowText"><b>{label(r.other)}</b><small>wants to be friends</small></span><Button kind="secondary" disabled={busy} onClick={()=>respond(r.other,true)}>Accept</Button><Button kind="ghost" disabled={busy} onClick={()=>respond(r.other,false)}>Decline</Button></li>)}</ul></section>}
   <section aria-labelledby="friends-title">
    <h2 id="friends-title" className="listLabel">Your friends</h2>
-   {accepted.length?<ul className="rowList">{accepted.map(r=><li key={r.other} className="playerRow"><span className="rowText"><b>{label(r.other)}</b></span><button className="linkButton danger" disabled={busy} onClick={()=>remove(r.other)}>Remove</button></li>)}</ul>:<p className="emptyNote">No friends yet. Send a request by username.</p>}
+   {accepted.length?<ul className="rowList">{accepted.map(r=><li key={r.other} className="playerRow"><span className="rowText"><b><PlayerName id={r.other} name={label(r.other)}/></b><small>tap to see their rating chart</small></span><button className="linkButton danger" disabled={busy} onClick={()=>remove(r.other)}>Remove</button></li>)}</ul>:<p className="emptyNote">No friends yet. Send a request by username.</p>}
    {sent.length>0&&<><h3 className="listLabel">Waiting for them</h3><ul className="rowList">{sent.map(r=><li key={r.other} className="playerRow"><span className="rowText"><b>{label(r.other)}</b><small>request sent</small></span><button className="linkButton" disabled={busy} onClick={()=>remove(r.other)}>Cancel</button></li>)}</ul></>}
   </section>
   {accepted.length>0&&<section aria-label="Standings among friends"><h2 className="listLabel">Standings with friends</h2><ModeChips mode={mode} setMode={setMode}/>{ranked.length?<Standings ratings={ranked} names={allNames} me={me} mode={mode}/>:<p className="emptyNote">Nobody here has played {MIN_FRIEND_GAMES} {modeInfo(mode).name} games yet.</p>}</section>}
