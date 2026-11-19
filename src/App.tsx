@@ -799,6 +799,9 @@ function ProfileScreen({me,profile,action,reload,showChances,setShowChances}:{me
  // Natural Durak results by table size (3–8 players), from public.my_player_count_stats.
  const [bySize,setBySize]=useState<{player_count:number;games:number;losses:number;elo_change:number|string}[]|null>(null)
  useEffect(()=>{let live=true;rpc<typeof bySize>('my_player_count_stats',{p_mode:'natural'}).then(r=>{if(live)setBySize(r||[])}).catch(e=>{console.error(e);if(live)setBySize([])});return()=>{live=false}},[me,ratings])
+ // Natural Durak: losses Elo expected (from everyone's pre-round rating) against actual ones (public.my_expected_losses).
+ const [expectation,setExpectation]=useState<{player_count:number;games:number;losses:number|string;expected_losses:number|string}[]|null>(null)
+ useEffect(()=>{let live=true;rpc<NonNullable<typeof expectation>>('my_expected_losses',{p_mode:'natural'}).then(r=>{if(live)setExpectation(r||[])}).catch(e=>{console.error(e);if(live)setExpectation([])});return()=>{live=false}},[me,ratings])
  // Natural Durak: how often you lose with each player at the table, against your fair share (public.my_table_effect).
  const [mates,setMates]=useState<TableMate[]|null>(null)
  useEffect(()=>{let live=true;rpc<TableMate[]>('my_table_effect',{p_mode:'natural'}).then(r=>{if(live)setMates((r||[]).filter(m=>m.games>=MIN_TABLE_GAMES).sort((x,y)=>tableEffect(y)-tableEffect(x)))}).catch(e=>{console.error(e);if(live)setMates([])});return()=>{live=false}},[me,ratings])
@@ -836,6 +839,16 @@ function ProfileScreen({me,profile,action,reload,showChances,setShowChances}:{me
   {total>=10?<section className="stack sm" aria-labelledby="stats-title">
    <h2 id="stats-title">Statistics</h2>
    <dl className="statsGrid"><div><dt>Win rate</dt><dd>{total?Math.round(100*wins/total):0}%</dd></div><div><dt>Honest self-votes</dt><dd>{admissions}</dd></div><div><dt>Modes played</dt><dd>{ratings.filter(r=>r.games>0).length}</dd></div><div><dt>Games with a result</dt><dd>{total}</dd></div></dl>
+   <h3 className="subTitle">Expected vs. actual losses</h3>
+   {!expectation?<p className="emptyNote">Loading…</p>:expectation.length?(()=>{
+    const exp=expectation.reduce((t,r)=>t+Number(r.expected_losses),0),act=expectation.reduce((t,r)=>t+Number(r.losses),0),games=expectation.reduce((t,r)=>t+r.games,0),diff=act-exp
+    const one=(x:number)=>x.toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:1})
+    return <div className="duelCard">
+     <p className="duelVerdict">{Math.abs(diff)<0.5?'Right where Elo expects you.':diff<0?`You've lost ${one(-diff)} fewer games than Elo expected.`:`You've lost ${one(diff)} more games than Elo expected.`}</p>
+     <div className="duelScore"><div><b>{one(act)}</b><small>Actual losses</small></div><span aria-hidden="true">vs</span><div><b>{one(exp)}</b><small>Expected by Elo</small></div></div>
+     <ul className="expectRows">{expectation.map(r=>{const d=Number(r.losses)-Number(r.expected_losses);return <li key={r.player_count}><span>{r.player_count} players <small>· {r.games} {r.games===1?'game':'games'}</small></span><span>{one(Number(r.losses))} vs {one(Number(r.expected_losses))}</span><strong className={Math.abs(d)<0.05?'':d<0?'gainDelta':'lossDelta'}>{d>=0.05?'+':d<=-0.05?'−':'±'}{one(Math.abs(d))}</strong></li>})}</ul>
+     <p className="fieldHint">Over {games} rated Natural Durak {games===1?'game':'games'}. Expected losses add up each game's chance of you being the Durak, from everyone's Elo when the round started (the same estimate shown at the table). A shared loss is split between the players who shared it. Fewer losses than expected means you're playing better than your rating says; more means your rating is ahead of your results.</p>
+    </div>})():<p className="emptyNote">Finish a rated Natural Durak game to compare your losses with what Elo expected.</p>}
    <h3 className="subTitle">Durak by number of players</h3>
    <ul className="modeRows">{[3,4,5,6,7,8].map(n=>{const r=bySize?.find(x=>x.player_count===n),g=r?.games||0,elo=Number(r?.elo_change||0)
     return <li key={n} className="modeRow"><span className="sizeBadge" aria-hidden="true">{n}</span><span className="modeText"><b>{n} players</b><small>{!bySize?'Loading…':g?`${g} ${g===1?'game':'games'} · lost ${r!.losses} (${Math.round(100*r!.losses/g)}%, fair share ${Math.round(100/n)}%)`:'No games yet'}</small></span><strong className={`modeRowRating ${g?elo<0?'lossDelta':'gainDelta':''}`}>{g?`${elo>=0?'+':'−'}${Math.abs(elo).toFixed(1)}`:'—'}</strong></li>})}</ul>
