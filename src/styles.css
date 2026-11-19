@@ -325,6 +325,8 @@ select{appearance:none;-webkit-appearance:none;padding-right:40px;background-ima
 .modeRow .miniCard{width:40px;height:56px;border-radius:5px;font-size:20px}
 .modeRow .miniIndex{top:3px;left:4px;font-size:9px}
 .modeRowRating{font:700 1.2rem var(--serif);font-variant-numeric:tabular-nums}
+.sizeBadge{flex:none;display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);font:700 1.125rem var(--serif);color:var(--ink)}
+[data-theme=blue] .sizeBadge{width:32px;height:32px;border:0;border-radius:50%;font-family:var(--sans);font-size:1rem}
 .statsGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:0}
 .statsGrid>div{display:flex;flex-direction:column-reverse;gap:4px;padding:14px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card)}
 .statsGrid dt{color:var(--ink-soft);font-size:.875rem}

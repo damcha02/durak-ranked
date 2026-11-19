@@ -768,6 +768,9 @@ function ProfileScreen({me,profile,action,reload,showChances,setShowChances}:{me
  useEffect(()=>{if(!chartMode)return;let live=true;setChartError('')
   rpc<RatedGame[]>('my_rating_history',{p_mode:chartMode}).then(games=>{if(live)setChart({mode:chartMode,games})}).catch(e=>{if(live)setChartError(errorMessage(e))})
   return()=>{live=false}},[chartMode,me])
+ // Natural Durak results by table size (3–8 players), from public.my_player_count_stats.
+ const [bySize,setBySize]=useState<{player_count:number;games:number;losses:number;elo_change:number|string}[]|null>(null)
+ useEffect(()=>{let live=true;rpc<typeof bySize>('my_player_count_stats',{p_mode:'natural'}).then(r=>{if(live)setBySize(r||[])}).catch(e=>{console.error(e);if(live)setBySize([])});return()=>{live=false}},[me,ratings])
  const saveName=()=>void action(async()=>{await rpc('set_username',{p_username:name.trim()});await reload();setAccountNotice('Username updated.')})
  const saveEmail=()=>void action(async()=>{
   if(!accountEmail.trim())throw new Error('Enter an email address.')
@@ -802,6 +805,10 @@ function ProfileScreen({me,profile,action,reload,showChances,setShowChances}:{me
   {total>=10?<section className="stack sm" aria-labelledby="stats-title">
    <h2 id="stats-title">Statistics</h2>
    <dl className="statsGrid"><div><dt>Win rate</dt><dd>{total?Math.round(100*wins/total):0}%</dd></div><div><dt>Honest self-votes</dt><dd>{admissions}</dd></div><div><dt>Modes played</dt><dd>{ratings.filter(r=>r.games>0).length}</dd></div><div><dt>Games with a result</dt><dd>{total}</dd></div></dl>
+   <h3 className="subTitle">Durak by number of players</h3>
+   <ul className="modeRows">{[3,4,5,6,7,8].map(n=>{const r=bySize?.find(x=>x.player_count===n),g=r?.games||0,elo=Number(r?.elo_change||0)
+    return <li key={n} className="modeRow"><span className="sizeBadge" aria-hidden="true">{n}</span><span className="modeText"><b>{n} players</b><small>{!bySize?'Loading…':g?`${g} ${g===1?'game':'games'} · lost ${r!.losses} (${Math.round(100*r!.losses/g)}%, fair share ${Math.round(100/n)}%)`:'No games yet'}</small></span><strong className={`modeRowRating ${g?elo<0?'lossDelta':'gainDelta':''}`}>{g?`${elo>=0?'+':'−'}${Math.abs(elo).toFixed(1)}`:'—'}</strong></li>})}</ul>
+   <p className="fieldHint">Rated Natural Durak games only. Fair share is how often you'd lose if everyone played equally well (1 in 3 at a 3-player table, 1 in 4 at 4, and so on); the number on the right is your net Elo change at that table size.</p>
    <h3 className="subTitle">Rating over time</h3>
    {chartMode&&<ModeChips mode={chartMode} setMode={setChartMode}/>}
    <div className="chartCard">
