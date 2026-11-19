@@ -327,6 +327,19 @@ select{appearance:none;-webkit-appearance:none;padding-right:40px;background-ima
 .modeRowRating{font:700 1.2rem var(--serif);font-variant-numeric:tabular-nums}
 .sizeBadge{flex:none;display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);font:700 1.125rem var(--serif);color:var(--ink)}
 [data-theme=blue] .sizeBadge{width:32px;height:32px;border:0;border-radius:50%;font-family:var(--sans);font-size:1rem}
+.duelCard{display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card)}
+.duelVerdict{margin:0;font-weight:600;color:var(--ink)}
+.duelScore{display:grid;grid-template-columns:1fr auto 1fr;align-items:start;gap:8px;text-align:center}
+.duelScore>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.duelScore b{font:700 2rem/1.2 var(--serif);color:var(--ink)}
+.duelScore small{color:var(--ink-soft);font-size:.8125rem;overflow-wrap:anywhere}
+.duelScore>span{font-size:1.5rem;line-height:2.4rem;color:var(--ink-soft)}
+.duelBar{display:flex;height:10px;border-radius:999px;overflow:hidden;background:var(--line)}
+.duelBar .you{background:var(--red)}
+.duelBar .them{background:var(--ink-soft)}
+.duelCard .fieldHint{margin:0}
+[data-theme=blue] .duelCard{border:0;border-radius:16px;background:#fff}
+[data-theme=blue] .duelScore b{font-family:var(--sans)}
 .statsGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:0}
 .statsGrid>div{display:flex;flex-direction:column-reverse;gap:4px;padding:14px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card)}
 .statsGrid dt{color:var(--ink-soft);font-size:.875rem}
@@ -454,6 +467,7 @@ select{appearance:none;-webkit-appearance:none;padding-right:40px;background-ima
 [data-theme=blue] .button.danger{border-width:1.5px;border-radius:12px}
 [data-theme=blue] .linkButton{gap:4px;text-decoration:none}
 [data-theme=blue] input:where(:not([type=checkbox],[type=radio])),[data-theme=blue] select{border-width:1.5px;border-radius:12px;background:#fff}
+[data-theme=blue] select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%231b2a37' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}
 [data-theme=blue] .field,[data-theme=blue] .card label{font-weight:600}
 [data-theme=blue] .codeInput{font-family:var(--mono);letter-spacing:.14em}
 [data-theme=blue] .codeInput::placeholder{font-family:var(--sans);letter-spacing:normal}

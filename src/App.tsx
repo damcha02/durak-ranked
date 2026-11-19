@@ -750,8 +750,36 @@ function FriendsScreen({me,action,busy}:{me:string;action:Action;busy:boolean}){
    {accepted.length?<ul className="rowList">{accepted.map(r=><li key={r.other} className="playerRow"><span className="rowText"><b><PlayerName id={r.other} name={label(r.other)}/></b><small>tap to see their rating chart</small></span><button className="linkButton danger" disabled={busy} onClick={()=>remove(r.other)}>Remove</button></li>)}</ul>:<p className="emptyNote">No friends yet. Send a request by username.</p>}
    {sent.length>0&&<><h3 className="listLabel">Waiting for them</h3><ul className="rowList">{sent.map(r=><li key={r.other} className="playerRow"><span className="rowText"><b>{label(r.other)}</b><small>request sent</small></span><button className="linkButton" disabled={busy} onClick={()=>remove(r.other)}>Cancel</button></li>)}</ul></>}
   </section>
+  {accepted.length>0&&<Duel friends={accepted.map(r=>({id:r.other,name:label(r.other)})).sort((x,y)=>x.name.localeCompare(y.name))}/>}
   {accepted.length>0&&<section aria-label="Standings among friends"><h2 className="listLabel">Standings with friends</h2><ModeChips mode={mode} setMode={setMode}/>{ranked.length?<Standings ratings={ranked} names={allNames} me={me} mode={mode}/>:<p className="emptyNote">Nobody here has played {MIN_FRIEND_GAMES} {modeInfo(mode).name} games yet.</p>}</section>}
  </div>
+}
+
+type TableMate={user_id:string;username:string;games:number;losses:number;expected_losses:number|string}
+const MIN_TABLE_GAMES=5
+/** Percentage points by which your loss rate with this player at the table exceeds your fair share. */
+const tableEffect=(m:TableMate)=>100*(m.losses-Number(m.expected_losses))/m.games
+
+type DuelRow={games:number;my_losses:number;their_losses:number;both_lost:number}
+function Duel({friends}:{friends:{id:string;name:string}[]}){
+ const [pick,setPick]=useState(''),[duel,setDuel]=useState<{id:string;row:DuelRow}|null>(null),[error,setError]=useState('')
+ useEffect(()=>{if(pick&&!friends.some(f=>f.id===pick))setPick('')},[friends,pick])
+ useEffect(()=>{if(!pick)return;let live=true;setError('')
+  rpc<DuelRow[]>('duel_stats',{p_friend:pick,p_mode:'natural'}).then(r=>{if(live)setDuel({id:pick,row:r[0]})}).catch(e=>{if(live)setError(errorMessage(e))})
+  return()=>{live=false}},[pick])
+ const them=friends.find(f=>f.id===pick)?.name||'',d=duel?.id===pick?duel.row:null
+ const decided=d?d.my_losses+d.their_losses:0,neither=d?d.games-d.my_losses-d.their_losses+d.both_lost:0,mine=decided?Math.round(100*d!.my_losses/decided):50
+ return <section aria-labelledby="duel-title" className="stack sm">
+  <h2 id="duel-title" className="listLabel">Duel</h2>
+  <label className="field" htmlFor="duel-friend">Compare yourself with</label>
+  <select id="duel-friend" value={pick} onChange={e=>setPick(e.target.value)}><option value="">Choose a friend</option>{friends.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select>
+  {pick&&(error?<p className="emptyNote" role="alert">{error}</p>:!d?<p className="emptyNote">Loading…</p>:!d.games?<p className="emptyNote">You and {them} haven't finished a rated Natural Durak game together yet.</p>:<div className="duelCard">
+   <p className="duelVerdict">{d.my_losses===d.their_losses?`Dead even: you've both been the Durak ${d.my_losses} ${d.my_losses===1?'time':'times'}.`:d.my_losses<d.their_losses?`You're ahead: ${them} has been the Durak more often.`:`${them} is ahead: you've been the Durak more often.`}</p>
+   <div className="duelScore"><div><b>{d.my_losses}</b><small>You were the Durak</small></div><span aria-hidden="true">–</span><div><b>{d.their_losses}</b><small>{them} was the Durak</small></div></div>
+   {decided>0&&<div className="duelBar" role="img" aria-label={`Of the games one of you lost, you lost ${mine}%`}><span className="you" style={{width:`${mine}%`}}/><span className="them" style={{width:`${100-mine}%`}}/></div>}
+   <p className="fieldHint">{d.games} rated Natural Durak {d.games===1?'game':'games'} together{neither>0&&`; in ${neither} someone else was the Durak`}{d.both_lost>0&&`; ${d.both_lost} shared ${d.both_lost===1?'loss':'losses'} between you two`}.{decided>0&&` Of the times one of you was the Durak, it was you ${mine}%.`}</p>
+  </div>)}
+ </section>
 }
 
 function ProfileScreen({me,profile,action,reload,showChances,setShowChances}:{me:string;profile:Profile|null;action:Action;reload:()=>Promise<void>;showChances:boolean;setShowChances:(show:boolean)=>void}){
@@ -771,6 +799,9 @@ function ProfileScreen({me,profile,action,reload,showChances,setShowChances}:{me
  // Natural Durak results by table size (3–8 players), from public.my_player_count_stats.
  const [bySize,setBySize]=useState<{player_count:number;games:number;losses:number;elo_change:number|string}[]|null>(null)
  useEffect(()=>{let live=true;rpc<typeof bySize>('my_player_count_stats',{p_mode:'natural'}).then(r=>{if(live)setBySize(r||[])}).catch(e=>{console.error(e);if(live)setBySize([])});return()=>{live=false}},[me,ratings])
+ // Natural Durak: how often you lose with each player at the table, against your fair share (public.my_table_effect).
+ const [mates,setMates]=useState<TableMate[]|null>(null)
+ useEffect(()=>{let live=true;rpc<TableMate[]>('my_table_effect',{p_mode:'natural'}).then(r=>{if(live)setMates((r||[]).filter(m=>m.games>=MIN_TABLE_GAMES).sort((x,y)=>tableEffect(y)-tableEffect(x)))}).catch(e=>{console.error(e);if(live)setMates([])});return()=>{live=false}},[me,ratings])
  const saveName=()=>void action(async()=>{await rpc('set_username',{p_username:name.trim()});await reload();setAccountNotice('Username updated.')})
  const saveEmail=()=>void action(async()=>{
   if(!accountEmail.trim())throw new Error('Enter an email address.')
@@ -809,6 +840,13 @@ function ProfileScreen({me,profile,action,reload,showChances,setShowChances}:{me
    <ul className="modeRows">{[3,4,5,6,7,8].map(n=>{const r=bySize?.find(x=>x.player_count===n),g=r?.games||0,elo=Number(r?.elo_change||0)
     return <li key={n} className="modeRow"><span className="sizeBadge" aria-hidden="true">{n}</span><span className="modeText"><b>{n} players</b><small>{!bySize?'Loading…':g?`${g} ${g===1?'game':'games'} · lost ${r!.losses} (${Math.round(100*r!.losses/g)}%, fair share ${Math.round(100/n)}%)`:'No games yet'}</small></span><strong className={`modeRowRating ${g?elo<0?'lossDelta':'gainDelta':''}`}>{g?`${elo>=0?'+':'−'}${Math.abs(elo).toFixed(1)}`:'—'}</strong></li>})}</ul>
    <p className="fieldHint">Rated Natural Durak games only. Fair share is how often you'd lose if everyone played equally well (1 in 3 at a 3-player table, 1 in 4 at 4, and so on); the number on the right is your net Elo change at that table size.</p>
+   <h3 className="subTitle">Who's at the table</h3>
+   {!mates?<p className="emptyNote">Loading…</p>:mates.length?<>
+    {mates.length>1&&<dl className="statsGrid"><div><dt>Toughest to play with</dt><dd>{mates[0].username}</dd></div><div><dt>Easiest to play with</dt><dd>{mates[mates.length-1].username}</dd></div></dl>}
+    <ul className="modeRows">{mates.map(m=>{const e=Math.round(tableEffect(m))
+     return <li key={m.user_id} className="modeRow"><span className="modeText"><b><PlayerName id={m.user_id} name={m.username}/></b><small>{m.games} games together · you lost {m.losses} ({Math.round(100*m.losses/m.games)}%, fair share {Math.round(100*Number(m.expected_losses)/m.games)}%)</small></span><strong className={`modeRowRating ${e>0?'lossDelta':e<0?'gainDelta':''}`}>{e>0?'+':e<0?'−':'±'}{Math.abs(e)}%</strong></li>})}</ul>
+    <p className="fieldHint">Rated Natural Durak games with at least {MIN_TABLE_GAMES} games together. The number on the right is how much more (+) or less (−) often you lose with them at the table than your fair share, in percentage points.</p>
+   </>:<p className="emptyNote">Play {MIN_TABLE_GAMES} Natural Durak games with someone to see how you do when they're at the table.</p>}
    <h3 className="subTitle">Rating over time</h3>
    {chartMode&&<ModeChips mode={chartMode} setMode={setChartMode}/>}
    <div className="chartCard">
