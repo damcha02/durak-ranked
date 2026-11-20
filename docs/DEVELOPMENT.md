@@ -62,6 +62,9 @@ To deploy the optional Worker:
 - `npm run dev` — local frontend
 - `npm run build` — type-check and build static output
 - `npm run test` — pure TypeScript rating-math unit tests
+- `npm run format` — format `src/` with Prettier (`npm run format:check` to only check)
+
+Frontend layout: `src/App.tsx` holds the shell (session, navigation, toasts); each tab is a file in `src/screens/`; shared components and constants live in `src/ui.tsx`.
 
 No databases, Supabase accounts, domains, or Cloudflare services have been provisioned by this repository itself.
 

@@ -1,940 +1,311 @@
-import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState} from 'react'
-import type {Session} from '@supabase/supabase-js'
-import {QRCodeSVG} from 'qrcode.react'
-import jsQR from 'jsqr'
-import {ArrowRight,Camera,ChevronDown,Clock3,Copy,Crown,LogOut,RefreshCw,ShieldCheck,Trash2,X} from 'lucide-react'
-import {authLinkError,configured,date,errorMessage,MODES,modeInfo,recoveryLink,rpc,supabase} from './lib'
-import {isEmailIdentifier,isUsername} from './authValidation'
-import {signInByUsername} from './usernameSignIn'
-import {applyTheme,readTheme,saveTheme,THEMES} from './theme'
-import type {Theme} from './theme'
-import {formatChance,lossChances,readShowChances,saveShowChances} from './lossChance'
-import type {Chance} from './lossChance'
-import {RatingChart} from './RatingChart'
-import type {RatedGame} from './ratingChart'
-import {streakLabel,streakPenaltyNext} from './lossStreak'
-import type {Game,GameDetails,HistoryGame,Member,Mode,Profile,Rating,TableRow,VoteTotal} from './lib'
+import type { Session } from '@supabase/supabase-js'
+import { X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { authLinkError, configured, errorMessage, recoveryLink, rpc, supabase } from './lib'
+import type { Profile } from './lib'
+import { readShowChances, saveShowChances } from './lossChance'
+import { AuthScreen, NewPasswordScreen } from './screens/AuthScreen'
+import { FriendStats, FriendsScreen } from './screens/FriendsScreen'
+import { HistoryScreen } from './screens/HistoryScreen'
+import { HomeScreen } from './screens/HomeScreen'
+import { LeaderboardScreen } from './screens/LeaderboardScreen'
+import { ProfileScreen } from './screens/ProfileScreen'
+import { TableScreen } from './screens/TableScreen'
+import { applyTheme, readTheme, saveTheme } from './theme'
+import type { Theme } from './theme'
+import { APP_NAME, Brand, Button, FriendCtx, NavTabs, Sheet, ThemeContext, tint } from './ui'
+import type { Action, Page, Rel } from './ui'
 
-type Page='home'|'history'|'leaderboard'|'friends'|'profile'
-// Players appear in the rankings only after this many games in the mode.
-const MIN_RANKED_GAMES=5
-const MIN_FRIEND_GAMES=2 // friends standings also show players still short of the ranking minimum
-type Action=(fn:()=>Promise<unknown>)=>Promise<void>
-const formatRating=(rating:number)=>Math.round(rating).toLocaleString()
-const dateTime=(s:string)=>{const d=new Date(s);return d.toLocaleString(undefined,{month:'short',day:'numeric',...(d.getFullYear()===new Date().getFullYear()?{}:{year:'numeric'}),hour:'2-digit',minute:'2-digit'})}
-const getJoinCode=()=>new URLSearchParams(location.search).get('join')?.trim().toUpperCase() || ''
-const APP_NAME='Durak Ranked'
-// Every game mode is a card with a corner index (abbreviation + suit). \uFE0E keeps iOS from drawing the suits as emoji.
-const MODE_CARD:Record<Mode,{abbr:string;suit:string;red:boolean}>={natural:{abbr:'D',suit:'\u2660\uFE0E',red:false},double_single:{abbr:'DS',suit:'\u2663\uFE0E',red:false},single_double:{abbr:'SD',suit:'\u2665\uFE0E',red:true},double_double:{abbr:'DD',suit:'\u2666\uFE0E',red:true}}
-const CornerIndex=({mode,flip=false}:{mode:Mode;flip?:boolean})=><span className={`cornerIndex ${MODE_CARD[mode].red?'red':''} ${flip?'flip':''}`} aria-hidden="true">{MODE_CARD[mode].abbr}<br/>{MODE_CARD[mode].suit}</span>
-const MiniModeCard=({mode}:{mode:Mode})=><span className={`miniCard ${MODE_CARD[mode].red?'red':''}`} aria-hidden="true"><span className="miniIndex">{MODE_CARD[mode].abbr}</span>{MODE_CARD[mode].suit}</span>
-const Brand=()=><span className="brand"><span className="brandMark" aria-hidden="true">{'\u2660\uFE0E'}</span><span>{APP_NAME}</span></span>
-const NAV:{id:Page;label:string;suit:string;red:boolean}[]=[{id:'home',label:'Home',suit:'\u2660\uFE0E',red:false},{id:'history',label:'History',suit:'\u21BA\uFE0E',red:false},{id:'leaderboard',label:'Rankings',suit:'\u2663\uFE0E',red:false},{id:'friends',label:'Friends',suit:'\u2665\uFE0E',red:true},{id:'profile',label:'Profile',suit:'\u2666\uFE0E',red:true}]
-// A closed table keeps status 'lobby' on the server; closed_at is what marks it.
-type TableStatus=TableRow['status']|'closed'
-const statusOf=(t:TableRow):TableStatus=>t.closed_at?'closed':t.status
-const STATUS_TEXT:Record<TableStatus,string>={lobby:'Waiting for players',playing:'Game in progress',results:'Recording results',closed:'Closed due to inactivity'}
-const STATUS_ORDER:Record<TableStatus,number>={results:0,playing:1,lobby:2,closed:3}
-// Closed tables stay on Home for a few days, so returning players see why their table is gone.
-const CLOSED_SHOWN_MS=3*86400000
-const greeting=()=>{const h=new Date().getHours();return h>=5&&h<12?'Good morning':h>=12&&h<18?'Good afternoon':'Good evening'}
+const getJoinCode = () => new URLSearchParams(location.search).get('join')?.trim().toUpperCase() || ''
 
-function Button({children,onClick,kind='primary',disabled=false,className='',type='button'}:{children:React.ReactNode;onClick?:()=>void;kind?:'primary'|'secondary'|'outline'|'ghost'|'danger';disabled?:boolean;className?:string;type?:'button'|'submit'}){
- return <button type={type} className={`button ${kind} ${className}`} onClick={onClick} disabled={disabled}>{children}</button>
-}
-// Two looks share every screen: "cards" (card stock, corner indices) and "blue" (the light-blue prototype).
-// Where the layouts differ, components branch on useBlue(); data loading and actions are shared.
-// Friend relations, so any name in the app can offer "Add friend" (see PlayerName).
-type Rel='none'|'friend'|'sent'|'incoming'
-const FriendCtx=createContext<{me:string;rel:(id:string)=>Rel;pick:(id:string,name:string)=>void}>({me:'',rel:()=>'none',pick:()=>{}})
-/** A player's name; tapping another player's name opens the add-friend sheet. */
-function PlayerName({id,name}:{id:string;name:string}){
- const f=useContext(FriendCtx)
- if(!id||id===f.me)return <>{name}</>
- return <button type="button" className="nameLink" onClick={e=>{e.stopPropagation();f.pick(id,name)}}>{name}</button>
-}
-/** The table code inside a scanned QR: an invite link (?join=CODE) or the bare 8-character code. */
-function codeFromScan(text:string){
- try{const c=new URL(text).searchParams.get('join');if(c&&/^[A-Za-z0-9]{8}$/.test(c))return c.toUpperCase()}catch{/* not a URL */}
- const t=text.trim();return /^[A-Za-z0-9]{8}$/.test(t)?t.toUpperCase():null
-}
-/** Opens the back camera and reports the first table code it sees. Mount it only while scanning: unmounting stops the camera. */
-function QrScanner({onCode}:{onCode:(code:string)=>void}){
- const video=useRef<HTMLVideoElement>(null),cb=useRef(onCode),[err,setErr]=useState('')
- cb.current=onCode
- useEffect(()=>{
-  let stop=false,stream:MediaStream|null=null,raf=0
-  const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d',{willReadFrequently:true})
-  void (async()=>{
-   try{
-    if(!navigator.mediaDevices?.getUserMedia||!ctx)throw new Error('unsupported')
-    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}})
-    if(stop){stream.getTracks().forEach(t=>t.stop());return}
-    const v=video.current;if(!v)return;v.srcObject=stream;await v.play()
-    const tick=()=>{
-     if(stop)return
-     if(v.readyState>=2&&v.videoWidth){
-      const k=Math.min(1,640/v.videoWidth);canvas.width=Math.round(v.videoWidth*k);canvas.height=Math.round(v.videoHeight*k)
-      ctx.drawImage(v,0,0,canvas.width,canvas.height)
-      const img=ctx.getImageData(0,0,canvas.width,canvas.height),hit=jsQR(img.data,img.width,img.height),code=hit&&codeFromScan(hit.data)
-      if(code){stop=true;cb.current(code);return}
-     }
-     raf=requestAnimationFrame(tick)
+export default function App() {
+  const [session, setSession] = useState<Session | null>(null),
+    [loading, setLoading] = useState(true),
+    [profile, setProfile] = useState<Profile | null>(null)
+  const [page, setPage] = useState<Page>('home'),
+    [tableId, setTableId] = useState<string | null>(null),
+    [message, setMessage] = useState<string | null>(null),
+    [busy, setBusy] = useState(false)
+  const [joinCode, setJoinCode] = useState(getJoinCode())
+  const [friendRows, setFriendRows] = useState<
+      { other: string; status: 'pending' | 'accepted'; mine: boolean }[]
+    >([]),
+    [person, setPerson] = useState<{ id: string; name: string } | null>(null)
+  const [theme, setThemeState] = useState<Theme>(readTheme)
+  // True from opening a password-reset link until the new password is saved.
+  const [recovering, setRecovering] = useState(recoveryLink)
+  const [showChances, setShowChancesState] = useState(readShowChances)
+  const setShowChances = (show: boolean) => {
+    setShowChancesState(show)
+    saveShowChances(show)
+  }
+  const themeValue = useMemo(
+    () => ({
+      theme,
+      setTheme: (t: Theme) => {
+        setThemeState(t)
+        saveTheme(t)
+        applyTheme(t)
+      },
+    }),
+    [theme],
+  )
+  const user = session?.user
+  const reloadProfile = useCallback(async () => {
+    if (!user) return
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+    if (error) throw error
+    setProfile(data as Profile)
+  }, [user?.id])
+  useEffect(() => {
+    let valid = true
+    void supabase.auth.getSession().then(({ data }) => {
+      if (valid) {
+        setSession(data.session)
+        setLoading(false)
+      }
+    })
+    const { subscription } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === 'PASSWORD_RECOVERY') setRecovering(true)
+      setSession(s)
+      setLoading(false)
+    }).data
+    return () => {
+      valid = false
+      subscription.unsubscribe()
     }
-    tick()
-   }catch(e){setErr(e instanceof Error&&e.message==='unsupported'?'This browser cannot open the camera here. Type the code instead.':'Camera access was blocked. Allow the camera for this site, or type the code instead.')}
-  })()
-  return()=>{stop=true;cancelAnimationFrame(raf);stream?.getTracks().forEach(t=>t.stop())}
- },[])
- return err?<p className="emptyNote" role="alert">{err}</p>:<div className="scanner"><video ref={video} muted playsInline aria-label="Camera view"/><p className="fieldHint">Point the camera at the QR code on the host's screen.</p></div>
-}
-const ThemeContext=createContext<{theme:Theme;setTheme:(t:Theme)=>void}>({theme:'blue',setTheme:()=>{}})
-const useBlue=()=>useContext(ThemeContext).theme==='blue'
-// Soft avatar tints for the blue theme, picked from the user id so each player keeps one colour; you are always the action tint.
-const TINTS=['#F1DCCF','#D9E8DC','#ECE3C8','#E2DDEE','#F3E1E8']
-const tint=(id:string,me?:string)=>id===me?'#D6E6F2':TINTS[[...id].reduce((s,c)=>s+c.charCodeAt(0),0)%TINTS.length]
-const Avatar=({id,name,me,size=''}:{id:string;name:string;me?:string;size?:string})=><span className={`tintAvatar ${size}`} style={{background:tint(id,me)}} aria-hidden="true">{name.slice(0,2).toUpperCase()}</span>
-const listNames=(names:string[])=>names.length<=1?(names[0]||''):`${names.slice(0,-1).join(', ')} and ${names[names.length-1]}`
-// Tiny italic line under a player's name: Elo in the table's mode and the estimated chance of being the Durak, with a bar.
-const ChanceLine=({chance}:{chance:Chance})=><span className="lossChance" title="Estimated from Elo, not a prediction"><span className="chanceBar" aria-hidden="true"><span style={{width:`${100*chance.p}%`}}/></span><span>{formatChance(chance.p)} to lose</span><span>· {formatRating(chance.rating)} Elo</span></span>
-const SuitBox=({mode}:{mode:Mode})=><span className={`suitBox ${MODE_CARD[mode].red?'red':''}`} aria-hidden="true">{MODE_CARD[mode].suit}</span>
-
-// Bottom sheet (blue theme): pickers and the invite open over the page so you keep your place.
-function Sheet({open,title,onClose,children}:{open:boolean;title:string;onClose:()=>void;children:React.ReactNode}){
- const panel=useRef<HTMLDivElement>(null),close=useRef(onClose)
- close.current=onClose
- useEffect(()=>{
-  if(!open)return
-  const back=document.activeElement as HTMLElement|null
-  const focusable=()=>[...(panel.current?.querySelectorAll<HTMLElement>('button,a[href],input,select')||[])].filter(el=>!el.hasAttribute('disabled'))
-  ;(panel.current?.querySelector<HTMLElement>('[aria-pressed="true"]')||focusable()[0])?.focus()
-  const key=(e:KeyboardEvent)=>{
-   if(e.key==='Escape'){e.preventDefault();close.current();return}
-   if(e.key!=='Tab')return
-   const items=focusable();if(!items.length)return
-   const first=items[0],last=items[items.length-1]
-   if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}
+  }, [])
+  useEffect(() => {
+    if (user) {
+      void reloadProfile().catch(e => setMessage(errorMessage(e)))
+    } else setProfile(null)
+  }, [user?.id, reloadProfile])
+  useEffect(() => {
+    if (!joinCode || !user) return
+    const c = joinCode
+    setJoinCode('')
+    void (async () => {
+      try {
+        setBusy(true)
+        const id = await rpc<string>('join_table', { p_code: c })
+        setTableId(id)
+        history.replaceState(null, '', location.pathname)
+      } catch (e) {
+        setMessage(errorMessage(e))
+      } finally {
+        setBusy(false)
+      }
+    })()
+  }, [user?.id, joinCode])
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [page, tableId])
+  // The client leaves a failed link's #error=… in the address bar; the sign-in screen has already read it.
+  useEffect(() => {
+    if (authLinkError) history.replaceState(null, '', location.pathname + location.search)
+  }, [])
+  const loadFriends = useCallback(async () => {
+    if (!user) return
+    const { data } = await supabase.from('friendships').select('*')
+    setFriendRows(
+      (data || []).map(f => ({
+        other: f.user_a === user.id ? f.user_b : f.user_a,
+        status: f.status,
+        mine: f.requested_by === user.id,
+      })),
+    )
+  }, [user?.id])
+  useEffect(() => {
+    void loadFriends().catch(console.error)
+  }, [loadFriends])
+  const friendCtx = useMemo(
+    () => ({
+      me: user?.id || '',
+      rel: (id: string): Rel => {
+        const r = friendRows.find(x => x.other === id)
+        return !r ? 'none' : r.status === 'accepted' ? 'friend' : r.mine ? 'sent' : 'incoming'
+      },
+      pick: (id: string, name: string) => {
+        setPerson({ id, name })
+        void loadFriends().catch(console.error)
+      },
+    }),
+    [user?.id, friendRows, loadFriends],
+  )
+  const action: Action = async fn => {
+    if (busy) return
+    setBusy(true)
+    setMessage(null)
+    try {
+      await fn()
+    } catch (e) {
+      setMessage(errorMessage(e))
+    } finally {
+      setBusy(false)
+    }
   }
-  document.addEventListener('keydown',key)
-  return()=>{document.removeEventListener('keydown',key);back?.focus()}
- },[open])
- return <>
-  <div className={`scrim ${open?'open':''}`} onClick={onClose} aria-hidden="true"/>
-  <div ref={panel} role="dialog" aria-modal="true" aria-label={title} className={`sheet ${open?'open':''}`} inert={!open}>
-   <span className="sheetGrip" aria-hidden="true"/>
-   <div className="sheetHead"><h2>{title}</h2><button className="linkButton plain" onClick={onClose}>Done</button></div>
-   {children}
-  </div>
- </>
-}
-
-// Suits double as tab icons in the cards theme; the blue theme shows labels on a sliding pill.
-// Rendered twice (bottom bar on phones, header on desktop); CSS shows one.
-function NavTabs({page,go,className}:{page:Page|null;go:(p:Page)=>void;className:string}){
- const index=NAV.findIndex(n=>n.id===page)
- return <nav className={className} aria-label="Main">
-  {index>=0&&<span className="navPill" aria-hidden="true" style={{transform:`translateX(${index*100}%)`}}/>}
-  {NAV.map(n=><button key={n.id} className={`${page===n.id?'on':''} ${n.red?'red':''}`} aria-current={page===n.id?'page':undefined} onClick={()=>go(n.id)}><span className="navSuit" aria-hidden="true">{n.suit}</span><span>{n.label}</span></button>)}
- </nav>
-}
-function AuthScreen({joinCode}:{joinCode:string}){
- const [identifier,setIdentifier]=useState(''),[email,setEmail]=useState(''),[username,setUsername]=useState(''),[password,setPassword]=useState('')
- // An expired or already-used reset link lands here with an error, so offer a fresh one straight away.
- const [tab,setTab]=useState<'sign-in'|'register'|'reset'>(authLinkError?'reset':'sign-in'),[notice,setNotice]=useState(authLinkError?`${authLinkError.replace(/\.?$/,'.')} Request a new reset link.`:''),[working,setWorking]=useState(false),[sentTo,setSentTo]=useState('')
- const blue=useBlue()
- const act=async(fn:()=>Promise<void>)=>{setWorking(true);setNotice('');try{await fn()}catch(e){setNotice(errorMessage(e))}finally{setWorking(false)}}
- const switchTab=(t:typeof tab)=>{setTab(t);setNotice('');setSentTo('')}
- const submit=()=>void act(async()=>{
-  if(tab==='reset'){
-   const address=email.trim()
-   if(!isEmailIdentifier(address))throw new Error('Enter the email address of your account.')
-   const {error}=await supabase.auth.resetPasswordForEmail(address,{redirectTo:`${location.origin}/`})
-   if(error)throw error
-   setSentTo(address)
-  }else if(tab==='register'){
-   const handle=username.trim()
-   if(!isUsername(handle))throw new Error('Username must contain 3–22 letters, numbers or underscores.')
-   if(password.length<10)throw new Error('Choose a password of at least 10 characters.')
-   const {data,error}=await supabase.auth.signUp({
-     email:email.trim(),password,options:{data:{username:handle}}
-   })
-   if(error){
-    if(/database error saving new user/i.test(error.message))throw new Error('Registration failed. This username may already be taken.')
-    throw error
-   }
-   if(!data.session)throw new Error('Account created but no session returned. Disable Confirm Email in Supabase Authentication → Email provider, or confirm your email.')
-   // The onAuthStateChange listener switches directly to the dashboard.
-  }else if(isEmailIdentifier(identifier)){
-   const {error}=await supabase.auth.signInWithPassword({email:identifier.trim(),password})
-   if(error)throw error
-  }else{
-   if(!isUsername(identifier.trim()))throw new Error('Enter a valid username or email address.')
-   await signInByUsername(identifier.trim(),password)
+  // Screen transitions: opening a table moves forward, leaving it moves back, switching tabs crossfades (CSS decides how each theme animates).
+  const screenKey = tableId ? `table-${tableId}` : page,
+    depth = tableId ? 2 : 1
+  const nav = useRef({ key: screenKey, depth, dir: 'fade' })
+  if (nav.current.key !== screenKey)
+    nav.current = {
+      key: screenKey,
+      depth,
+      dir: depth > nav.current.depth ? 'forward' : depth < nav.current.depth ? 'back' : 'fade',
+    }
+  const themed = (content: React.ReactNode) => (
+    <ThemeContext.Provider value={themeValue}>
+      <FriendCtx.Provider value={friendCtx}>{content}</FriendCtx.Provider>
+    </ThemeContext.Provider>
+  )
+  if (!configured)
+    return themed(
+      <div className="setup">
+        <Brand />
+        <h1>Connect your backend</h1>
+        <p>
+          Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> to a{' '}
+          <code>.env</code> file, then restart Vite.
+        </p>
+        <p className="muted">See README.md for the complete Supabase setup.</p>
+      </div>,
+    )
+  if (loading)
+    return themed(
+      <div className="loading" role="status">
+        <Brand />
+        <p>Loading {APP_NAME}…</p>
+      </div>,
+    )
+  if (!session) return themed(<AuthScreen joinCode={joinCode} />)
+  if (recovering)
+    return themed(
+      <NewPasswordScreen
+        onDone={() => {
+          setRecovering(false)
+          setMessage("Password changed. You're signed in.")
+        }}
+      />,
+    )
+  const initials = (profile?.username || 'U').slice(0, 2).toUpperCase()
+  const go = (p: Page) => {
+    setTableId(null)
+    setPage(p)
   }
- })
- // Username problems are shown under the username field; everything else above the submit button.
- const usernameError=tab==='register'&&/username/i.test(notice)
- const errorLine=<p id="auth-error" className="fieldError" role="alert"><span aria-hidden="true">{'\u2666\uFE0E'}</span>{notice}</p>
- return <div className="authWrap"><main className="authInner">
-  {joinCode?<>
-   <h1 className="brandHeading"><Brand/></h1>
-   <div className="authInvite" role="status"><span className="inviteCard" aria-hidden="true">{joinCode.slice(0,4)}<br/>{joinCode.slice(4)}</span><p>You've been invited to table <strong>{joinCode}</strong>. Sign in or create an account and you'll join it straight away.</p></div>
-  </>:blue?<header className="authIntro">
-   <span className="authMark" aria-hidden="true">{'\u2660\uFE0E'}</span>
-   <h1>{APP_NAME}</h1>
-   <p>A scorebook for your Durak nights. Play with real cards, vote on who lost, and keep a rating for each game mode.</p>
-  </header>:<header className="authIntro">
-   <div className="brandLarge"><span className="brandFan" aria-hidden="true"><span className="fanBack"/><span className="fanFront"><span className="miniIndex">D</span>{'\u2660\uFE0E'}</span></span><h1>Durak<br/>Ranked</h1></div>
-   <p>Keep score for the games you play with a real deck. Vote on who's left holding cards, and see your rating per mode.</p>
-  </header>}
-  {tab==='reset'?<form className="authCard" aria-labelledby="reset-title" onSubmit={e=>{e.preventDefault();submit()}}>
-   <h2 id="reset-title">Reset your password</h2>
-   {sentTo?<p role="status">If <strong>{sentTo}</strong> belongs to an account, a reset link is on its way. Open it to choose a new password. It can take a few minutes; check your spam folder too.</p>:<>
-    <p className="fieldHint">Enter the email address you signed up with and we'll send you a link to choose a new password.</p>
-    <label className="field">Email address<input required type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)}/></label>
-    {notice&&errorLine}
-    <Button type="submit" disabled={working} className="wide">{working?'Please wait…':'Send reset link'}</Button>
-   </>}
-   <button type="button" className="linkButton plain" onClick={()=>switchTab('sign-in')}>Back to sign in</button>
-  </form>:<>
-  <div className="authTabs" role="group" aria-label="Account">
-   <span className={`authThumb ${tab==='register'?'right':''}`} aria-hidden="true"/>
-   <button type="button" aria-pressed={tab==='sign-in'} className={tab==='sign-in'?'selected':''} onClick={()=>switchTab('sign-in')}>Sign in</button>
-   <button type="button" aria-pressed={tab==='register'} className={tab==='register'?'selected':''} onClick={()=>switchTab('register')}>Create account</button>
-  </div>
-  <form className="authCard" aria-label={tab==='register'?'Create account':'Sign in'} onSubmit={e=>{e.preventDefault();submit()}}>
-   {tab==='register'?<>
-    <div className="fieldGroup"><label className="field">Username<input required type="text" minLength={3} maxLength={22} pattern="[A-Za-z0-9_]{3,22}" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} aria-invalid={usernameError||undefined} aria-describedby={usernameError?'auth-error':undefined} value={username} onChange={e=>setUsername(e.target.value)}/></label>{usernameError&&errorLine}</div>
-    <label className="field">Email address<input required type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)}/></label>
-   </>:<label className="field">Username or email<input required type="text" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={identifier} onChange={e=>setIdentifier(e.target.value)}/></label>}
-   <div className="fieldGroup"><label className="field">Password<input required minLength={tab==='register'?10:1} type="password" autoComplete={tab==='register'?'new-password':'current-password'} aria-describedby={tab==='register'?'password-hint':undefined} value={password} onChange={e=>setPassword(e.target.value)}/></label>{tab==='register'&&<p id="password-hint" className="fieldHint">At least 10 characters</p>}</div>
-   {notice&&!usernameError&&errorLine}
-   <Button type="submit" disabled={working} className="wide">{working?'Please wait…':tab==='register'?'Create account':'Sign in'}</Button>
-   {tab==='sign-in'&&<button type="button" className="linkButton plain" onClick={()=>switchTab('reset')}>Forgot your password?</button>}
-  </form>
-  {tab==='register'&&<p className="authNote">Use an email address you control: it's how you reset a forgotten password.</p>}
-  </>}
- </main></div>
-}
-
-// Shown after opening a password-reset link: the link signs you in, and you choose a new password before going on.
-function NewPasswordScreen({onDone}:{onDone:()=>void}){
- const [password,setPassword]=useState(''),[repeat,setRepeat]=useState(''),[notice,setNotice]=useState(''),[working,setWorking]=useState(false)
- const submit=async()=>{
-  setNotice('')
-  if(password.length<10){setNotice('Choose a password of at least 10 characters.');return}
-  if(password!==repeat){setNotice('The two passwords don\'t match.');return}
-  setWorking(true)
-  try{const {error}=await supabase.auth.updateUser({password});if(error)throw error;onDone()}
-  catch(e){setNotice(errorMessage(e))}finally{setWorking(false)}
- }
- return <div className="authWrap"><main className="authInner">
-  <h1 className="brandHeading"><Brand/></h1>
-  <form className="authCard" aria-labelledby="new-password-title" onSubmit={e=>{e.preventDefault();void submit()}}>
-   <h2 id="new-password-title">Choose a new password</h2>
-   <div className="fieldGroup"><label className="field">New password<input required minLength={10} type="password" autoComplete="new-password" aria-describedby="reset-password-hint" value={password} onChange={e=>setPassword(e.target.value)}/></label><p id="reset-password-hint" className="fieldHint">At least 10 characters</p></div>
-   <label className="field">Repeat new password<input required minLength={10} type="password" autoComplete="new-password" value={repeat} onChange={e=>setRepeat(e.target.value)}/></label>
-   {notice&&<p className="fieldError" role="alert"><span aria-hidden="true">{'♦︎'}</span>{notice}</p>}
-   <Button type="submit" disabled={working} className="wide">{working?'Please wait…':'Save new password'}</Button>
-  </form>
- </main></div>
-}
-
-export default function App(){
- const [session,setSession]=useState<Session|null>(null),[loading,setLoading]=useState(true),[profile,setProfile]=useState<Profile|null>(null)
- const [page,setPage]=useState<Page>('home'),[tableId,setTableId]=useState<string|null>(null),[message,setMessage]=useState<string|null>(null),[busy,setBusy]=useState(false)
- const [joinCode,setJoinCode]=useState(getJoinCode())
- const [friendRows,setFriendRows]=useState<{other:string;status:'pending'|'accepted';mine:boolean}[]>([]),[person,setPerson]=useState<{id:string;name:string}|null>(null)
- const [theme,setThemeState]=useState<Theme>(readTheme)
- // True from opening a password-reset link until the new password is saved.
- const [recovering,setRecovering]=useState(recoveryLink)
- const [showChances,setShowChancesState]=useState(readShowChances)
- const setShowChances=(show:boolean)=>{setShowChancesState(show);saveShowChances(show)}
- const themeValue=useMemo(()=>({theme,setTheme:(t:Theme)=>{setThemeState(t);saveTheme(t);applyTheme(t)}}),[theme])
- const user=session?.user
- const reloadProfile=useCallback(async()=>{if(!user)return;const {data,error}=await supabase.from('profiles').select('*').eq('id',user.id).single();if(error)throw error;setProfile(data as Profile)},[user?.id])
- useEffect(()=>{let valid=true;void supabase.auth.getSession().then(({data})=>{if(valid){setSession(data.session);setLoading(false)}});const{subscription}=supabase.auth.onAuthStateChange((event,s)=>{if(event==='PASSWORD_RECOVERY')setRecovering(true);setSession(s);setLoading(false)}).data;return()=>{valid=false;subscription.unsubscribe()}},[])
- useEffect(()=>{if(user){void reloadProfile().catch(e=>setMessage(errorMessage(e))) }else setProfile(null)},[user?.id,reloadProfile])
- useEffect(()=>{if(!joinCode||!user)return;const c=joinCode;setJoinCode('');void (async()=>{try{setBusy(true);const id=await rpc<string>('join_table',{p_code:c});setTableId(id);history.replaceState(null,'',location.pathname)}catch(e){setMessage(errorMessage(e))}finally{setBusy(false)}})()},[user?.id,joinCode])
- useEffect(()=>{window.scrollTo(0,0)},[page,tableId])
- // The client leaves a failed link's #error=… in the address bar; the sign-in screen has already read it.
- useEffect(()=>{if(authLinkError)history.replaceState(null,'',location.pathname+location.search)},[])
- const loadFriends=useCallback(async()=>{if(!user)return;const{data}=await supabase.from('friendships').select('*');setFriendRows((data||[]).map(f=>({other:f.user_a===user.id?f.user_b:f.user_a,status:f.status,mine:f.requested_by===user.id})))},[user?.id])
- useEffect(()=>{void loadFriends().catch(console.error)},[loadFriends])
- const friendCtx=useMemo(()=>({me:user?.id||'',rel:(id:string):Rel=>{const r=friendRows.find(x=>x.other===id);return !r?'none':r.status==='accepted'?'friend':r.mine?'sent':'incoming'},pick:(id:string,name:string)=>{setPerson({id,name});void loadFriends().catch(console.error)}}),[user?.id,friendRows,loadFriends])
- const action:Action=async fn=>{if(busy)return;setBusy(true);setMessage(null);try{await fn()}catch(e){setMessage(errorMessage(e))}finally{setBusy(false)}}
- // Screen transitions: opening a table moves forward, leaving it moves back, switching tabs crossfades (CSS decides how each theme animates).
- const screenKey=tableId?`table-${tableId}`:page,depth=tableId?2:1
- const nav=useRef({key:screenKey,depth,dir:'fade'})
- if(nav.current.key!==screenKey)nav.current={key:screenKey,depth,dir:depth>nav.current.depth?'forward':depth<nav.current.depth?'back':'fade'}
- const themed=(content:React.ReactNode)=><ThemeContext.Provider value={themeValue}><FriendCtx.Provider value={friendCtx}>{content}</FriendCtx.Provider></ThemeContext.Provider>
- if(!configured)return themed(<div className="setup"><Brand/><h1>Connect your backend</h1><p>Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> to a <code>.env</code> file, then restart Vite.</p><p className="muted">See README.md for the complete Supabase setup.</p></div>)
- if(loading)return themed(<div className="loading" role="status"><Brand/><p>Loading {APP_NAME}…</p></div>)
- if(!session)return themed(<AuthScreen joinCode={joinCode}/>)
- if(recovering)return themed(<NewPasswordScreen onDone={()=>{setRecovering(false);setMessage('Password changed. You\'re signed in.')}}/>)
- const initials=(profile?.username||'U').slice(0,2).toUpperCase()
- const go=(p:Page)=>{setTableId(null);setPage(p)}
- return themed(<div className="appShell">
-  <header className="topbar"><div className="topbarInner">
-   <button className="brandButton" aria-label={`${APP_NAME}, home`} onClick={()=>go('home')}><Brand/></button>
-   <NavTabs className="headerNav" page={tableId?'home':page} go={go}/>
-   <button className="avatar" aria-label="Your profile" title="Your profile" onClick={()=>go('profile')}><span style={theme==='blue'?{background:tint(user!.id,user!.id)}:undefined}>{initials}</span></button>
-  </div></header>
-  <main className="main withNav">
-   <div key={screenKey} className={`screen enter-${nav.current.dir}`}>
-   {tableId?<TableScreen key={tableId} tableId={tableId} me={user!.id} action={action} busy={busy} showChances={showChances} openTable={setTableId} openHistory={()=>go('history')} onLeave={()=>{setTableId(null);setPage('home')}}/>:
-   page==='history'?<HistoryScreen me={user!.id}/>:
-   page==='home'?<HomeScreen me={user!.id} profile={profile} openTable={setTableId} openRankings={()=>setPage('leaderboard')} action={action} busy={busy}/>:
-   page==='leaderboard'?<LeaderboardScreen me={user!.id}/>:
-   page==='friends'?<FriendsScreen me={user!.id} action={action} busy={busy}/>:
-   <ProfileScreen me={user!.id} profile={profile} action={action} reload={reloadProfile} showChances={showChances} setShowChances={setShowChances}/>}
-   </div>
-  </main>
-  <NavTabs className="bottomNav" page={tableId?'home':page} go={go}/>
-  <Sheet open={Boolean(person)} title={person?.name||'Player'} onClose={()=>setPerson(null)}>
-   {person&&(()=>{const rel=friendCtx.rel(person.id),act=(fn:()=>Promise<unknown>)=>void action(async()=>{await fn();await loadFriends()})
-    return <div className="stack sm">
-     {rel==='friend'&&<FriendStats key={person.id} id={person.id} name={person.name}/>}
-     {rel==='sent'&&<p>You asked {person.name} to be friends. Waiting for them to accept.</p>}
-     {rel==='incoming'&&<><p>{person.name} wants to be your friend.</p><Button className="wide" disabled={busy} onClick={()=>act(()=>rpc('respond_friend_request',{p_user:person.id,p_accept:true}))}>Accept</Button></>}
-     {rel==='none'&&<Button className="wide" disabled={busy} onClick={()=>act(()=>rpc('send_friend_request',{p_username:person.name}))}>Add {person.name} as a friend</Button>}
-    </div>})()}
-  </Sheet>
-  {message&&<div className="toast" role="alert">{message}<button aria-label="Dismiss message" onClick={()=>setMessage(null)}><X size={16}/></button></div>}
- </div>)
-}
-
-// A friend's ratings and Elo chart, shown in the player sheet. The chart opens on the mode they play most.
-function FriendStats({id,name}:{id:string;name:string}){
- const [ratings,setRatings]=useState<Rating[]|null>(null),[mode,setMode]=useState<Mode|null>(null),[chart,setChart]=useState<{mode:Mode;games:RatedGame[]}|null>(null),[error,setError]=useState('')
- useEffect(()=>{let live=true
-  void supabase.from('ratings').select('*').eq('user_id',id).then(({data,error})=>{if(!live)return;if(error){setError(errorMessage(error));return}
-   const rs=(data||[]) as Rating[];setRatings(rs)
-   setMode(MODES.reduce((best,m)=>(rs.find(r=>r.mode===m.id)?.games||0)>(rs.find(r=>r.mode===best)?.games||0)?m.id:best,'natural' as Mode))})
-  return()=>{live=false}},[id])
- useEffect(()=>{if(!mode)return;let live=true;setError('')
-  rpc<RatedGame[]>('friend_rating_history',{p_user:id,p_mode:mode}).then(games=>{if(live)setChart({mode,games})}).catch(e=>{if(live)setError(errorMessage(e))})
-  return()=>{live=false}},[id,mode])
- const r=mode?ratings?.find(x=>x.mode===mode):undefined,info=modeInfo(mode||'natural')
- return <div className="stack sm">
-  <p>{name} is your friend.</p>
-  {mode&&<ModeChips mode={mode} setMode={setMode}/>}
-  <div className="chartCard">
-   <h3>{info.name}{r&&r.games>0&&<small className="chartMeta"> · {formatRating(r.rating)} Elo · {r.games} {r.games===1?'game':'games'} · {r.losses} {r.losses===1?'loss':'losses'}</small>}</h3>
-   {error?<p className="emptyNote" role="alert">{error}</p>
-   :!chart||chart.mode!==mode?<p className="emptyNote">Loading…</p>
-   :chart.games.length?<RatingChart games={chart.games} modeName={info.name}/>
-   :<p className="emptyNote">{name} has no rated {info.name} games yet.</p>}
-  </div>
- </div>
-}
-
-function HomeScreen({me,profile,openTable,openRankings,action,busy}:{me:string;profile:Profile|null;openTable:(id:string)=>void;openRankings:()=>void;action:Action;busy:boolean}){
- const[mode,setMode]=useState<Mode>('natural'),[expanded,setExpanded]=useState(false),[join,setJoin]=useState(''),[tables,setTables]=useState<TableRow[]>([]),[ratings,setRatings]=useState<Rating[]>([])
- const [loaded,setLoaded]=useState(false),[front,setFront]=useState(0)
- const blue=useBlue(),[people,setPeople]=useState<Record<string,{id:string;name:string}[]>>({}),[modeSheet,setModeSheet]=useState(false)
- const load=useCallback(async()=>{const {data:members}=await supabase.from('table_members').select('table_id').eq('user_id',me).eq('is_active',true);const ids=(members||[]).map(m=>m.table_id);const [{data:tt},{data:rr}]=await Promise.all([
-  ids.length?supabase.from('tables').select('*').in('id',ids).or(`closed_at.is.null,closed_at.gt."${new Date(Date.now()-CLOSED_SHOWN_MS).toISOString()}"`).order('created_at',{ascending:false}):Promise.resolve({data:[]}),
-  supabase.from('ratings').select('*').eq('user_id',me)])
- setTables((tt||[]) as TableRow[]);setRatings((rr||[]) as Rating[]);setLoaded(true)
- // Both themes name the players at each table ("With Masha and Grisha"), so it also loads who sits at each table.
- if(ids.length){
-  const{data:seated}=await supabase.from('table_members').select('table_id,user_id').in('table_id',ids).eq('is_active',true).order('joined_at')
-  const userIds=[...new Set((seated||[]).map(s=>s.user_id))]
-  const{data:pp}=userIds.length?await supabase.from('profiles').select('id,username').in('id',userIds):{data:[]}
-  const names=Object.fromEntries(((pp||[]) as {id:string;username:string}[]).map(p=>[p.id,p.username]))
-  const byTable:Record<string,{id:string;name:string}[]>={};for(const s of seated||[])(byTable[s.table_id]||=[]).push({id:s.user_id,name:names[s.user_id]||'Player'})
-  setPeople(byTable)
- }
- },[me])
- useEffect(()=>{void load();const id=setInterval(()=>void load(),12000);return()=>clearInterval(id)},[load])
- const create=()=>void action(async()=>{const id=await rpc<string>('create_table',{p_mode:mode,p_group:null});openTable(id)})
- const joinRoom=()=>void action(async()=>{if(!join.trim())throw new Error('Enter a table code');const id=await rpc<string>('join_table',{p_code:join});openTable(id)})
- const [scanning,setScanning]=useState(false)
- const scanned=(code:string)=>{setScanning(false);setJoin(code);void action(async()=>{openTable(await rpc<string>('join_table',{p_code:code}))})}
- // Tables that need attention first (results, then playing, then lobby); the sort is stable, so newest stays first within a status.
- const sorted=useMemo(()=>[...tables].sort((a,b)=>STATUS_ORDER[statusOf(a)]-STATUS_ORDER[statusOf(b)]),[tables])
- const hand=sorted.length,idx=hand?front%hand:0,current=sorted[idx],next=hand>1?sorted[(idx+1)%hand]:undefined
- const picked=modeInfo(mode),played=ratings.some(r=>r.games>0)
- // New players see all four mode cards; everyone else gets the compact picker behind "Change".
- const showModes=expanded||(loaded&&hand===0)
- const modeGrid=useRef<HTMLDivElement>(null),changeButton=useRef<HTMLButtonElement>(null),returnFocus=useRef(false)
- useEffect(()=>{if(expanded)modeGrid.current?.querySelector<HTMLButtonElement>('.on')?.focus();else if(returnFocus.current){returnFocus.current=false;changeButton.current?.focus()}},[expanded])
- const pickMode=(m:Mode)=>{setMode(m);if(expanded){returnFocus.current=true;setExpanded(false)}}
- // Horizontal swipe on the hand of table cards; a swipe must not also count as a tap on the card underneath.
- const swipeStart=useRef<number|null>(null),swiped=useRef(false)
- // The release is read from window: a mouse (unlike touch) is not captured, so it may be released outside the hand.
- const startSwipe=(x:number)=>{
-  swipeStart.current=x;swiped.current=false
-  const stop=()=>{window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',cancel)}
-  const up=(e:PointerEvent)=>{stop();const start=swipeStart.current;swipeStart.current=null;if(start===null)return;const dx=e.clientX-start;swiped.current=Math.abs(dx)>40;if(swiped.current&&hand>1)setFront((idx+(dx<0?1:hand-1))%hand)}
-  const cancel=()=>{stop();swipeStart.current=null}
-  window.addEventListener('pointerup',up);window.addEventListener('pointercancel',cancel)
- }
- const describe=(t:TableRow)=>`${modeInfo(t.mode).name}, table ${t.code}, ${STATUS_TEXT[statusOf(t)].toLowerCase()}`
- const lead=blue?sorted[0]:current
- const status=lead?lead.closed_at?'Your table closed after 2 hours without activity. Start a new one whenever you play again.':lead.status==='results'?'Your table is waiting for your vote.':lead.status==='playing'?'Your game is still going.':'Your table is waiting for players.':!loaded?'':played?'No open tables right now. Start one, or join a friend\'s.':'No tables yet. Pick a game to start one, or join a friend\'s.'
- // Card theme: just the players, under the table code (the card already shows the status).
- const playersText=(t:TableRow)=>{if(!people[t.id])return '';const others=people[t.id].filter(p=>p.id!==me).map(p=>p.name);return others.length?`With ${listNames(others)}`:'Just you so far'}
- const withText=(t:TableRow)=>{const others=(people[t.id]||[]).filter(p=>p.id!==me).map(p=>p.name);return t.closed_at?`Closed ${dateTime(t.closed_at)}`:people[t.id]?others.length?`With ${listNames(others)}`:'Just you so far':STATUS_TEXT[t.status]}
- const joinSection=<section aria-labelledby="join-title">
-  <h2 id="join-title" className="sectionTitle">Join a table</h2>
-  <form onSubmit={e=>{e.preventDefault();joinRoom()}}>
-   <label className="field" htmlFor="join-code">Table code</label>
-   <div className="joinRow"><input id="join-code" className="codeInput" placeholder="8 characters" maxLength={8} autoComplete="off" autoCapitalize="characters" autoCorrect="off" spellCheck={false} enterKeyHint="go" aria-describedby="join-hint" value={join} onChange={e=>setJoin(e.target.value.toUpperCase())}/><Button type="submit" kind="outline" disabled={busy||!join.trim()}>Join</Button></div>
-   <p id="join-hint" className="fieldHint">Type the 8-character code from the host, or scan the QR code on their phone.</p>
-  </form>
-  <Button kind="secondary" className="wide scanButton" onClick={()=>setScanning(true)}><Camera size={16}/> Scan QR code</Button>
-  <Sheet open={scanning} title="Scan QR code" onClose={()=>setScanning(false)}>{scanning&&<QrScanner onCode={scanned}/>}</Sheet>
- </section>
- const greetingBlock=<section className="greeting"><h1>{greeting()}, {profile?.username||'friend'}</h1>{status&&<p>{status}</p>}</section>
- if(blue)return <div className="stack home pageEntry">
-  {greetingBlock}
-  {lead&&<section className="stack sm" aria-labelledby="tables-title">
-   <div className="sectionHeading"><h2 id="tables-title" className="listLabel">Your tables</h2><button className="iconButton" aria-label="Refresh tables" title="Refresh tables" onClick={()=>void load()}><RefreshCw size={18}/></button></div>
-   <div className="summaryCard">
-    <div className="summaryTop"><span className={`statusChip status-${statusOf(lead)}`}>{STATUS_TEXT[statusOf(lead)]}</span>{people[lead.id]&&<span className="avatarStack" aria-hidden="true">{people[lead.id].slice(0,4).map(p=><Avatar key={p.id} id={p.id} name={p.name} me={me} size="sm"/>)}</span>}</div>
-    <div><h3 className="summaryTitle">{modeInfo(lead.mode).name}</h3><p className="summaryMeta">Table <span className="mono">{lead.code}</span> · {withText(lead)}</p></div>
-    <Button className="wide" kind={lead.closed_at?'outline':'primary'} onClick={()=>openTable(lead.id)}>{lead.closed_at?'View closed table':'Return to table'}</Button>
-   </div>
-   {sorted.length>1&&<div><h3 className="listLabel">Other tables</h3><ul className="rowList">{sorted.slice(1).map(t=><li key={t.id}><button className="listRow" onClick={()=>openTable(t.id)}><span className="rowText"><b>{modeInfo(t.mode).name}</b><small>Table <span className="mono">{t.code}</span> · {STATUS_TEXT[statusOf(t)]}</small></span><span className="chevron" aria-hidden="true">›</span></button></li>)}</ul></div>}
-  </section>}
-  <section className="stack sm" aria-labelledby="create-title">
-   <h2 id="create-title">Start a table</h2>
-   <button className="modeButton" aria-haspopup="dialog" aria-label={`Game mode: ${picked.name}. Change`} onClick={()=>setModeSheet(true)}><span className="modeButtonMain"><SuitBox mode={mode}/><span className="rowText"><b>{picked.name}</b><small>{picked.detail} · <span className="nowrap">{picked.min}–{picked.max} players</span></small></span></span><span className="modeButtonAction" aria-hidden="true">Change</span></button>
-   <Button onClick={create} disabled={busy} className="wide">Create table</Button>
-  </section>
-  {joinSection}
-  <section aria-labelledby="ratings-title">
-   <div className="sectionHeading"><h2 id="ratings-title">Your ratings</h2><button className="linkButton plain" onClick={openRankings}>See rankings <span aria-hidden="true">›</span></button></div>
-   <ul className="rowList">{MODES.map(m=>{const r=ratings.find(r=>r.mode===m.id),games=r?.games||0;return <li key={m.id} className="rateRow"><span className={`rowSuit ${MODE_CARD[m.id].red?'red':''}`} aria-hidden="true">{MODE_CARD[m.id].suit}</span><span className="rowText"><b>{m.name}</b><small>{games?`${games} ${games===1?'game':'games'}`:'No games yet'}</small></span><strong className={`rowValue ${games?'':'quiet'}`}>{formatRating(r?.rating??1200)}</strong></li>})}</ul>
-  </section>
-  <Sheet open={modeSheet} title="Game mode" onClose={()=>setModeSheet(false)}>
-   <div className="sheetOptions" role="group" aria-label="Game mode">{MODES.map(m=><button key={m.id} aria-pressed={mode===m.id} className={`sheetOption ${mode===m.id?'on':''}`} onClick={()=>{setMode(m.id);setTimeout(()=>setModeSheet(false),200)}}><SuitBox mode={m.id}/><span className="rowText"><b>{m.name}{m.id==='natural'&&<span className="optionNote"> · default</span>}</b><small>{m.detail} · {m.min}–{m.max} players</small></span><span className="radioDot" aria-hidden="true"/></button>)}</div>
-  </Sheet>
- </div>
- return <div className="stack home pageEntry">
-  {greetingBlock}
-  <div className={`homeGrid ${current?'withHand':''}`}>
-   {current&&<section aria-labelledby="tables-title">
-    <div className="sectionHeading"><h2 id="tables-title">Your tables</h2><span className="handMeta">{hand>1&&<span>Swipe · {idx+1} of {hand}</span>}<button className="iconButton" aria-label="Refresh tables" title="Refresh tables" onClick={()=>void load()}><RefreshCw size={18}/></button></span></div>
-    <div className="hand" onPointerDown={e=>startSwipe(e.clientX)} onClickCapture={e=>{if(swiped.current){swiped.current=false;e.preventDefault();e.stopPropagation()}}}>
-     {next&&<button className="tableCard back" aria-label={`Show ${describe(next)}`} onClick={()=>setFront((idx+1)%hand)}><CornerIndex mode={next.mode}/><span className="tableName">{modeInfo(next.mode).name}</span><span>{next.code}</span><span>{STATUS_TEXT[statusOf(next)]}</span>{playersText(next)&&<span className="tablePlayers">{playersText(next)}</span>}</button>}
-     <div className="tableCard front" key={current.id}>
-      <CornerIndex mode={current.mode}/><CornerIndex mode={current.mode} flip/>
-      <div className="tableCardBody"><span className={`tableStatus status-${statusOf(current)}`}>{STATUS_TEXT[statusOf(current)]}</span><h3>{modeInfo(current.mode).name}</h3><span className="tableCode">Table {current.code}</span>{playersText(current)&&<span className="tablePlayers">{playersText(current)}</span>}</div>
-      <Button kind={current.closed_at?'outline':'primary'} onClick={()=>openTable(current.id)}>{current.closed_at?'View closed table':'Return to table'}</Button>
-     </div>
-    </div>
-    {hand>1&&<div className="handDots">{sorted.map((t,i)=><button key={t.id} className={i===idx?'on':''} aria-label={`Show ${describe(t)}`} aria-current={i===idx||undefined} onClick={()=>setFront(i)}/>)}</div>}
-   </section>}
-   <div className="homeActions">
-    <section aria-labelledby="create-title">
-     <h2 id="create-title" className="sectionTitle">Start a table</h2>
-     <div className={`startPanel ${showModes?'open':''}`}>
-      {showModes?<div className="modeGrid" role="group" aria-label="Game mode" ref={modeGrid}>{MODES.map(m=><button key={m.id} aria-pressed={mode===m.id} className={`modeCard ${mode===m.id?'on':''} ${MODE_CARD[m.id].red?'red':''}`} onClick={()=>pickMode(m.id)}><CornerIndex mode={m.id}/>{mode===m.id&&<span className="chosen" aria-hidden="true">✓ Selected</span>}<span className="modeSuit" aria-hidden="true">{MODE_CARD[m.id].suit}</span><span className="modeName">{m.name}</span><span className="modeDetail">{m.detail}<br/><span className="nowrap">{m.min}–{m.max} players</span></span></button>)}</div>
-      :<div className="modeSummary"><MiniModeCard mode={mode}/><div className="modeText"><b>{picked.name}</b><small>{picked.detail} · <span className="nowrap">{picked.min}–{picked.max} players</span></small></div><button ref={changeButton} className="linkButton" aria-label={`Change game mode, currently ${picked.name}`} onClick={()=>setExpanded(true)}>Change</button></div>}
-         <Button onClick={create} disabled={busy} className="wide">Create {picked.name} table</Button>
-     </div>
-    </section>
-    {joinSection}
-   </div>
-  </div>
-  {played?<section aria-labelledby="ratings-title">
-   <div className="sectionHeading"><h2 id="ratings-title">Your ratings</h2><button className="linkButton" onClick={openRankings}>See rankings</button></div>
-   <ul className="rateList">{MODES.map(m=>{const r=ratings.find(r=>r.mode===m.id),games=r?.games||0;return <li key={m.id} className={`rateItem ${games?'':'unplayed'} ${MODE_CARD[m.id].red?'red':''}`}><span className="rateName"><span className="rateNameSuit" aria-hidden="true">{MODE_CARD[m.id].suit}</span>{m.name}</span><span className="rateCard"><span className="rateSuit" aria-hidden="true">{MODE_CARD[m.id].suit}</span><b className="rateValue">{formatRating(r?.rating??1200)}</b><small>{games} {games===1?'game':'games'}</small></span></li>})}</ul>
-  </section>:loaded&&<p className="startsAt"><span>Everyone starts at 1,200 in each mode.</span><button className="linkButton" onClick={openRankings}>Rankings</button></p>}
- </div>
-}
-
-// The vote countdown ticks on its own, once per second on the second boundary, so only this number re-renders.
-function VoteTimer({deadline}:{deadline:string}){
- const end=new Date(deadline).getTime(),left=()=>Math.max(0,Math.ceil((end-Date.now())/1000))
- const [secs,setSecs]=useState(left)
- useEffect(()=>{let t=0
-  const tick=()=>{const s=left();setSecs(s);if(s>0)t=window.setTimeout(tick,((end-Date.now())%1000)||1000)}
-  tick();return()=>clearTimeout(t)
- },[end])
- return <div className={`voteTimer ${secs<=10?'low':''}`} role="timer" aria-label={`${secs} seconds left`}><b>{secs}</b><span>sec</span></div>
-}
-function TableScreen({tableId,me,action,busy,showChances,openTable,openHistory,onLeave}:{tableId:string;me:string;action:Action;busy:boolean;showChances:boolean;openTable:(id:string)=>void;openHistory:()=>void;onLeave:()=>void}){
- const [table,setTable]=useState<TableRow|null>(null),[members,setMembers]=useState<Member[]>([]),[profiles,setProfiles]=useState<Record<string,Profile>>({}),[players,setPlayers]=useState<string[]>([]),[games,setGames]=useState<Game[]>([]),[totals,setTotals]=useState<VoteTotal[]>([]),[historyGames,setHistoryGames]=useState<Game[]>([]),[cases,setCases]=useState<{id:string;game_id:string;state:string;created_at:string}[]>([]),[yesCounts,setYesCounts]=useState<Record<string,number>>({}),[showQR,setShowQR]=useState(false),[mySelections,setMySelections]=useState<Record<string,string>>({}),[showHistory,setShowHistory]=useState(false),[ballots,setBallots]=useState<Record<string,{voter_id:string;nominee_id:string}[]>>({}),[myFriends,setMyFriends]=useState<{id:string;name:string}[]>([])
- // Ids the realtime listeners watch (comma-joined, so an unchanged set does not resubscribe).
- const [watchRounds,setWatchRounds]=useState(''),[watchGames,setWatchGames]=useState(''),[watchHistory,setWatchHistory]=useState('')
- const blue=useBlue(),[shareNote,setShareNote]=useState('')
- // Ratings behind the losing-chance estimate, tagged with the round they belong to (null = lobby preview).
- const [chanceInput,setChanceInput]=useState<{round:string|null;ratings:Record<string,number|null>}|null>(null)
- const leaveRef=useRef(onLeave);leaveRef.current=onLeave
- const fetchTable=useCallback(async()=>{
-  const{data:tt,error:te}=await supabase.from('tables').select('*').eq('id',tableId).single();if(te?.code==='PGRST116'){leaveRef.current();return}if(te)throw te;const t=tt as TableRow;setTable(t)
-  const[{data:mm},{data:allR}]=await Promise.all([
-   supabase.from('table_members').select('*').eq('table_id',tableId).eq('is_active',true).order('joined_at'),
-   supabase.from('rounds').select('id').eq('table_id',tableId).order('started_at',{ascending:false}).limit(12)
-  ]);setMembers((mm||[]) as Member[])
-  if(t.host_id===me&&t.status==='lobby'&&!t.closed_at){const{data:ff}=await supabase.from('friendships').select('user_a,user_b').eq('status','accepted');const fids=(ff||[]).map(f=>f.user_a===me?f.user_b:f.user_a);if(fids.length){const{data:pp}=await supabase.from('profiles').select('id,username').in('id',fids);setMyFriends(((pp||[]) as {id:string;username:string}[]).map(p=>({id:p.id,name:p.username})).sort((x,y)=>x.name.localeCompare(y.name)))}else setMyFriends([])}
-  const rids=(allR||[]).map(r=>r.id);setWatchRounds(rids.join(','))
-  const seated=(mm||[]).map(m=>m.user_id),none=Promise.resolve({data:[],error:null})
-  const [{data:rp},{data:gg},{data:historic},chanceRows]=await Promise.all([
-    t.current_round_id?supabase.from('round_players').select('user_id').eq('round_id',t.current_round_id):Promise.resolve({data:[]}),
-    t.current_round_id?supabase.from('round_games').select('*').eq('round_id',t.current_round_id).order('slot'):Promise.resolve({data:[]}),
-    rids.length?supabase.from('round_games').select('*').in('round_id',rids).order('finalized_at',{ascending:false}).limit(24):Promise.resolve({data:[]}),
-    // Losing chance: live ratings of whoever is seated in the lobby; once the round is locked, the ratings stored when it started.
-    // A failed read (e.g. before the snapshot migration is applied) only hides the estimate.
-    t.status==='lobby'?(seated.length?supabase.from('ratings').select('user_id,rating').eq('mode',t.mode).in('user_id',seated):none)
-    :t.status==='playing'&&t.current_round_id?supabase.from('round_players').select('user_id,rating:rating_at_start').eq('round_id',t.current_round_id):none
-  ]);
-  setChanceInput(chanceRows.error||t.status==='results'?null:{round:t.status==='lobby'?null:t.current_round_id,ratings:Object.fromEntries((chanceRows.data||[]).map(r=>[r.user_id,r.rating]))})
-  setPlayers((rp||[]).map(x=>x.user_id));setGames((gg||[]) as Game[]);setHistoryGames((historic||[]) as Game[])
-  const allIds=[...(mm||[]).map(m=>m.user_id),...(rp||[]).map(p=>p.user_id),...(historic||[]).flatMap(g=>g.loser_ids)];
-  if(allIds.length){const{data:people}=await supabase.from('profiles').select('*').in('id',[...new Set(allIds)]);setProfiles(Object.fromEntries(((people||[]) as Profile[]).map(p=>[p.id,p])))}
-  const gameIds=(gg||[]).map(g=>g.id);setWatchGames(gameIds.join(','));setWatchHistory((historic||[]).map(g=>g.id).join(','));if(gameIds.length){const{data:voteData}=await supabase.from('vote_totals').select('*').in('game_id',gameIds);setTotals((voteData||[]) as VoteTotal[])}else setTotals([])
-  const histIds=(historic||[]).map(g=>g.id);if(histIds.length){
-   const {data:vv}=await supabase.from('game_votes').select('game_id,voter_id,nominee_id').in('game_id',histIds);
-   const votesByGame:Record<string,{voter_id:string;nominee_id:string}[]>={};for(const v of vv||[])(votesByGame[v.game_id] ||= []).push({voter_id:v.voter_id,nominee_id:v.nominee_id});setBallots(votesByGame);const{data:cc}=await supabase.from('reversal_cases').select('*').in('game_id',histIds);setCases((cc||[]) as typeof cases);const cs=(cc||[]).filter(c=>c.state==='open').map(c=>c.id);if(cs.length){const{data:vv}=await supabase.from('reversal_votes').select('case_id,approve').in('case_id',cs);const counts:Record<string,number>={};for(const v of vv||[])if(v.approve)counts[v.case_id]=(counts[v.case_id]||0)+1;setYesCounts(counts)}else setYesCounts({})}else setCases([])
- },[tableId,me])
- // One fetch at a time: a call made while one is running waits for it plus one fresh rerun, so slow
- // mobile connections do not stack up overlapping fetches (and every caller still sees fresh data).
- const inFlight=useRef<Promise<void>|null>(null),again=useRef(false)
- const load=useCallback(():Promise<void>=>{
-  if(inFlight.current){again.current=true;return inFlight.current}
-  const run=async()=>{try{do{again.current=false;await fetchTable()}while(again.current)}finally{inFlight.current=null}}
-  return inFlight.current=run()
- },[fetchTable])
- // Realtime does the live updates; the poll is only a safety net, skipped while the app is in the background.
- useEffect(()=>{void load().catch(console.error);const timer=setInterval(()=>{if(document.visibilityState==='visible')void load().catch(console.error)},15000)
-  const visibility=()=>{if(document.visibilityState==='visible')void load().catch(console.error)};document.addEventListener('visibilitychange',visibility)
-  return()=>{clearInterval(timer);document.removeEventListener('visibilitychange',visibility)}
- },[load])
- // Listen only to this table's rows. A burst of changes (one vote touches several rows) becomes one reload.
- useEffect(()=>{let debounce=0
-  const kick=()=>{clearTimeout(debounce);debounce=window.setTimeout(()=>void load().catch(console.error),300)}
-  const ch=supabase.channel(`table-${tableId}-${Math.random().toString(36).slice(2)}`)
-   .on('postgres_changes',{event:'*',schema:'public',table:'tables',filter:`id=eq.${tableId}`},kick)
-   .on('postgres_changes',{event:'*',schema:'public',table:'table_members',filter:`table_id=eq.${tableId}`},kick)
-  if(watchRounds)ch.on('postgres_changes',{event:'*',schema:'public',table:'round_games',filter:`round_id=in.(${watchRounds})`},kick)
-  if(watchGames)ch.on('postgres_changes',{event:'*',schema:'public',table:'vote_totals',filter:`game_id=in.(${watchGames})`},kick)
-  if(watchHistory)ch.on('postgres_changes',{event:'*',schema:'public',table:'reversal_cases',filter:`game_id=in.(${watchHistory})`},kick)
-  ch.subscribe()
-  return()=>{clearTimeout(debounce);void supabase.removeChannel(ch)}
- },[tableId,watchRounds,watchGames,watchHistory,load])
- const activeGame=games.find(g=>!['confirmed','tied','unresolved','void'].includes(g.state))
- const pendingBefore=activeGame&&games.some(g=>g.slot<activeGame.slot&&!['confirmed','tied','unresolved','void'].includes(g.state))
- // When the vote deadline passes, ask the server to resolve it; retry every few seconds until the game's state moves on.
- useEffect(()=>{if(!activeGame||!['voting','tie_offer'].includes(activeGame.state)||!activeGame.deadline)return
-  const id=activeGame.id;let retry=0
-  const advance=()=>void rpc('advance_expired',{p_game:id}).then(load).catch(console.error)
-  const first=window.setTimeout(()=>{advance();retry=window.setInterval(advance,3000)},Math.max(0,new Date(activeGame.deadline).getTime()-Date.now()+300))
-  return()=>{clearTimeout(first);clearInterval(retry)}
- },[activeGame?.id,activeGame?.deadline,activeGame?.state,load])
- const name=(id:string)=>profiles[id]?.username||`Player ${id.slice(0,4)}`
- const invite=table?`${location.origin}${location.pathname}?join=${table.code}`:''
- const share=async()=>{if(navigator.share){try{await navigator.share({title:`Join my table on ${APP_NAME}`,text:`Join my Durak table on ${APP_NAME} with code ${table?.code}.`,url:invite});return}catch{/* copy fallback */}}
-  try{await navigator.clipboard.writeText(invite);setShareNote('Link copied')}catch{setShareNote('Could not copy. Share the code instead.')}}
- const play=()=>void action(async()=>{await rpc('start_round',{p_table:tableId});await load()})
- const finishPlay=()=>void action(async()=>{await rpc('begin_results',{p_table:tableId});await load()})
- const cast=(game:string,nominee:string)=>void action(async()=>{await rpc('cast_vote',{p_game:game,p_nominee:nominee});setMySelections(s=>({...s,[game]:nominee}));await load()})
- const respond=(game:string,accept:boolean)=>void action(async()=>{await rpc('respond_to_tie',{p_game:game,p_accept:accept});await load()})
- const leave=()=>void action(async()=>{await rpc('leave_table',{p_table:tableId});onLeave()})
- const newTable=()=>void action(async()=>{if(!table)return;openTable(await rpc<string>('create_table',{p_mode:table.mode,p_group:null}))})
- const addFriend=(id:string)=>void action(async()=>{await rpc('add_friend_to_table',{p_table:tableId,p_friend:id});await load()})
-const stopGame=()=>{if(!window.confirm('Stop this game? Nothing is recorded and everyone goes back to the table.'))return;void action(async()=>{await rpc('cancel_round',{p_table:tableId});await load()})}
-const removeTable=()=>{if(!window.confirm('Delete this table for everyone? Players will no longer see it. Recorded results and ratings are kept.'))return;void action(async()=>{await rpc('delete_table',{p_table:tableId});onLeave()})}
-const kick=(id:string,who:string)=>{if(!window.confirm(`Remove ${who} from the table?`))return;void action(async()=>{await rpc('kick_member',{p_table:tableId,p_user:id});await load()})}
-const promote=(id:string)=>void action(async()=>{await rpc('transfer_host',{p_table:tableId,p_new_host:id});await load()})
- const restart=(id:string)=>void action(async()=>{await rpc('restart_unresolved',{p_game:id});await load()})
- const openCorrection=(id:string)=>void action(async()=>{const cid=await rpc<string>('request_reversal',{p_game:id});await rpc('vote_reversal',{p_case:cid,p_approve:true});await load()})
- const correctionVote=(cid:string,approve:boolean)=>void action(async()=>{await rpc('vote_reversal',{p_case:cid,p_approve:approve});await load()})
- const info=table?modeInfo(table.mode):MODES[0]
-// Same rule as the server: a game with no result, not reopened, can be stopped.
-const canStop=games.length>0&&games.every(g=>['awaiting','voting','tie_offer'].includes(g.state)&&!g.was_reopened)
- if(!table)return <div className="loading">Loading table…</div>
- const closed=Boolean(table.closed_at),seats=table.status==='lobby'&&!closed?Math.max(0,info.min-members.length):0,card=MODE_CARD[table.mode]
- const tiedNames=activeGame?activeGame.loser_ids.map(name).join(' and '):''
- const nominees=activeGame?players.filter(id=>!activeGame.allowed_nominees||activeGame.allowed_nominees.includes(id)):[]
- // Lobby: a live preview for the current members. Playing: fixed at the round's start, the same for both games of a parallel round.
- const chanceRound=table.status==='lobby'?null:table.current_round_id
- const chances=showChances&&table.status!=='results'&&chanceInput?.round===chanceRound?lossChances(table.status==='lobby'?members.map(m=>m.user_id):players,chanceInput.ratings):null
- const chanceNote=chances&&<p className="chanceNote">{table.status==='lobby'?'Estimated chance of losing, from each player\'s Elo in this mode. It changes as players join or leave.':`Estimated chance of losing, fixed when this round started${info.games>1?' and used for both games':''}.`} An estimate, not a prediction. You can hide it in Profile.</p>
- const refresh=<button className="iconButton" aria-label="Refresh table" title="Refresh table" onClick={()=>void load()}><RefreshCw size={18}/></button>
- return <div className="stack lobby pageEntry">
-  {blue?<>
-   <button className="backLink" onClick={onLeave}><span aria-hidden="true">‹</span> Home</button>
-   <div className="summaryCard">
-    <span className={`statusChip status-${statusOf(table)}`}>{STATUS_TEXT[statusOf(table)]}</span>
-    <div><h1 className="summaryTitle">{info.name}</h1><p className="summaryMeta">Table <span className="mono">{table.code}</span> · {info.detail.split(' · ').slice(0,2).join(' · ')}</p></div>
-    {table.status!=='results'&&!closed&&<Button kind="outline" className="wide" onClick={()=>setShowQR(true)}>Invite / QR</Button>}
-   </div>
-   <Sheet open={showQR&&table.status!=='results'&&!closed} title="Invite friends" onClose={()=>{setShowQR(false);setShareNote('')}}>
-    <div className="inviteSheet"><div className="qrInner"><QRCodeSVG value={invite} size={184} includeMargin/></div><div className="codeLarge">{table.code}</div><p>Friends can scan this, type the code, or open the link.</p><Button className="wide" onClick={()=>void share()}>{shareNote||'Share invite link'}</Button></div>
-   </Sheet>
-  </>:<>
-   <div className="lobbyHero"><span className={`heroCard ${card.red?'red':''}`} aria-hidden="true"><span className="heroIndex">{card.abbr}<br/>{card.suit}</span>{card.suit}</span><div><h1>{info.name}</h1><p>Table {table.code} · {STATUS_TEXT[statusOf(table)]}</p><p className="heroDetail">{info.detail} · <span className="nowrap">{info.min}–{info.max} players</span></p></div></div>
-   {table.status!=='results'&&!closed&&<Button kind="outline" className="wide inviteButton" onClick={()=>setShowQR(s=>!s)}>{showQR?'Hide invite':'Invite / QR'}</Button>}
-   {showQR&&table.status!=='results'&&!closed&&<section className="card qrCard" aria-label="Invite"><div className="qrInner"><QRCodeSVG value={invite} size={184} includeMargin/></div><p>Scan to join this table, or type the code</p><div className="codeLarge">{table.code}</div><Button kind="secondary" onClick={()=>void share()}><Copy size={15}/> {shareNote||'Share link'}</Button></section>}
-  </>}
-  {closed&&<section className="closedNotice" role="status" aria-labelledby="closed-title">
-   <h2 id="closed-title">Table closed due to inactivity</h2>
-   <p>Nothing happened at this table for 2 hours, so it closed{table.closed_at?` on ${dateTime(table.closed_at)}`:''}. Nobody can join it or start a game here any more. Every result and rating is kept.</p>
-   <Button className="wide" onClick={newTable} disabled={busy}>Start a new {info.name} table</Button>
-   <Button kind="outline" className="wide" onClick={openHistory}>See your game history</Button>
-   <button className="leaveLink" onClick={leave} disabled={busy}>Remove from your tables <LogOut size={14}/></button>
-  </section>}
-  {table.status!=='results'&&!closed&&<section aria-labelledby="players-title">
-   {blue?<div className="sectionHeading"><h2 id="players-title">Players</h2><span className="countText">{members.length} of {info.max}{refresh}</span></div>
-   :<div className="sectionHeading"><h2 id="players-title">Players · {members.length} of {info.max}</h2>{refresh}</div>}
-   {blue?<ul className="rowList">
-    {members.map(m=>{const host=m.user_id===table.host_id,mine=m.user_id===me,who=name(m.user_id);return <li key={m.user_id} className="playerRow">
-     <Avatar id={m.user_id} name={who} me={me} size="md"/>
-     <span className="rowText"><b><PlayerName id={m.user_id} name={who}/>{mine&&<span className="youChip">you</span>}</b>{chances?.[m.user_id]&&<ChanceLine chance={chances[m.user_id]}/>}{host&&<small><Crown className="hostIcon" size={13} aria-hidden="true"/> Host</small>}</span>
-     {table.status==='lobby'&&table.host_id===me&&!mine&&<button className="linkButton" disabled={busy} aria-label={`Make ${who} the host`} onClick={()=>promote(m.user_id)}>Make host</button>}
-     {table.status==='lobby'&&table.host_id===me&&!mine&&<button className="linkButton danger" disabled={busy} aria-label={`Remove ${who} from the table`} onClick={()=>kick(m.user_id,who)}>Remove</button>}
-    </li>})}
-    {seats>0&&<li><button className="playerRow waiting" aria-label="Waiting for someone to join. Show the invite" onClick={()=>setShowQR(true)}><span className="tintAvatar md empty" aria-hidden="true"/><span>Waiting for someone to join…</span></button></li>}
-   </ul>:<ul className="seatGrid">
-    {members.map(m=>{const host=m.user_id===table.host_id,mine=m.user_id===me,who=name(m.user_id);return <li key={m.user_id} className={`seat ${mine?'mine':''}`}>
-     {host&&<Crown className="seatCrown" size={16} aria-hidden="true"/>}
-     {mine&&<span className="seatYou">you</span>}
-     <span className="seatInitials" aria-hidden="true">{who.slice(0,2).toUpperCase()}</span>
-     <b className="seatName" title={who}><PlayerName id={m.user_id} name={who}/></b>
-     {chances?.[m.user_id]&&<ChanceLine chance={chances[m.user_id]}/>}
-     {host&&<span className="seatMeta">host</span>}
-     {table.status==='lobby'&&table.host_id===me&&!mine&&<button className="seatAction" disabled={busy} aria-label={`Make ${who} the host`} onClick={()=>promote(m.user_id)}>Make host</button>}
-     {table.status==='lobby'&&table.host_id===me&&!mine&&<button className="seatAction danger" disabled={busy} aria-label={`Remove ${who} from the table`} onClick={()=>kick(m.user_id,who)}>Remove</button>}
-    </li>})}
-    {Array.from({length:seats},(_,i)=><li key={`empty-${i}`} className="seatSlot"><button className="seat empty" aria-label="Empty seat, show the invite QR code" onClick={()=>setShowQR(true)}>Empty seat</button></li>)}
-   </ul>}
-   {table.status==='lobby'&&table.host_id===me&&(()=>{const here=new Set(members.map(m=>m.user_id)),avail=myFriends.filter(f=>!here.has(f.id));return avail.length>0&&<section className="card" aria-label="Add friends"><h3 className="listLabel">Add friends</h3><ul className="rowList">{avail.map(f=><li key={f.id} className="playerRow"><span className="rowText"><b>{f.name}</b></span><Button kind="secondary" disabled={busy||members.length>=info.max} onClick={()=>addFriend(f.id)}>Add</Button></li>)}</ul></section>})()}
-   {chanceNote}
-   {table.status==='lobby'&&<div className="lobbyFooter"><p>{members.length<info.min?`Need ${info.min-members.length} more player${info.min-members.length===1?'':'s'} to start`:'Everyone ready? Deal the cards.'}</p><Button onClick={play} disabled={busy||members.length<info.min} className="wide">Start new game</Button><button className="leaveLink" onClick={leave} disabled={busy}>Leave table <LogOut size={14}/></button>{table.host_id===me&&<button className="leaveLink" onClick={removeTable} disabled={busy}>Delete table <Trash2 size={14}/></button>}</div>}
-   {table.status==='playing'&&<div className="lobbyFooter"><div className="hint"><ShieldCheck size={18}/> All players are locked into this round. You can close your phone while playing.</div><Button onClick={finishPlay} disabled={busy} className="wide">Cards finished — record results <ArrowRight size={17}/></Button>{table.host_id===me&&canStop&&<button className="leaveLink" onClick={stopGame} disabled={busy}>Started by mistake? Stop this game <X size={14}/></button>}</div>}
-  </section>}
-  {table.status==='results'&&<section className="voting" aria-labelledby="vote-title">
-   <div className="voteHead">
-    <div>{games.length>1&&activeGame&&<p className="voteGame">Game {activeGame.slot} of {games.length}</p>}<h2 id="vote-title">{!activeGame?'Results':pendingBefore?'One game at a time':activeGame.state==='tie_offer'?'It\'s a tie':'Who lost?'}</h2></div>
-    {activeGame&&!pendingBefore&&(activeGame.deadline?<VoteTimer deadline={activeGame.deadline}/>:<div className="voteTimer idle" aria-label="The 30-second timer starts with the first vote"><b>30</b><span>sec</span></div>)}
-   </div>
-   {activeGame&&!pendingBefore?activeGame.state==='tie_offer'?<>
-    {blue?<ul className="rowList">{activeGame.loser_ids.map(id=><li key={id} className="playerRow"><Avatar id={id} name={name(id)} me={me} size="md"/><span className="rowText"><b>{name(id)}{id===me&&<span className="youChip">you</span>}</b><small>Tied</small></span></li>)}</ul>
-    :<ul className="voteGrid tied">{activeGame.loser_ids.map(id=><li key={id} className="seat"><span className="seatInitials" aria-hidden="true">{name(id).slice(0,2).toUpperCase()}</span><b className="seatName">{name(id)}</b><span className="seatMeta">{id===me?'you · tied':'tied'}</span></li>)}</ul>}
-    <p className="voteRules">{tiedNames} have the same number of votes. If everyone tied accepts, they share the loss and each loses less rating. If anyone declines, they vote again between themselves.</p>
-    {activeGame.loser_ids.includes(me)?<div className="voteActions"><Button className="wide" onClick={()=>respond(activeGame.id,true)} disabled={busy}>Accept shared loss</Button><Button kind="outline" className="wide" onClick={()=>respond(activeGame.id,false)} disabled={busy}>Decline, vote again</Button></div>:<p className="voteNote">Waiting for {tiedNames} to decide.</p>}
-   </>:<>
-    <p className="voteRules">{activeGame.allowed_nominees?`Vote again between ${activeGame.allowed_nominees.map(name).join(' and ')}.`:'Tap the player who was left holding cards.'} A clear majority decides straight away; otherwise the most votes after 30 seconds wins, with at least 2 votes.</p>
-    {blue?<ul className="rowList voteRows">{nominees.map(id=>{const votes=totals.find(v=>v.game_id===activeGame.id&&v.nominee_id===id)?.votes||0,picked=mySelections[activeGame.id]===id,count=`${votes} ${votes===1?'vote':'votes'}`
-     return <li key={id}><button className={`playerRow voteRow ${picked?'picked':''}`} aria-pressed={picked} aria-label={`${name(id)}${id===me?' (you)':''}, ${count}`} disabled={busy} onClick={()=>cast(activeGame.id,id)}>
-      <Avatar id={id} name={name(id)} me={me} size="md"/>
-      <span className="rowText" aria-hidden="true"><b>{name(id)}{id===me&&<span className="youChip">you</span>}</b><small>{count}</small></span>
-      {picked&&<span className="voteCheck" aria-hidden="true">✓</span>}
-     </button></li>})}</ul>
-    :<ul className="voteGrid">{nominees.map(id=>{const votes=totals.find(v=>v.game_id===activeGame.id&&v.nominee_id===id)?.votes||0,picked=mySelections[activeGame.id]===id,count=`${votes} ${votes===1?'vote':'votes'}`
-     return <li key={id}><button className={`seat voteCard ${picked?'picked':''}`} aria-pressed={picked} aria-label={`${name(id)}${id===me?' (you)':''}, ${count}`} disabled={busy} onClick={()=>cast(activeGame.id,id)}>
-      {picked&&<span className="voteCheck" aria-hidden="true">✓</span>}
-      <span className="seatInitials" aria-hidden="true">{name(id).slice(0,2).toUpperCase()}</span>
-      <b className="seatName">{name(id)}</b>
-      <span className={`votePips ${card.red?'red':''}`} aria-hidden="true">{card.suit.repeat(Math.min(votes,6))}</span>
-      <span className="seatMeta" aria-hidden="true">{id===me?'you · ':''}{count}</span>
-     </button></li>})}</ul>}
-    <p className="voteNote">{activeGame.state==='awaiting'?'The timer starts with the first vote.':'Totals are public; who voted for whom stays hidden until the result is final. You can change your vote.'}</p>
-   </>:activeGame?<p className="voteRules">Game {activeGame.slot} opens once the earlier game has a result.</p>:null}
-   {games.some(g=>FINAL.includes(g.state))&&<ol className="roundResults" aria-label="Results so far">{games.filter(g=>FINAL.includes(g.state)).map(g=><li key={g.id}><ResultRow game={g} name={name} restart={()=>restart(g.id)} busy={busy}/></li>)}</ol>}
-   {table.host_id===me&&canStop&&<button className="leaveLink" onClick={stopGame} disabled={busy}>Started by mistake? Stop this game <X size={14}/></button>}
-   {games.some(g=>g.state==='unresolved')&&<div className="hint"><Clock3 size={17}/> Games without a result can be voted on again later. The table stays open until they have one.</div>}
-  </section>}
-  {table.status==='lobby'&&historyGames.length>0&&<section className="card historyCard">
-   <h2><button className="historyToggle" aria-expanded={showHistory} aria-controls="history-list" onClick={()=>setShowHistory(s=>!s)}>Recent results <ChevronDown size={18} className={showHistory?'flip':''} aria-hidden="true"/></button></h2>
-   {showHistory&&<ul className="historyList" id="history-list">{historyGames.filter(g=>FINAL.includes(g.state)).slice(0,12).map(g=><li key={g.id} className="historyItem">
-    <ResultRow game={g} name={name} restart={closed?undefined:()=>restart(g.id)} busy={busy}/>
-    {ballots[g.id]?.length>0&&<p className="ballots"><span className="ballotsLabel">Votes</span>{ballots[g.id].map(v=><span key={v.voter_id}>{name(v.voter_id)} → {name(v.nominee_id)}</span>)}</p>}
-    {['confirmed','tied'].includes(g.state)&&g.finalized_at&&Date.now()-new Date(g.finalized_at).getTime()<86400000&&<button className="linkButton" onClick={()=>openCorrection(g.id)}>Request correction</button>}
-    {cases.filter(c=>c.game_id===g.id&&c.state==='open').map(c=><div className="correction" key={c.id}><span>Correction vote · {yesCounts[c.id]||0} {yesCounts[c.id]===1?'approval':'approvals'}</span><Button kind="secondary" onClick={()=>correctionVote(c.id,true)}>Approve</Button><Button kind="ghost" onClick={()=>correctionVote(c.id,false)}>Reject</Button></div>)}
-   </li>)}</ul>}
-  </section>}
- </div>
-}
-const FINAL:Game['state'][]=['confirmed','tied','unresolved','void']
-// Without restart (a closed table, which never has a game without a result), there is no "Vote again".
-function ResultRow({game,name,restart,busy}:{game:Game;name:(id:string)=>string;restart?:()=>void;busy:boolean}){
- return <div className={`resultRow ${game.state}`}><span className="resultGame">Game {game.slot}</span><span className="resultText">{game.state==='confirmed'?<><b><PlayerName id={game.loser_ids[0]} name={name(game.loser_ids[0])}/></b> lost</>:game.state==='tied'?<>Shared loss: <b>{game.loser_ids.map((id,i)=><span key={id}>{i>0&&', '}<PlayerName id={id} name={name(id)}/></span>)}</b></>:game.state==='unresolved'?'No result':game.state==='void'?'Reversed after a correction vote':'Waiting for a result'}</span>{game.state==='unresolved'&&restart&&<button className="linkButton" disabled={busy} onClick={restart}>Vote again</button>}</div>
-}
-
-// Personal game history: every result the player took part in, from the server's ledger (nothing is re-rated here).
-const HISTORY_PAGE=20
-const signed=(d:number)=>`${d>0?'+':d<0?'\u2212':'\u00B1'}${Math.abs(d).toFixed(2)}`
-const elo=(r:number)=>r.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})
-const deltaClass=(d:number)=>d>0?'gainDelta':d<0?'lossDelta':''
-const capitalize=(s:string)=>s.charAt(0).toUpperCase()+s.slice(1)
-const resultText=(state:Game['state'],losers:string[])=>state==='confirmed'?`${capitalize(losers[0]||'someone')} lost`:state==='tied'?`Shared loss: ${listNames(losers)}`:state==='void'?'Reversed after a correction vote':state==='unresolved'?'No result':'Waiting for a result'
-const STATE_TEXT:Partial<Record<Game['state'],string>>={confirmed:'Confirmed result.',tied:'Shared loss, accepted by everyone tied.',void:'Reversed after a correction vote: this game no longer counts for ratings.',unresolved:'No result: the vote ended without a clear loser, so ratings did not change.'}
-const CORRECTION_TEXT:Record<string,string>={open:'A correction vote is open.',rejected:'A correction was requested and rejected.',expired:'A correction request expired.'}
-
-function HistoryScreen({me}:{me:string}){
- const [games,setGames]=useState<HistoryGame[]>([]),[loading,setLoading]=useState(true),[more,setMore]=useState(false),[open,setOpen]=useState<string|null>(null),[error,setError]=useState('')
- const fetchPage=useCallback(async(before:string|null)=>{
-  setLoading(true);setError('')
-  try{const rows=await rpc<HistoryGame[]>('my_game_history',{p_before:before,p_limit:HISTORY_PAGE});setGames(g=>before?[...g,...rows]:rows);setMore(rows.length===HISTORY_PAGE)}
-  catch(e){setError(errorMessage(e))}finally{setLoading(false)}
- },[])
- useEffect(()=>{void fetchPage(null)},[fetchPage,me])
- return <div className="stack page pageEntry">
-  <header className="pageHead"><h1>History</h1><p>Your games in every mode, newest first. Tap a game to see everyone's rating change.</p></header>
-  {error&&<p className="emptyNote" role="alert">{error}</p>}
-  {games.length?<ol className="gameLog">{games.map(g=><HistoryItem key={g.game_id} game={g} me={me} open={open===g.game_id} toggle={()=>setOpen(o=>o===g.game_id?null:g.game_id)}/>)}</ol>
-  :loading?<p className="emptyNote">Loading…</p>:!error&&<p className="emptyNote">No games yet. A game shows up here once its vote is final.</p>}
-  {more&&<Button kind="outline" className="wide" disabled={loading} onClick={()=>void fetchPage(games[games.length-1].game_id)}>{loading?'Loading…':'Show older games'}</Button>}
- </div>
-}
-function HistoryItem({game:g,me,open,toggle}:{game:HistoryGame;me:string;open:boolean;toggle:()=>void}){
- const [details,setDetails]=useState<GameDetails|null>(null),[error,setError]=useState('')
- useEffect(()=>{if(!open||details)return;let live=true
-  rpc<GameDetails>('game_details',{p_game:g.game_id}).then(d=>{if(live)setDetails(d)}).catch(e=>{if(live)setError(errorMessage(e))})
-  return()=>{live=false}},[open,details,g.game_id])
- const card=MODE_CARD[g.mode],panel=`game-${g.game_id}`,delta=Number(g.delta),extra=Number(g.streak_extra??0)
- const losers=g.loser_ids.map((id,i)=>id===me?'you':g.loser_names[i])
- return <li className={`logItem ${g.state}`}>
-  <button className="logSummary" aria-expanded={open} aria-controls={panel} onClick={toggle}>
-   <span className={`logSuit ${card.red?'red':''}`} aria-hidden="true">{card.suit}</span>
-   <span className="logMain">
-    <b>{modeInfo(g.mode).name}{g.games_in_round>1&&<span className="logGame"> · Game {g.slot} of {g.games_in_round}</span>}</b>
-    <small>{dateTime(g.played_at)} · <span className="nowrap">{g.player_count} players</span></small>
-    <small className="logResult">{resultText(g.state,losers)}</small>
-    <small className="logElo">Elo {elo(Number(g.rating_before))} → {elo(Number(g.rating_after))}</small>
-    {g.streak_penalty&&<small className="logStreak"><span className="streakTag">{extra<0?streakLabel(g.loss_streak):extra>0?'Streak penalty share':'Losing-streak penalty'}</span>{extra!==0&&<span className="streakAmount">{signed(extra)}</span>}</small>}
-   </span>
-   <span className="logRating"><strong className={deltaClass(delta)} aria-label={`Rating change ${signed(delta)}`}>{signed(delta)}</strong></span>
-  </button>
-  {open&&<div className="logDetails" id={panel}>
-   {error?<p className="fieldError" role="alert">{error}</p>:!details?<p className="logMeta">Loading…</p>:<>
-    <p className="logStatus">{STATE_TEXT[details.state]||resultText(details.state,[])}{details.correction&&CORRECTION_TEXT[details.correction]?` ${CORRECTION_TEXT[details.correction]}`:''}</p>
-    {details.streak_penalty&&<p className="logMeta">Losing-streak penalty: from the 4th loss in a row in a mode, a loss costs 25% more, and the extra goes to the winners in proportion to their gains.</p>}
-    <p className="logMeta">Played {dateTime(details.played_at)}{details.finalized_at&&` · result recorded ${dateTime(details.finalized_at)}`}</p>
-    <ul className="logPlayers" aria-label="Players">{details.players.map(p=><li key={p.user_id}>
-     <span className="logName"><b><PlayerName id={p.user_id} name={p.username}/>{p.user_id===me&&' (you)'}</b>{p.lost&&<span className="lostTag">{details.state==='tied'?'shared loss':details.state==='void'?'voted loser':'lost'}</span>}{Number(p.streak_extra??0)<0&&<span className="streakTag">{streakLabel(p.loss_streak)}</span>}</span>
-     <span className="logRating">
-      <strong className={deltaClass(Number(p.delta))}>{p.delta==null?'–':signed(Number(p.delta))}</strong>
-      {p.rating_before!=null&&p.rating_after!=null&&<small>{elo(Number(p.rating_before))} → {elo(Number(p.rating_after))}</small>}
-      {Number(p.streak_extra??0)!==0&&<small>incl. {signed(Number(p.streak_extra))} streak</small>}
-     </span>
-    </li>)}</ul>
-    {g.games_in_round>1&&<p className="logMeta">Both games of a round are rated from everyone's rating at the start of the round. Before and after show the running total.</p>}
-   </>}
-  </div>}
- </li>
-}
-
-// Game-mode switch shared by Rankings and Groups: one chip per mode, with its suit.
-function ModeChips({mode,setMode}:{mode:Mode;setMode:(m:Mode)=>void}){
- return <div className="modeChips" role="group" aria-label="Game mode">{MODES.map(m=><button key={m.id} aria-pressed={mode===m.id} className={`${mode===m.id?'on':''} ${MODE_CARD[m.id].red?'red':''}`} onClick={()=>setMode(m.id)}><span className="chipSuit" aria-hidden="true">{MODE_CARD[m.id].suit}</span>{m.name}</button>)}</div>
-}
-// Top three as player cards with the rank as the corner index; everyone else as ledger rows.
-function Standings({ratings,names,me,mode}:{ratings:Rating[];names:Record<string,string>;me:string;mode:Mode}){
- const card=MODE_CARD[mode],who=(r:Rating)=>names[r.user_id]||'Player'
- // Blue theme: one white list card, no podium.
- if(useBlue())return <ol className="listCard">{ratings.map((r,i)=><li key={r.user_id} className={`rankRow ${r.user_id===me?'mine':''}`}>
-  <span className="position" aria-hidden="true">{i+1}</span>
-  <Avatar id={r.user_id} name={who(r)} me={me}/>
-  <span className="rowText"><b><PlayerName id={r.user_id} name={who(r)}/>{r.user_id===me&&' (you)'}</b><small>{r.games} games · {r.losses} losses{r.games<MIN_RANKED_GAMES&&' · provisional'}</small></span>
-  <span className="rowValue">{formatRating(r.rating)}</span>
- </li>)}</ol>
- return <>
-  <ol className="podium">{ratings.slice(0,3).map((r,i)=><li key={r.user_id} className={`seat podiumCard ${r.user_id===me?'mine':''}`}>
-   <span className={`cornerIndex ${card.red?'red':''}`} aria-hidden="true">{i+1}<br/>{card.suit}</span>
-   {r.user_id===me&&<span className="seatYou">you</span>}
-   <span className="seatInitials" aria-hidden="true">{who(r).slice(0,2).toUpperCase()}</span>
-   <b className="seatName" title={who(r)}><PlayerName id={r.user_id} name={who(r)}/></b>
-   <span className="podiumRating">{formatRating(r.rating)}</span>
-   <span className="seatMeta">{r.games} {r.games===1?'game':'games'}{r.games<MIN_RANKED_GAMES&&' · provisional'}</span>
-  </li>)}</ol>
-  {ratings.length>3&&<ol className="rankList" start={4}>{ratings.slice(3).map((r,i)=><li key={r.user_id} className={`rankRow ${r.user_id===me?'mine':''}`}>
-   <span className="position" aria-hidden="true">{i+4}</span>
-   <span className="playerAvatar" aria-hidden="true">{who(r).slice(0,2).toUpperCase()}</span>
-   <span className="rankName"><strong><PlayerName id={r.user_id} name={who(r)}/>{r.user_id===me&&<span className="youTag">you</span>}</strong><small>{r.games} games · {r.losses} losses{r.games<MIN_RANKED_GAMES&&' · provisional'}</small></span>
-   <span className="rankScore">{formatRating(r.rating)}</span>
-  </li>)}</ol>}
- </>
-}
-
-function LeaderboardScreen({me}:{me:string}){
- const [mode,setMode]=useState<Mode>('natural'),[ratings,setRatings]=useState<Rating[]>([]),[users,setUsers]=useState<Record<string,Profile>>({}),[loading,setLoading]=useState(true)
- useEffect(()=>{let live=true;setLoading(true);void (async()=>{const{data,error}=await supabase.from('ratings').select('*').eq('mode',mode).gte('games',MIN_RANKED_GAMES).order('rating',{ascending:false}).limit(100);if(error)throw error;const scores=(data||[]) as Rating[];const{data:p}=scores.length?await supabase.from('profiles').select('*').in('id',scores.map(r=>r.user_id)):{data:[]};if(live){setRatings(scores);setUsers(Object.fromEntries(((p||[]) as Profile[]).map(x=>[x.id,x])));setLoading(false)}})().catch(console.error);return()=>{live=false}},[mode])
- const names=useMemo(()=>Object.fromEntries(Object.values(users).map(u=>[u.id,u.username])),[users])
- return <div className="stack page pageEntry">
-  <header className="pageHead"><h1>Rankings</h1><p>Everyone starts at 1,200, and each game mode has its own standings. You appear after {MIN_RANKED_GAMES} games in a mode.</p></header>
-  <ModeChips mode={mode} setMode={setMode}/>
-  <section aria-label={`${modeInfo(mode).name} standings`}>{loading?<p className="emptyNote">Loading…</p>:ratings.length===0?<p className="emptyNote">Nobody has played {MIN_RANKED_GAMES} {modeInfo(mode).name} games yet. Start a table and play.</p>:<Standings ratings={ratings} names={names} me={me} mode={mode}/>}</section>
- </div>
-}
-
-function FriendsScreen({me,action,busy}:{me:string;action:Action;busy:boolean}){
- type Row={other:string;status:'pending'|'accepted';mine:boolean}
- const [rows,setRows]=useState<Row[]>([]),[names,setNames]=useState<Record<string,string>>({}),[name,setName]=useState(''),[mode,setMode]=useState<Mode>('natural'),[ranked,setRanked]=useState<Rating[]>([])
- const load=useCallback(async()=>{
-  const{data}=await supabase.from('friendships').select('*');const rs:Row[]=(data||[]).map(f=>({other:f.user_a===me?f.user_b:f.user_a,status:f.status,mine:f.requested_by===me}));setRows(rs)
-  const ids=rs.map(r=>r.other);if(ids.length){const{data:pp}=await supabase.from('profiles').select('id,username').in('id',ids);setNames(Object.fromEntries(((pp||[]) as {id:string;username:string}[]).map(p=>[p.id,p.username])))}
- },[me])
- useEffect(()=>{void load().catch(console.error)},[load])
- const friendIds=rows.filter(r=>r.status==='accepted').map(r=>r.other),key=friendIds.join(',')
- // Standings among you and your friends: same rating and the same minimum number of games as the global rankings.
- useEffect(()=>{let live=true;void (async()=>{const{data}=await supabase.from('ratings').select('*').in('user_id',[me,...friendIds]).eq('mode',mode).gte('games',MIN_FRIEND_GAMES).order('rating',{ascending:false});if(live)setRanked((data||[]) as Rating[])})().catch(console.error);return()=>{live=false}},[me,mode,key])
- const label=(id:string)=>id===me?'You':names[id]||'Player'
- const allNames={...names,[me]:'You'}
- const add=()=>void action(async()=>{await rpc('send_friend_request',{p_username:name.trim()});setName('');await load()})
- const respond=(id:string,accept:boolean)=>void action(async()=>{await rpc('respond_friend_request',{p_user:id,p_accept:accept});await load()})
- const remove=(id:string)=>{if(!window.confirm(`Remove ${label(id)} from your friends?`))return;void action(async()=>{await rpc('remove_friend',{p_user:id});await load()})}
- const incoming=rows.filter(r=>r.status==='pending'&&!r.mine),sent=rows.filter(r=>r.status==='pending'&&r.mine),accepted=rows.filter(r=>r.status==='accepted')
- return <div className="stack page pageEntry">
-  <header className="pageHead"><h1>Friends</h1><p>Add friends once, then seat them at your table in one tap. No code or QR needed.</p></header>
-  <section aria-labelledby="add-friend-title">
-   <h2 id="add-friend-title" className="sectionTitle">Add a friend</h2>
-   <form onSubmit={e=>{e.preventDefault();if(name.trim())add()}}>
-    <label className="field" htmlFor="friend-name">Their username</label>
-    <div className="joinRow"><input id="friend-name" placeholder="username" maxLength={22} autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={name} onChange={e=>setName(e.target.value)}/><Button type="submit" disabled={busy||!name.trim()}>Send request</Button></div>
-   </form>
-  </section>
-  {incoming.length>0&&<section aria-labelledby="requests-title"><h2 id="requests-title" className="listLabel">Requests</h2><ul className="rowList">{incoming.map(r=><li key={r.other} className="playerRow"><span className="rowText"><b>{label(r.other)}</b><small>wants to be friends</small></span><Button kind="secondary" disabled={busy} onClick={()=>respond(r.other,true)}>Accept</Button><Button kind="ghost" disabled={busy} onClick={()=>respond(r.other,false)}>Decline</Button></li>)}</ul></section>}
-  <section aria-labelledby="friends-title">
-   <h2 id="friends-title" className="listLabel">Your friends</h2>
-   {accepted.length?<ul className="rowList">{accepted.map(r=><li key={r.other} className="playerRow"><span className="rowText"><b><PlayerName id={r.other} name={label(r.other)}/></b><small>tap to see their rating chart</small></span><button className="linkButton danger" disabled={busy} onClick={()=>remove(r.other)}>Remove</button></li>)}</ul>:<p className="emptyNote">No friends yet. Send a request by username.</p>}
-   {sent.length>0&&<><h3 className="listLabel">Waiting for them</h3><ul className="rowList">{sent.map(r=><li key={r.other} className="playerRow"><span className="rowText"><b>{label(r.other)}</b><small>request sent</small></span><button className="linkButton" disabled={busy} onClick={()=>remove(r.other)}>Cancel</button></li>)}</ul></>}
-  </section>
-  {accepted.length>0&&<Duel friends={accepted.map(r=>({id:r.other,name:label(r.other)})).sort((x,y)=>x.name.localeCompare(y.name))}/>}
-  {accepted.length>0&&<section aria-label="Standings among friends"><h2 className="listLabel">Standings with friends</h2><ModeChips mode={mode} setMode={setMode}/>{ranked.length?<Standings ratings={ranked} names={allNames} me={me} mode={mode}/>:<p className="emptyNote">Nobody here has played {MIN_FRIEND_GAMES} {modeInfo(mode).name} games yet.</p>}</section>}
- </div>
-}
-
-type TableMate={user_id:string;username:string;games:number;losses:number;expected_losses:number|string}
-const MIN_TABLE_GAMES=5
-/** Percentage points by which your loss rate with this player at the table exceeds your fair share. */
-const tableEffect=(m:TableMate)=>100*(m.losses-Number(m.expected_losses))/m.games
-
-type DuelRow={games:number;my_losses:number;their_losses:number;both_lost:number}
-function Duel({friends}:{friends:{id:string;name:string}[]}){
- const [pick,setPick]=useState(''),[duel,setDuel]=useState<{id:string;row:DuelRow}|null>(null),[error,setError]=useState('')
- useEffect(()=>{if(pick&&!friends.some(f=>f.id===pick))setPick('')},[friends,pick])
- useEffect(()=>{if(!pick)return;let live=true;setError('')
-  rpc<DuelRow[]>('duel_stats',{p_friend:pick,p_mode:'natural'}).then(r=>{if(live)setDuel({id:pick,row:r[0]})}).catch(e=>{if(live)setError(errorMessage(e))})
-  return()=>{live=false}},[pick])
- const them=friends.find(f=>f.id===pick)?.name||'',d=duel?.id===pick?duel.row:null
- const decided=d?d.my_losses+d.their_losses:0,neither=d?d.games-d.my_losses-d.their_losses+d.both_lost:0,mine=decided?Math.round(100*d!.my_losses/decided):50
- return <section aria-labelledby="duel-title" className="stack sm">
-  <h2 id="duel-title" className="listLabel">Duel</h2>
-  <label className="field" htmlFor="duel-friend">Compare yourself with</label>
-  <select id="duel-friend" value={pick} onChange={e=>setPick(e.target.value)}><option value="">Choose a friend</option>{friends.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select>
-  {pick&&(error?<p className="emptyNote" role="alert">{error}</p>:!d?<p className="emptyNote">Loading…</p>:!d.games?<p className="emptyNote">You and {them} haven't finished a rated Natural Durak game together yet.</p>:<div className="duelCard">
-   <p className="duelVerdict">{d.my_losses===d.their_losses?`Dead even: you've both been the Durak ${d.my_losses} ${d.my_losses===1?'time':'times'}.`:d.my_losses<d.their_losses?`You're ahead: ${them} has been the Durak more often.`:`${them} is ahead: you've been the Durak more often.`}</p>
-   <div className="duelScore"><div><b>{d.my_losses}</b><small>You were the Durak</small></div><span aria-hidden="true">–</span><div><b>{d.their_losses}</b><small>{them} was the Durak</small></div></div>
-   {decided>0&&<div className="duelBar" role="img" aria-label={`Of the games one of you lost, you lost ${mine}%`}><span className="you" style={{width:`${mine}%`}}/><span className="them" style={{width:`${100-mine}%`}}/></div>}
-   <p className="fieldHint">{d.games} rated Natural Durak {d.games===1?'game':'games'} together{neither>0&&`; in ${neither} someone else was the Durak`}{d.both_lost>0&&`; ${d.both_lost} shared ${d.both_lost===1?'loss':'losses'} between you two`}.{decided>0&&` Of the times one of you was the Durak, it was you ${mine}%.`}</p>
-  </div>)}
- </section>
-}
-
-function ProfileScreen({me,profile,action,reload,showChances,setShowChances}:{me:string;profile:Profile|null;action:Action;reload:()=>Promise<void>;showChances:boolean;setShowChances:(show:boolean)=>void}){
- const {theme,setTheme}=useContext(ThemeContext),blue=theme==='blue'
- const [name,setName]=useState(profile?.username||''),[ratings,setRatings]=useState<Rating[]>([]),[admissions,setAdmissions]=useState(0),[ledger,setLedger]=useState<{game_id:string;delta:number;recorded_at:string;mode:Mode}[]>([])
- const [accountEmail,setAccountEmail]=useState(''),[oldPassword,setOldPassword]=useState(''),[nextPassword,setNextPassword]=useState(''),[accountNotice,setAccountNotice]=useState('')
- useEffect(()=>{let live=true;void supabase.auth.getUser().then(({data})=>{if(live)setAccountEmail(data.user?.email||'')}).catch(console.error);return()=>{live=false}},[me])
- useEffect(()=>{if(profile)setName(profile.username)},[profile?.username])
- useEffect(()=>{void (async()=>{const[{data:r},{count},{data:ll}]=await Promise.all([supabase.from('ratings').select('*').eq('user_id',me),supabase.from('honesty_events').select('*',{count:'exact',head:true}).eq('user_id',me),supabase.from('rating_ledger').select('game_id,delta,recorded_at,mode').eq('user_id',me).order('recorded_at',{ascending:false}).limit(200)]);setRatings((r||[]) as Rating[]);setAdmissions(count||0);setLedger((ll||[]) as {game_id:string;delta:number;recorded_at:string;mode:Mode}[])})()},[me])
- const total=ratings.reduce((s,r)=>s+r.games,0),losses=ratings.reduce((s,r)=>s+r.losses,0),wins=Math.max(0,total-losses),who=profile?.username||''
- // Rating over time, one mode at a time (the most played one first), from the server's replay-ordered history.
- const [chartMode,setChartMode]=useState<Mode|null>(null),[chart,setChart]=useState<{mode:Mode;games:RatedGame[]}|null>(null),[chartError,setChartError]=useState('')
- useEffect(()=>{if(!chartMode&&ratings.length)setChartMode(MODES.reduce((best,m)=>(ratings.find(r=>r.mode===m.id)?.games||0)>(ratings.find(r=>r.mode===best)?.games||0)?m.id:best,'natural' as Mode))},[ratings,chartMode])
- useEffect(()=>{if(!chartMode)return;let live=true;setChartError('')
-  rpc<RatedGame[]>('my_rating_history',{p_mode:chartMode}).then(games=>{if(live)setChart({mode:chartMode,games})}).catch(e=>{if(live)setChartError(errorMessage(e))})
-  return()=>{live=false}},[chartMode,me])
- // Natural Durak results by table size (3–8 players), from public.my_player_count_stats.
- const [bySize,setBySize]=useState<{player_count:number;games:number;losses:number;elo_change:number|string}[]|null>(null)
- useEffect(()=>{let live=true;rpc<typeof bySize>('my_player_count_stats',{p_mode:'natural'}).then(r=>{if(live)setBySize(r||[])}).catch(e=>{console.error(e);if(live)setBySize([])});return()=>{live=false}},[me,ratings])
- // Natural Durak: losses Elo expected (from everyone's pre-round rating) against actual ones (public.my_expected_losses).
- const [expectation,setExpectation]=useState<{player_count:number;games:number;losses:number|string;expected_losses:number|string}[]|null>(null)
- useEffect(()=>{let live=true;rpc<NonNullable<typeof expectation>>('my_expected_losses',{p_mode:'natural'}).then(r=>{if(live)setExpectation(r||[])}).catch(e=>{console.error(e);if(live)setExpectation([])});return()=>{live=false}},[me,ratings])
- // Natural Durak: how often you lose with each player at the table, against your fair share (public.my_table_effect).
- const [mates,setMates]=useState<TableMate[]|null>(null)
- useEffect(()=>{let live=true;rpc<TableMate[]>('my_table_effect',{p_mode:'natural'}).then(r=>{if(live)setMates((r||[]).filter(m=>m.games>=MIN_TABLE_GAMES).sort((x,y)=>tableEffect(y)-tableEffect(x)))}).catch(e=>{console.error(e);if(live)setMates([])});return()=>{live=false}},[me,ratings])
- const saveName=()=>void action(async()=>{await rpc('set_username',{p_username:name.trim()});await reload();setAccountNotice('Username updated.')})
- const saveEmail=()=>void action(async()=>{
-  if(!accountEmail.trim())throw new Error('Enter an email address.')
-  const {data,error}=await supabase.auth.updateUser({email:accountEmail.trim()})
-  if(error)throw error
-  setAccountNotice(data.user?.new_email ? 'Email change pending. Follow the verification instructions sent to your email.' : 'Email update requested. If Supabase sends confirmation links, complete them to finish.')
- })
- const savePassword=()=>void action(async()=>{
-  if(nextPassword.length<10)throw new Error('New password must be at least 10 characters.')
-  if(!oldPassword)throw new Error('Enter your current password.')
-  const {data:user,error:userError}=await supabase.auth.getUser()
-  if(userError||!user.user?.email)throw userError||new Error('Cannot determine current email.')
-  const {error:loginError}=await supabase.auth.signInWithPassword({email:user.user.email,password:oldPassword})
-  if(loginError)throw new Error('Current password is incorrect.')
-  const {error:updateError}=await supabase.auth.updateUser({password:nextPassword})
-  if(updateError)throw updateError
-  setOldPassword('');setNextPassword('');setAccountNotice('Password changed.')
- })
- return <div className="stack page pageEntry">
-  {blue?<header className="profileHero">
-   <Avatar id={me} name={who} me={me} size="lg"/>
-   <div><h1>{who}</h1>{accountEmail&&<p>{accountEmail}</p>}</div>
-  </header>:<header className="profileHero">
-   <span className="seat mine heroPlayer" aria-hidden="true"><span className="seatInitials">{who.slice(0,2).toUpperCase()}</span></span>
-   <div><h1>{who}</h1></div>
-  </header>}
-  <dl className="statRow"><div><dt>Games</dt><dd>{total}</dd></div><div><dt>Wins</dt><dd>{wins}</dd></div><div><dt>Losses</dt><dd>{losses}</dd></div></dl>
-  <section aria-labelledby="my-ratings-title">
-   <h2 id="my-ratings-title" className="sectionTitle">Your ratings</h2>
-   <ul className="modeRows">{MODES.map(m=>{const r=ratings.find(r=>r.mode===m.id);return <li key={m.id} className="modeRow">{blue?<span className={`rowSuit ${MODE_CARD[m.id].red?'red':''}`} aria-hidden="true">{MODE_CARD[m.id].suit}</span>:<MiniModeCard mode={m.id}/>}<span className="modeText"><b>{m.name}</b><small>{r?.games||0} games · {r?.losses||0} losses</small>{streakLabel(r?.loss_streak)&&<small className={`streakNote ${streakPenaltyNext(r?.loss_streak)?'warn':''}`}>{streakLabel(r?.loss_streak)}</small>}</span><strong className="modeRowRating">{formatRating(r?.rating||1200)}</strong></li>})}</ul>
-  </section>
-  {total>=10?<section className="stack sm" aria-labelledby="stats-title">
-   <h2 id="stats-title">Statistics</h2>
-   <dl className="statsGrid"><div><dt>Win rate</dt><dd>{total?Math.round(100*wins/total):0}%</dd></div><div><dt>Honest self-votes</dt><dd>{admissions}</dd></div><div><dt>Modes played</dt><dd>{ratings.filter(r=>r.games>0).length}</dd></div><div><dt>Games with a result</dt><dd>{total}</dd></div></dl>
-   <h3 className="subTitle">Expected vs. actual losses</h3>
-   {!expectation?<p className="emptyNote">Loading…</p>:expectation.length?(()=>{
-    const exp=expectation.reduce((t,r)=>t+Number(r.expected_losses),0),act=expectation.reduce((t,r)=>t+Number(r.losses),0),games=expectation.reduce((t,r)=>t+r.games,0),diff=act-exp
-    const one=(x:number)=>x.toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:1})
-    return <div className="duelCard">
-     <p className="duelVerdict">{Math.abs(diff)<0.5?'Right where Elo expects you.':diff<0?`You've lost ${one(-diff)} fewer games than Elo expected.`:`You've lost ${one(diff)} more games than Elo expected.`}</p>
-     <div className="duelScore"><div><b>{one(act)}</b><small>Actual losses</small></div><span aria-hidden="true">vs</span><div><b>{one(exp)}</b><small>Expected by Elo</small></div></div>
-     <ul className="expectRows">{expectation.map(r=>{const d=Number(r.losses)-Number(r.expected_losses);return <li key={r.player_count}><span>{r.player_count} players <small>· {r.games} {r.games===1?'game':'games'}</small></span><span>{one(Number(r.losses))} vs {one(Number(r.expected_losses))}</span><strong className={Math.abs(d)<0.05?'':d<0?'gainDelta':'lossDelta'}>{d>=0.05?'+':d<=-0.05?'−':'±'}{one(Math.abs(d))}</strong></li>})}</ul>
-     <p className="fieldHint">Over {games} rated Natural Durak {games===1?'game':'games'}. Expected losses add up each game's chance of you being the Durak, from everyone's Elo when the round started (the same estimate shown at the table). A shared loss is split between the players who shared it. Fewer losses than expected means you're playing better than your rating says; more means your rating is ahead of your results.</p>
-    </div>})():<p className="emptyNote">Finish a rated Natural Durak game to compare your losses with what Elo expected.</p>}
-   <h3 className="subTitle">Durak by number of players</h3>
-   <ul className="modeRows">{[3,4,5,6,7,8].map(n=>{const r=bySize?.find(x=>x.player_count===n),g=r?.games||0,elo=Number(r?.elo_change||0)
-    return <li key={n} className="modeRow"><span className="sizeBadge" aria-hidden="true">{n}</span><span className="modeText"><b>{n} players</b><small>{!bySize?'Loading…':g?`${g} ${g===1?'game':'games'} · lost ${r!.losses} (${Math.round(100*r!.losses/g)}%, fair share ${Math.round(100/n)}%)`:'No games yet'}</small></span><strong className={`modeRowRating ${g?elo<0?'lossDelta':'gainDelta':''}`}>{g?`${elo>=0?'+':'−'}${Math.abs(elo).toFixed(1)}`:'—'}</strong></li>})}</ul>
-   <p className="fieldHint">Rated Natural Durak games only. Fair share is how often you'd lose if everyone played equally well (1 in 3 at a 3-player table, 1 in 4 at 4, and so on); the number on the right is your net Elo change at that table size.</p>
-   <h3 className="subTitle">Who's at the table</h3>
-   {!mates?<p className="emptyNote">Loading…</p>:mates.length?<>
-    {mates.length>1&&<dl className="statsGrid"><div><dt>Toughest to play with</dt><dd>{mates[0].username}</dd></div><div><dt>Easiest to play with</dt><dd>{mates[mates.length-1].username}</dd></div></dl>}
-    <ul className="modeRows">{mates.map(m=>{const e=Math.round(tableEffect(m))
-     return <li key={m.user_id} className="modeRow"><span className="modeText"><b><PlayerName id={m.user_id} name={m.username}/></b><small>{m.games} games together · you lost {m.losses} ({Math.round(100*m.losses/m.games)}%, fair share {Math.round(100*Number(m.expected_losses)/m.games)}%)</small></span><strong className={`modeRowRating ${e>0?'lossDelta':e<0?'gainDelta':''}`}>{e>0?'+':e<0?'−':'±'}{Math.abs(e)}%</strong></li>})}</ul>
-    <p className="fieldHint">Rated Natural Durak games with at least {MIN_TABLE_GAMES} games together. The number on the right is how much more (+) or less (−) often you lose with them at the table than your fair share, in percentage points.</p>
-   </>:<p className="emptyNote">Play {MIN_TABLE_GAMES} Natural Durak games with someone to see how you do when they're at the table.</p>}
-   <h3 className="subTitle">Rating over time</h3>
-   {chartMode&&<ModeChips mode={chartMode} setMode={setChartMode}/>}
-   <div className="chartCard">
-    <h3>{modeInfo(chartMode||'natural').name}</h3>
-    {chartError?<p className="emptyNote" role="alert">{chartError}</p>
-    :!chart||chart.mode!==chartMode?<p className="emptyNote">Loading…</p>
-    :chart.games.length?<RatingChart games={chart.games} modeName={modeInfo(chart.mode).name}/>
-    :<p className="emptyNote">No rated {modeInfo(chart.mode).name} games yet. Your chart starts at 1,200 with your first result.</p>}
-   </div>
-   <h3 className="subTitle">Recent rating changes</h3>
-   <ul className="modeRows">{ledger.slice(0,8).map(entry=><li key={entry.game_id} className="modeRow"><span className="modeText"><b>{modeInfo(entry.mode).name}</b><small>{date(entry.recorded_at)}</small></span><strong className={`modeRowRating ${entry.delta<0?'lossDelta':'gainDelta'}`}>{entry.delta>=0?'+':'−'}{Math.abs(entry.delta).toFixed(1)}</strong></li>)}</ul>
-  </section>:<section className="unlock" aria-labelledby="stats-title">
-   <h2 id="stats-title" className="sectionTitle">Statistics</h2>
-   <div className="unlockCards" aria-hidden="true">{Array.from({length:10},(_,i)=><span key={i} className={i<total?'on':''}/>)}</div>
-   <p>Statistics unlock after 10 games with a confirmed result. {Math.max(0,10-total)} more to go.</p>
-  </section>}
-  <section aria-labelledby="look-title">
-   <h2 id="look-title" className="sectionTitle">Appearance</h2>
-   <div className="themePicker" role="group" aria-label="Theme">{THEMES.map(t=><button key={t.id} aria-pressed={theme===t.id} className={`themeOption ${t.id} ${theme===t.id?'on':''}`} onClick={()=>setTheme(t.id)}><span className="themeSwatch" aria-hidden="true"><span/><span/><span/></span><span className="rowText"><b>{t.name}</b><small>{t.description}</small></span></button>)}</div>
-   <label className="toggleRow"><span className="rowText"><b>Show losing chances</b><small>At the table, each player's estimated chance of being the Durak, from Elo.</small></span><input type="checkbox" role="switch" className="switch" checked={showChances} onChange={e=>setShowChances(e.target.checked)}/></label>
-   <p className="fieldHint">Saved on this device.</p>
-  </section>
-  <section className="card accountCard" aria-labelledby="account-title">
-   <h2 id="account-title">Account</h2>
-   <form onSubmit={e=>{e.preventDefault();saveName()}}><label className="field">Display username<input value={name} onChange={e=>setName(e.target.value)} maxLength={22} autoCapitalize="none" autoCorrect="off" spellCheck={false}/></label><Button type="submit" kind="outline">Save username</Button></form>
-   <form onSubmit={e=>{e.preventDefault();saveEmail()}}><label className="field">Email address<input type="email" autoComplete="email" value={accountEmail} onChange={e=>setAccountEmail(e.target.value)}/></label><p className="fieldHint">Keep Secure email change enabled in Supabase. Email changes may require confirmation of the old and new addresses.</p><Button type="submit" kind="outline">Update email</Button></form>
-   <form onSubmit={e=>{e.preventDefault();savePassword()}}><label className="field">Current password<input type="password" autoComplete="current-password" value={oldPassword} onChange={e=>setOldPassword(e.target.value)}/></label><label className="field">New password<input type="password" minLength={10} autoComplete="new-password" aria-describedby="new-password-hint" value={nextPassword} onChange={e=>setNextPassword(e.target.value)}/></label><p id="new-password-hint" className="fieldHint">At least 10 characters</p><Button type="submit" kind="outline">Change password</Button></form>
-   {accountNotice&&<p className="accountNotice" role="status">{accountNotice}</p>}
-   <Button kind="danger" onClick={()=>void supabase.auth.signOut()}>Sign out <LogOut size={17}/></Button>
-  </section>
- </div>
+  return themed(
+    <div className="appShell">
+      <header className="topbar">
+        <div className="topbarInner">
+          <button className="brandButton" aria-label={`${APP_NAME}, home`} onClick={() => go('home')}>
+            <Brand />
+          </button>
+          <NavTabs className="headerNav" page={tableId ? 'home' : page} go={go} />
+          <button
+            className="avatar"
+            aria-label="Your profile"
+            title="Your profile"
+            onClick={() => go('profile')}
+          >
+            <span style={theme === 'blue' ? { background: tint(user!.id, user!.id) } : undefined}>
+              {initials}
+            </span>
+          </button>
+        </div>
+      </header>
+      <main className="main withNav">
+        <div key={screenKey} className={`screen enter-${nav.current.dir}`}>
+          {tableId ? (
+            <TableScreen
+              key={tableId}
+              tableId={tableId}
+              me={user!.id}
+              action={action}
+              busy={busy}
+              showChances={showChances}
+              openTable={setTableId}
+              openHistory={() => go('history')}
+              onLeave={() => {
+                setTableId(null)
+                setPage('home')
+              }}
+            />
+          ) : page === 'history' ? (
+            <HistoryScreen me={user!.id} />
+          ) : page === 'home' ? (
+            <HomeScreen
+              me={user!.id}
+              profile={profile}
+              openTable={setTableId}
+              openRankings={() => setPage('leaderboard')}
+              action={action}
+              busy={busy}
+            />
+          ) : page === 'leaderboard' ? (
+            <LeaderboardScreen me={user!.id} />
+          ) : page === 'friends' ? (
+            <FriendsScreen me={user!.id} action={action} busy={busy} />
+          ) : (
+            <ProfileScreen
+              me={user!.id}
+              profile={profile}
+              action={action}
+              reload={reloadProfile}
+              showChances={showChances}
+              setShowChances={setShowChances}
+            />
+          )}
+        </div>
+      </main>
+      <NavTabs className="bottomNav" page={tableId ? 'home' : page} go={go} />
+      <Sheet open={Boolean(person)} title={person?.name || 'Player'} onClose={() => setPerson(null)}>
+        {person &&
+          (() => {
+            const rel = friendCtx.rel(person.id),
+              act = (fn: () => Promise<unknown>) =>
+                void action(async () => {
+                  await fn()
+                  await loadFriends()
+                })
+            return (
+              <div className="stack sm">
+                {rel === 'friend' && <FriendStats key={person.id} id={person.id} name={person.name} />}
+                {rel === 'sent' && <p>You asked {person.name} to be friends. Waiting for them to accept.</p>}
+                {rel === 'incoming' && (
+                  <>
+                    <p>{person.name} wants to be your friend.</p>
+                    <Button
+                      className="wide"
+                      disabled={busy}
+                      onClick={() =>
+                        act(() => rpc('respond_friend_request', { p_user: person.id, p_accept: true }))
+                      }
+                    >
+                      Accept
+                    </Button>
+                  </>
+                )}
+                {rel === 'none' && (
+                  <Button
+                    className="wide"
+                    disabled={busy}
+                    onClick={() => act(() => rpc('send_friend_request', { p_username: person.name }))}
+                  >
+                    Add {person.name} as a friend
+                  </Button>
+                )}
+              </div>
+            )
+          })()}
+      </Sheet>
+      {message && (
+        <div className="toast" role="alert">
+          {message}
+          <button aria-label="Dismiss message" onClick={() => setMessage(null)}>
+            <X size={16} />
+          </button>
+        </div>
+      )}
+    </div>,
+  )
 }
