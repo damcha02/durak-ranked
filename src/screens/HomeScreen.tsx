@@ -1,8 +1,7 @@
 import { Camera, RefreshCw } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MODES, modeInfo, rpc, supabase } from '../lib'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { MODES, modeInfo, rpc } from '../lib'
 import type { Mode, Profile, Rating, TableRow } from '../lib'
-import { QrScanner } from '../QrScanner'
 import {
   Avatar,
   Button,
@@ -19,6 +18,9 @@ import {
   useBlue,
 } from '../ui'
 import type { Action, TableStatus } from '../ui'
+
+// The scanner and its QR decoder (jsQR) load only when someone opens it, not with the app.
+const QrScanner = lazy(() => import('../QrScanner').then(m => ({ default: m.QrScanner })))
 
 const STATUS_ORDER: Record<TableStatus, number> = { results: 0, playing: 1, lobby: 2, closed: 3 }
 
@@ -55,52 +57,33 @@ export function HomeScreen({
   const blue = useBlue(),
     [people, setPeople] = useState<Record<string, { id: string; name: string }[]>>({}),
     [modeSheet, setModeSheet] = useState(false)
+  // One call (public.home_state, same row-level security as direct queries): your tables, who sits
+  // at each ("With Masha and Grisha" in both themes) and your ratings.
   const load = useCallback(async () => {
-    const { data: members } = await supabase
-      .from('table_members')
-      .select('table_id')
-      .eq('user_id', me)
-      .eq('is_active', true)
-    const ids = (members || []).map(m => m.table_id)
-    const [{ data: tt }, { data: rr }] = await Promise.all([
-      ids.length
-        ? supabase
-            .from('tables')
-            .select('*')
-            .in('id', ids)
-            .or(`closed_at.is.null,closed_at.gt."${new Date(Date.now() - CLOSED_SHOWN_MS).toISOString()}"`)
-            .order('created_at', { ascending: false })
-        : Promise.resolve({ data: [] }),
-      supabase.from('ratings').select('*').eq('user_id', me),
-    ])
-    setTables((tt || []) as TableRow[])
-    setRatings((rr || []) as Rating[])
+    const h = await rpc<{
+      tables: TableRow[]
+      ratings: Rating[]
+      seated: { table_id: string; id: string; name: string }[]
+    }>('home_state', { p_closed_after: new Date(Date.now() - CLOSED_SHOWN_MS).toISOString() })
+    setTables(h.tables)
+    setRatings(h.ratings)
+    const byTable: Record<string, { id: string; name: string }[]> = {}
+    for (const s of h.seated) (byTable[s.table_id] ||= []).push({ id: s.id, name: s.name })
+    setPeople(byTable)
     setLoaded(true)
-    // Both themes name the players at each table ("With Masha and Grisha"), so it also loads who sits at each table.
-    if (ids.length) {
-      const { data: seated } = await supabase
-        .from('table_members')
-        .select('table_id,user_id')
-        .in('table_id', ids)
-        .eq('is_active', true)
-        .order('joined_at')
-      const userIds = [...new Set((seated || []).map(s => s.user_id))]
-      const { data: pp } = userIds.length
-        ? await supabase.from('profiles').select('id,username').in('id', userIds)
-        : { data: [] }
-      const names = Object.fromEntries(
-        ((pp || []) as { id: string; username: string }[]).map(p => [p.id, p.username]),
-      )
-      const byTable: Record<string, { id: string; name: string }[]> = {}
-      for (const s of seated || [])
-        (byTable[s.table_id] ||= []).push({ id: s.user_id, name: names[s.user_id] || 'Player' })
-      setPeople(byTable)
-    }
-  }, [me])
+  }, [])
+  // Refresh every 12 s while Home is on screen, and straight away when the app comes back to the front.
   useEffect(() => {
-    void load()
-    const id = setInterval(() => void load(), 12000)
-    return () => clearInterval(id)
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void load().catch(console.error)
+    }
+    void load().catch(console.error)
+    const id = setInterval(refresh, 12000)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', refresh)
+    }
   }, [load])
   const create = () =>
     void action(async () => {
@@ -251,7 +234,11 @@ export function HomeScreen({
         <Camera size={16} /> Scan QR code
       </Button>
       <Sheet open={scanning} title="Scan QR code" onClose={() => setScanning(false)}>
-        {scanning && <QrScanner onCode={scanned} />}
+        {scanning && (
+          <Suspense fallback={<p className="fieldHint">Starting the camera…</p>}>
+            <QrScanner onCode={scanned} />
+          </Suspense>
+        )}
       </Sheet>
     </section>
   )

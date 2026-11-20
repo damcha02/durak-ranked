@@ -63,6 +63,23 @@ function VoteTimer({ deadline }: { deadline: string }) {
 const shownVerdicts = new Set<string>()
 type Ballot = { voter_id: string; nominee_id: string }
 type Verdict = { game: Game; delta: number | null; ballots: Ballot[] }
+type Case = { id: string; game_id: string; state: string; created_at: string }
+/** public.table_state (migration 202611200002); null when the caller cannot see the table. */
+type TableState = {
+  table: TableRow
+  members: Member[]
+  round_ids: string[] // newest first, at most 12
+  players: string[] // the current round's locked players
+  games: Game[] // the current round's games, by slot
+  history: Game[] // games of those rounds, most recently finalized first, at most 24
+  totals: VoteTotal[]
+  ballots: (Ballot & { game_id: string })[] // only for games whose result is final (RLS)
+  cases: Case[]
+  case_approvals: Record<string, number> // approvals per open correction
+  profiles: Pick<Profile, 'id' | 'username'>[]
+  chance: { user_id: string; rating: number | null }[] | null // null while results are recorded
+  friends: { id: string; name: string }[] | null // only for the host of an open lobby
+}
 
 export function TableScreen({
   tableId,
@@ -85,12 +102,12 @@ export function TableScreen({
 }) {
   const [table, setTable] = useState<TableRow | null>(null),
     [members, setMembers] = useState<Member[]>([]),
-    [profiles, setProfiles] = useState<Record<string, Profile>>({}),
+    [profiles, setProfiles] = useState<Record<string, Pick<Profile, 'id' | 'username'>>>({}),
     [players, setPlayers] = useState<string[]>([]),
     [games, setGames] = useState<Game[]>([]),
     [totals, setTotals] = useState<VoteTotal[]>([]),
     [historyGames, setHistoryGames] = useState<Game[]>([]),
-    [cases, setCases] = useState<{ id: string; game_id: string; state: string; created_at: string }[]>([]),
+    [cases, setCases] = useState<Case[]>([]),
     [yesCounts, setYesCounts] = useState<Record<string, number>>({}),
     [showQR, setShowQR] = useState(false),
     [mySelections, setMySelections] = useState<Record<string, string>>({}),
@@ -111,128 +128,45 @@ export function TableScreen({
   } | null>(null)
   const leaveRef = useRef(onLeave)
   leaveRef.current = onLeave
+  // Everything the screen shows comes from one call (public.table_state), which runs under the
+  // same row-level security as direct queries: a game's ballots, for example, stay hidden until it is final.
   const fetchTable = useCallback(async () => {
-    const { data: tt, error: te } = await supabase.from('tables').select('*').eq('id', tableId).single()
-    if (te?.code === 'PGRST116') {
-      leaveRef.current()
+    const s = await rpc<TableState | null>('table_state', { p_table: tableId })
+    if (!s) {
+      leaveRef.current() // deleted, or you are no longer a member
       return
     }
-    if (te) throw te
-    const t = tt as TableRow
+    const t = s.table
     setTable(t)
-    const [{ data: mm }, { data: allR }] = await Promise.all([
-      supabase
-        .from('table_members')
-        .select('*')
-        .eq('table_id', tableId)
-        .eq('is_active', true)
-        .order('joined_at'),
-      supabase
-        .from('rounds')
-        .select('id')
-        .eq('table_id', tableId)
-        .order('started_at', { ascending: false })
-        .limit(12),
-    ])
-    setMembers((mm || []) as Member[])
-    if (t.host_id === me && t.status === 'lobby' && !t.closed_at) {
-      const { data: ff } = await supabase.from('friendships').select('user_a,user_b').eq('status', 'accepted')
-      const fids = (ff || []).map(f => (f.user_a === me ? f.user_b : f.user_a))
-      if (fids.length) {
-        const { data: pp } = await supabase.from('profiles').select('id,username').in('id', fids)
-        setMyFriends(
-          ((pp || []) as { id: string; username: string }[])
-            .map(p => ({ id: p.id, name: p.username }))
-            .sort((x, y) => x.name.localeCompare(y.name)),
-        )
-      } else setMyFriends([])
-    }
-    const rids = (allR || []).map(r => r.id)
-    setWatchRounds(rids.join(','))
-    const seated = (mm || []).map(m => m.user_id),
-      none = Promise.resolve({ data: [], error: null })
-    const [{ data: rp }, { data: gg }, { data: historic }, chanceRows] = await Promise.all([
-      t.current_round_id
-        ? supabase.from('round_players').select('user_id').eq('round_id', t.current_round_id)
-        : Promise.resolve({ data: [] }),
-      t.current_round_id
-        ? supabase.from('round_games').select('*').eq('round_id', t.current_round_id).order('slot')
-        : Promise.resolve({ data: [] }),
-      rids.length
-        ? supabase
-            .from('round_games')
-            .select('*')
-            .in('round_id', rids)
-            .order('finalized_at', { ascending: false })
-            .limit(24)
-        : Promise.resolve({ data: [] }),
-      // Losing chance: live ratings of whoever is seated in the lobby; once the round is locked, the ratings stored when it started.
-      // A failed read (e.g. before the snapshot migration is applied) only hides the estimate.
-      t.status === 'lobby'
-        ? seated.length
-          ? supabase.from('ratings').select('user_id,rating').eq('mode', t.mode).in('user_id', seated)
-          : none
-        : t.status === 'playing' && t.current_round_id
-          ? supabase
-              .from('round_players')
-              .select('user_id,rating:rating_at_start')
-              .eq('round_id', t.current_round_id)
-          : none,
-    ])
+    setMembers(s.members)
+    if (s.friends) setMyFriends([...s.friends].sort((x, y) => x.name.localeCompare(y.name)))
+    setWatchRounds(s.round_ids.join(','))
+    setWatchGames(s.games.map(g => g.id).join(','))
+    setWatchHistory(s.history.map(g => g.id).join(','))
     setChanceInput(
-      chanceRows.error || t.status === 'results'
-        ? null
-        : {
+      s.chance
+        ? {
             round: t.status === 'lobby' ? null : t.current_round_id,
-            ratings: Object.fromEntries((chanceRows.data || []).map(r => [r.user_id, r.rating])),
-          },
+            ratings: Object.fromEntries(s.chance.map(r => [r.user_id, r.rating])),
+          }
+        : null,
     )
-    setPlayers((rp || []).map(x => x.user_id))
-    setGames((gg || []) as Game[])
-    setHistoryGames((historic || []) as Game[])
-    const allIds = [
-      ...(mm || []).map(m => m.user_id),
-      ...(rp || []).map(p => p.user_id),
-      ...(historic || []).flatMap(g => g.loser_ids),
-    ]
-    if (allIds.length) {
-      const { data: people } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', [...new Set(allIds)])
-      setProfiles(Object.fromEntries(((people || []) as Profile[]).map(p => [p.id, p])))
-    }
-    const gameIds = (gg || []).map(g => g.id)
-    setWatchGames(gameIds.join(','))
-    setWatchHistory((historic || []).map(g => g.id).join(','))
-    if (gameIds.length) {
-      const { data: voteData } = await supabase.from('vote_totals').select('*').in('game_id', gameIds)
-      setTotals((voteData || []) as VoteTotal[])
-    } else setTotals([])
-    const histIds = (historic || []).map(g => g.id)
+    setPlayers(s.players)
+    setGames(s.games)
+    setHistoryGames(s.history)
+    setProfiles(Object.fromEntries(s.profiles.map(p => [p.id, p])))
+    setTotals(s.totals)
     const votesByGame: Record<string, Ballot[]> = {}
-    if (histIds.length) {
-      const { data: vv } = await supabase
-        .from('game_votes')
-        .select('game_id,voter_id,nominee_id')
-        .in('game_id', histIds)
-      for (const v of vv || [])
-        (votesByGame[v.game_id] ||= []).push({ voter_id: v.voter_id, nominee_id: v.nominee_id })
-      setBallots(votesByGame)
-      const { data: cc } = await supabase.from('reversal_cases').select('*').in('game_id', histIds)
-      setCases((cc || []) as typeof cases)
-      const cs = (cc || []).filter(c => c.state === 'open').map(c => c.id)
-      if (cs.length) {
-        const { data: vv } = await supabase.from('reversal_votes').select('case_id,approve').in('case_id', cs)
-        const counts: Record<string, number> = {}
-        for (const v of vv || []) if (v.approve) counts[v.case_id] = (counts[v.case_id] || 0) + 1
-        setYesCounts(counts)
-      } else setYesCounts({})
-    } else setCases([])
-    // rids is newest first, so rids[0] is the latest round: a result from before it never pops up.
-    const fresh = pickVerdicts((historic || []) as Game[], rids[0], Date.now(), shownVerdicts)
+    for (const v of s.ballots)
+      (votesByGame[v.game_id] ||= []).push({ voter_id: v.voter_id, nominee_id: v.nominee_id })
+    setBallots(votesByGame)
+    setCases(s.cases)
+    setYesCounts(s.case_approvals)
+    // round_ids is newest first, so its first id is the latest round: a result from before it never pops up.
+    const latest = s.round_ids[0]
+    const fresh = pickVerdicts(s.history, latest, Date.now(), shownVerdicts)
     // A new round makes the older results still waiting in the queue stale; the one on screen stays.
-    setVerdicts(v => v.filter((x, i) => i === 0 || x.game.round_id === rids[0]))
+    setVerdicts(v => v.filter((x, i) => i === 0 || x.game.round_id === latest))
     if (fresh.length) {
       for (const g of fresh) shownVerdicts.add(g.id)
       const { data: ll } = await supabase
