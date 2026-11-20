@@ -2,16 +2,12 @@ import { useCallback, useEffect, useState } from 'react'
 import { errorMessage, modeInfo, rpc } from '../lib'
 import type { Game, GameDetails, HistoryGame } from '../lib'
 import { streakLabel } from '../lossStreak'
-import { Button, MODE_CARD, PlayerName, dateTime, listNames } from '../ui'
+import { Button, MODE_CARD, PlayerName, dateTime, deltaClass, listNames, signed } from '../ui'
 
 // Personal game history: every result the player took part in, from the server's ledger (nothing is re-rated here).
 const HISTORY_PAGE = 20
 
-const signed = (d: number) => `${d > 0 ? '+' : d < 0 ? '\u2212' : '\u00B1'}${Math.abs(d).toFixed(2)}`
-
 const elo = (r: number) => r.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-
-const deltaClass = (d: number) => (d > 0 ? 'gainDelta' : d < 0 ? 'lossDelta' : '')
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 

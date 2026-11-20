@@ -13,10 +13,25 @@ import {
   MiniModeCard,
   ModeChips,
   PlayerName,
+  REPUTATION_WINDOW,
+  Stars,
   ThemeContext,
+  dateTime,
   formatRating,
+  useReputation,
 } from '../ui'
 import type { Action } from '../ui'
+
+type RepEvent = {
+  game_id: string
+  finalized_at: string
+  mode: Mode
+  kind: 'denied_loss' | 'backed_overturned'
+}
+const REP_EVENT_TEXT: Record<RepEvent['kind'], string> = {
+  denied_loss: 'Voted for someone else in a game you lost',
+  backed_overturned: 'Named the loser of a game that was later reversed',
+}
 
 type TableMate = {
   user_id: string
@@ -214,6 +229,23 @@ export function ProfileScreen({
       setNextPassword('')
       setAccountNotice('Password changed.')
     })
+  // Reputation stars, and the dishonest votes behind any missing ones (public.my_reputation_events).
+  const myRep = useReputation([me], ratings)[me]
+  const [repEvents, setRepEvents] = useState<RepEvent[] | null>(null)
+  useEffect(() => {
+    let live = true
+    rpc<RepEvent[]>('my_reputation_events')
+      .then(r => {
+        if (live) setRepEvents(r || [])
+      })
+      .catch(e => {
+        console.error(e)
+        if (live) setRepEvents([])
+      })
+    return () => {
+      live = false
+    }
+  }, [me, ratings])
   return (
     <div className="stack page pageEntry">
       {blue ? (
@@ -221,7 +253,14 @@ export function ProfileScreen({
           <Avatar id={me} name={who} me={me} size="lg" />
           <div>
             <h1>{who}</h1>
-            {accountEmail && <p>{accountEmail}</p>}
+            <p>
+              {accountEmail && <>{accountEmail} · </>}
+              {myRep && (
+                <>
+                  <Stars rep={myRep} /> reputation
+                </>
+              )}
+            </p>
           </div>
         </header>
       ) : (
@@ -231,6 +270,11 @@ export function ProfileScreen({
           </span>
           <div>
             <h1>{who}</h1>
+            {myRep && (
+              <p>
+                <Stars rep={myRep} /> reputation
+              </p>
+            )}
           </div>
         </header>
       )}
@@ -280,6 +324,44 @@ export function ProfileScreen({
             )
           })}
         </ul>
+      </section>
+      <section className="stack sm" aria-labelledby="reputation-title">
+        <h2 id="reputation-title" className="sectionTitle">
+          Reputation
+        </h2>
+        {myRep && (
+          <p className="reputationLine">
+            <Stars rep={myRep} />
+            <small>
+              {myRep.voted === 0
+                ? 'You start with 5 stars. Vote in a game to build your record.'
+                : myRep.dishonest === 0
+                  ? `Honest in all of your last ${myRep.voted} voted ${myRep.voted === 1 ? 'game' : 'games'}.`
+                  : `${myRep.dishonest} dishonest ${myRep.dishonest === 1 ? 'vote' : 'votes'} in your last ${myRep.voted} voted games. ${myRep.dishonest === 1 ? 'It stops' : 'They stop'} counting once ${REPUTATION_WINDOW} newer voted games have passed.`}
+            </small>
+          </p>
+        )}
+        {repEvents && repEvents.length > 0 && (
+          <ul className="modeRows">
+            {repEvents.map(e => (
+              <li key={e.game_id} className="modeRow">
+                <span className="modeText">
+                  <b>{REP_EVENT_TEXT[e.kind]}</b>
+                  <small>
+                    {modeInfo(e.mode).name} · {dateTime(e.finalized_at)}
+                  </small>
+                </span>
+                <strong className="modeRowRating lossDelta">−1 ★</strong>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="fieldHint">
+          Everyone starts with 5 stars and loses one for each dishonest vote in their last {REPUTATION_WINDOW}{' '}
+          voted games, down to 1: voting for someone else in a game you lost, or naming the loser of a game
+          that a correction later reversed (unless you approved the correction). Disagreeing with the others
+          is not dishonest. Stars come back as those votes get older.
+        </p>
       </section>
       {total >= 10 ? (
         <section className="stack sm" aria-labelledby="stats-title">

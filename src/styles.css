@@ -3657,3 +3657,73 @@ select {
     transition: none;
   }
 }
+
+/* Reputation stars (public.player_reputation): gold when full, red once a dishonest vote has cost one. */
+.stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--brass-ink);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.starGlyph {
+  font-size: 1.3em;
+  line-height: 1;
+}
+.stars.dented {
+  color: var(--red);
+}
+.seatMeta .stars,
+.rowRep .stars {
+  font-size: 0.85rem;
+}
+.rowRep {
+  flex: none;
+  margin-left: auto;
+}
+.reputationLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  margin: 0;
+}
+.reputationLine small {
+  flex-basis: 100%;
+  color: var(--ink-soft);
+  font-size: 0.9375rem;
+}
+
+/* "Vote closed" sheet on the table screen. */
+.verdict {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.verdict .voteGame {
+  margin: 0;
+}
+.verdictName {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.75rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.verdictDelta {
+  margin: 0;
+  color: var(--ink-2);
+}
+.verdictDelta strong {
+  margin-left: 6px;
+  font-size: 1.125rem;
+}
+.verdictWarning {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--red-tint);
+  color: var(--red);
+  font-weight: 600;
+}

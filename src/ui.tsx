@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useRef } from 'react'
-import { MODES } from './lib'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { MODES, rpc } from './lib'
 import type { Mode, TableRow } from './lib'
 import { formatChance } from './lossChance'
 import type { Chance } from './lossChance'
@@ -308,5 +308,60 @@ export function ModeChips({ mode, setMode }: { mode: Mode; setMode: (m: Mode) =>
         </button>
       ))}
     </div>
+  )
+}
+
+/** A rating change with sign and two decimals, as in History. */
+export const signed = (d: number) => `${d > 0 ? '+' : d < 0 ? '\u2212' : '\u00B1'}${Math.abs(d).toFixed(2)}`
+export const deltaClass = (d: number) => (d > 0 ? 'gainDelta' : d < 0 ? 'lossDelta' : '')
+
+// Reputation (public.player_reputation): 5 stars, minus one per dishonest vote in the last
+// REPUTATION_WINDOW voted games, never below 1. See supabase/migrations/202611200001_reputation.sql.
+export const REPUTATION_WINDOW = 30
+export type Reputation = { stars: number; dishonest: number; voted: number }
+/** Stars for these players; refetched when the set of players or `refresh` changes. */
+export function useReputation(ids: string[], refresh?: unknown) {
+  const [reps, setReps] = useState<Record<string, Reputation>>({})
+  const key = [...new Set(ids)].sort().join(',')
+  useEffect(() => {
+    if (!key) return
+    let live = true
+    rpc<({ user_id: string } & Reputation)[]>('player_reputation', { p_users: key.split(',') })
+      .then(rows => {
+        if (live) setReps(Object.fromEntries((rows || []).map(r => [r.user_id, r])))
+      })
+      .catch(console.error) // stars are extra: without them the screen still works
+    return () => {
+      live = false
+    }
+  }, [key, refresh])
+  return reps
+}
+const starsTitle = (rep: Reputation) =>
+  `Reputation ${rep.stars} of 5: ${rep.dishonest} dishonest ${rep.dishonest === 1 ? 'vote' : 'votes'} in the last ${Math.min(rep.voted, REPUTATION_WINDOW)} voted games`
+export const Stars = ({ rep }: { rep?: Reputation }) =>
+  rep ? (
+    <span className={`stars ${rep.stars < 5 ? 'dented' : ''}`} title={starsTitle(rep)}>
+      <span className="starGlyph" aria-hidden="true">
+        {'\u2605\uFE0E'}
+      </span>
+      {rep.stars.toFixed(1)}
+    </span>
+  ) : null
+/** One player's stars with a short explanation, for the player sheet. */
+export function ReputationLine({ id, name }: { id: string; name: string }) {
+  const rep = useReputation([id])[id]
+  if (!rep) return null
+  return (
+    <p className="reputationLine">
+      <Stars rep={rep} /> reputation
+      <small>
+        {rep.voted === 0
+          ? `${name} has not voted in a finished game yet.`
+          : rep.dishonest === 0
+            ? `Honest in all of their last ${rep.voted} voted ${rep.voted === 1 ? 'game' : 'games'}.`
+            : `${rep.dishonest} dishonest ${rep.dishonest === 1 ? 'vote' : 'votes'} in their last ${rep.voted} voted games.`}
+      </small>
+    </p>
   )
 }

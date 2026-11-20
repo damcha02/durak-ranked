@@ -13,7 +13,7 @@ import { ProfileScreen } from './screens/ProfileScreen'
 import { TableScreen } from './screens/TableScreen'
 import { applyTheme, readTheme, saveTheme } from './theme'
 import type { Theme } from './theme'
-import { APP_NAME, Brand, Button, FriendCtx, NavTabs, Sheet, ThemeContext, tint } from './ui'
+import { APP_NAME, Brand, Button, FriendCtx, NavTabs, ReputationLine, Sheet, ThemeContext, tint } from './ui'
 import type { Action, Page, Rel } from './ui'
 
 const getJoinCode = () => new URLSearchParams(location.search).get('join')?.trim().toUpperCase() || ''
@@ -269,6 +269,7 @@ export default function App() {
                 })
             return (
               <div className="stack sm">
+                <ReputationLine key={`rep-${person.id}`} id={person.id} name={person.name} />
                 {rel === 'friend' && <FriendStats key={person.id} id={person.id} name={person.name} />}
                 {rel === 'sent' && <p>You asked {person.name} to be friends. Waiting for them to accept.</p>}
                 {rel === 'incoming' && (

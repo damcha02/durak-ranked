@@ -15,6 +15,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { MODES, modeInfo, rpc, supabase } from '../lib'
 import type { Game, Member, Profile, TableRow, VoteTotal } from '../lib'
 import { lossChances } from '../lossChance'
+import { pickVerdicts } from '../verdict'
 import {
   APP_NAME,
   Avatar,
@@ -24,9 +25,14 @@ import {
   PlayerName,
   STATUS_TEXT,
   Sheet,
+  Stars,
   dateTime,
+  deltaClass,
+  listNames,
+  signed,
   statusOf,
   useBlue,
+  useReputation,
 } from '../ui'
 import type { Action } from '../ui'
 
@@ -52,6 +58,11 @@ function VoteTimer({ deadline }: { deadline: string }) {
     </div>
   )
 }
+
+// "Vote closed" pop-up (see pickVerdicts): shown once per game per session.
+const shownVerdicts = new Set<string>()
+type Ballot = { voter_id: string; nominee_id: string }
+type Verdict = { game: Game; delta: number | null; ballots: Ballot[] }
 
 export function TableScreen({
   tableId,
@@ -85,7 +96,8 @@ export function TableScreen({
     [mySelections, setMySelections] = useState<Record<string, string>>({}),
     [showHistory, setShowHistory] = useState(false),
     [ballots, setBallots] = useState<Record<string, { voter_id: string; nominee_id: string }[]>>({}),
-    [myFriends, setMyFriends] = useState<{ id: string; name: string }[]>([])
+    [myFriends, setMyFriends] = useState<{ id: string; name: string }[]>([]),
+    [verdicts, setVerdicts] = useState<Verdict[]>([])
   // Ids the realtime listeners watch (comma-joined, so an unchanged set does not resubscribe).
   const [watchRounds, setWatchRounds] = useState(''),
     [watchGames, setWatchGames] = useState(''),
@@ -198,12 +210,12 @@ export function TableScreen({
       setTotals((voteData || []) as VoteTotal[])
     } else setTotals([])
     const histIds = (historic || []).map(g => g.id)
+    const votesByGame: Record<string, Ballot[]> = {}
     if (histIds.length) {
       const { data: vv } = await supabase
         .from('game_votes')
         .select('game_id,voter_id,nominee_id')
         .in('game_id', histIds)
-      const votesByGame: Record<string, { voter_id: string; nominee_id: string }[]> = {}
       for (const v of vv || [])
         (votesByGame[v.game_id] ||= []).push({ voter_id: v.voter_id, nominee_id: v.nominee_id })
       setBallots(votesByGame)
@@ -217,6 +229,28 @@ export function TableScreen({
         setYesCounts(counts)
       } else setYesCounts({})
     } else setCases([])
+    // rids is newest first, so rids[0] is the latest round: a result from before it never pops up.
+    const fresh = pickVerdicts((historic || []) as Game[], rids[0], Date.now(), shownVerdicts)
+    // A new round makes the older results still waiting in the queue stale; the one on screen stays.
+    setVerdicts(v => v.filter((x, i) => i === 0 || x.game.round_id === rids[0]))
+    if (fresh.length) {
+      for (const g of fresh) shownVerdicts.add(g.id)
+      const { data: ll } = await supabase
+        .from('rating_ledger')
+        .select('game_id,delta')
+        .eq('user_id', me)
+        .in(
+          'game_id',
+          fresh.map(g => g.id),
+        )
+      const deltas = new Map((ll || []).map(l => [l.game_id as string, Number(l.delta)]))
+      const next = fresh.map(g => ({
+        game: g,
+        delta: deltas.get(g.id) ?? null,
+        ballots: votesByGame[g.id] || [],
+      }))
+      setVerdicts(v => [...v, ...next])
+    }
   }, [tableId, me])
   // One fetch at a time: a call made while one is running waits for it plus one fresh rerun, so slow
   // mobile connections do not stack up overlapping fetches (and every caller still sees fresh data).
@@ -322,6 +356,10 @@ export function TableScreen({
     }
   }, [activeGame?.id, activeGame?.deadline, activeGame?.state, load])
   const name = (id: string) => profiles[id]?.username || `Player ${id.slice(0, 4)}`
+  const reps = useReputation(
+    members.map(m => m.user_id),
+    historyGames.map(g => g.id + g.state).join(),
+  )
   const invite = table ? `${location.origin}${location.pathname}?join=${table.code}` : ''
   const share = async () => {
     if (navigator.share) {
@@ -626,6 +664,9 @@ export function TableScreen({
                         Remove
                       </button>
                     )}
+                    <span className="rowRep">
+                      <Stars rep={reps[m.user_id]} />
+                    </span>
                   </li>
                 )
               })}
@@ -659,7 +700,12 @@ export function TableScreen({
                       <PlayerName id={m.user_id} name={who} />
                     </b>
                     {chances?.[m.user_id] && <ChanceLine chance={chances[m.user_id]} />}
-                    {host && <span className="seatMeta">host</span>}
+                    {(host || reps[m.user_id]) && (
+                      <span className="seatMeta">
+                        <Stars rep={reps[m.user_id]} />
+                        {host && (reps[m.user_id] ? ' · host' : 'host')}
+                      </span>
+                    )}
                     {table.status === 'lobby' && table.host_id === me && !mine && (
                       <button
                         className="seatAction"
@@ -1027,7 +1073,84 @@ export function TableScreen({
           )}
         </section>
       )}
+      <VerdictSheet
+        verdict={verdicts[0]}
+        me={me}
+        name={name}
+        parallel={info.games > 1}
+        onClose={() => setVerdicts(v => v.slice(1))}
+      />
     </div>
+  )
+}
+
+/** "Vote closed": who the Durak is, your rating change and every ballot, once the vote is final. */
+function VerdictSheet({
+  verdict,
+  me,
+  name,
+  parallel,
+  onClose,
+}: {
+  verdict?: Verdict
+  me: string
+  name: (id: string) => string
+  parallel: boolean
+  onClose: () => void
+}) {
+  const g = verdict?.game
+  const myBallot = verdict?.ballots.find(b => b.voter_id === me)
+  // Telling the player who just denied their own loss what it cost (see the reputation migration).
+  const denied = g?.state === 'confirmed' && g.loser_ids[0] === me && myBallot && myBallot.nominee_id !== me
+  return (
+    <Sheet open={Boolean(verdict)} title="Vote closed" onClose={onClose}>
+      {g && verdict && (
+        <div className="verdict" role="status">
+          {parallel && <p className="voteGame">Game {g.slot}</p>}
+          <p className="verdictName">
+            {g.state === 'confirmed' ? (
+              g.loser_ids[0] === me ? (
+                <>
+                  You're the <b>Durak</b>
+                </>
+              ) : (
+                <>
+                  <b>{name(g.loser_ids[0])}</b> is the Durak
+                </>
+              )
+            ) : (
+              <>
+                Shared loss: <b>{listNames(g.loser_ids.map(id => (id === me ? 'you' : name(id))))}</b>
+              </>
+            )}
+          </p>
+          {verdict.delta !== null && (
+            <p className="verdictDelta">
+              Your rating <strong className={deltaClass(verdict.delta)}>{signed(verdict.delta)}</strong>
+            </p>
+          )}
+          {verdict.ballots.length > 0 && (
+            <p className="ballots">
+              <span className="ballotsLabel">Votes</span>
+              {verdict.ballots.map(b => (
+                <span key={b.voter_id}>
+                  {name(b.voter_id)} → {name(b.nominee_id)}
+                </span>
+              ))}
+            </p>
+          )}
+          {denied && (
+            <p className="verdictWarning">
+              You voted for {name(myBallot.nominee_id)}. Voting for someone else in a game you lost costs a
+              reputation star.
+            </p>
+          )}
+          <Button className="wide" onClick={onClose}>
+            OK
+          </Button>
+        </div>
+      )}
+    </Sheet>
   )
 }
 
