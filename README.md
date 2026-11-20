@@ -24,9 +24,11 @@ Durak Ranked now opens from its icon like any other app.
 2. **Start a table**: pick a game mode and tap **Create table**. Friends join by scanning your QR code (**Invite / QR**) or typing the 8-character table code under **Join a table**.
 3. **Deal the cards**: once enough players have joined, the host taps **Start new game**. Play with your real deck; you can put your phone away.
 4. **Record the result**: when the hand is over, tap **Cards finished — record results**, and everyone votes for the player left holding cards. A clear majority decides straight away; otherwise the vote closes 30 seconds after the first vote.
-5. **See where you stand** under **Rankings**, or set up a private leaderboard for your regular crowd under **Groups**.
+5. **See where you stand** under **Rankings**. Add your regular crowd under **Friends** to seat them at your table in one tap, see standings among yourselves, and compare head to head.
 
 Ratings start at 1,200 and each game mode (Durak, Double Single, Single Double, Double Double) has its own.
+
+Forgot your password? Tap **Forgot your password?** on the sign-in screen and we'll email you a reset link.
 
 You can switch between the light-blue and the card-table look under **Profile → Appearance**.
 

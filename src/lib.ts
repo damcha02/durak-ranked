@@ -2,6 +2,10 @@ import { createClient } from '@supabase/supabase-js'
 export const url = import.meta.env.VITE_SUPABASE_URL || ''
 export const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 export const configured = Boolean(url && key && url.startsWith('https://'))
+// Read before the client consumes the URL: a password-reset link lands on #…&type=recovery, an expired one on #error=….
+const authHash = new URLSearchParams(location.hash.slice(1))
+export const recoveryLink = authHash.get('type') === 'recovery'
+export const authLinkError = authHash.has('error') ? authHash.get('error_description') || 'This link is no longer valid.' : ''
 export const supabase = createClient(configured ? url : 'https://example.supabase.co',key || 'placeholder',{
   auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}
 })

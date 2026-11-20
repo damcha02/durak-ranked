@@ -2,8 +2,8 @@ import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState} 
 import type {Session} from '@supabase/supabase-js'
 import {QRCodeSVG} from 'qrcode.react'
 import jsQR from 'jsqr'
-import {ArrowRight,Camera,ChevronDown,Clock3,Copy,Crown,LogOut,RefreshCw,ShieldCheck,Star,Trash2,X} from 'lucide-react'
-import {configured,date,errorMessage,MODES,modeInfo,rpc,supabase} from './lib'
+import {ArrowRight,Camera,ChevronDown,Clock3,Copy,Crown,LogOut,RefreshCw,ShieldCheck,Trash2,X} from 'lucide-react'
+import {authLinkError,configured,date,errorMessage,MODES,modeInfo,recoveryLink,rpc,supabase} from './lib'
 import {isEmailIdentifier,isUsername} from './authValidation'
 import {signInByUsername} from './usernameSignIn'
 import {applyTheme,readTheme,saveTheme,THEMES} from './theme'
@@ -23,7 +23,6 @@ type Action=(fn:()=>Promise<unknown>)=>Promise<void>
 const formatRating=(rating:number)=>Math.round(rating).toLocaleString()
 const dateTime=(s:string)=>{const d=new Date(s);return d.toLocaleString(undefined,{month:'short',day:'numeric',...(d.getFullYear()===new Date().getFullYear()?{}:{year:'numeric'}),hour:'2-digit',minute:'2-digit'})}
 const getJoinCode=()=>new URLSearchParams(location.search).get('join')?.trim().toUpperCase() || ''
-const Stars=({compact=false}:{compact?:boolean})=><span className="stars" title="5-star reputation baseline"><Star size={compact?11:14} fill="currentColor"/> 5.0</span>
 const APP_NAME='Durak Ranked'
 // Every game mode is a card with a corner index (abbreviation + suit). \uFE0E keeps iOS from drawing the suits as emoji.
 const MODE_CARD:Record<Mode,{abbr:string;suit:string;red:boolean}>={natural:{abbr:'D',suit:'\u2660\uFE0E',red:false},double_single:{abbr:'DS',suit:'\u2663\uFE0E',red:false},single_double:{abbr:'SD',suit:'\u2665\uFE0E',red:true},double_double:{abbr:'DD',suit:'\u2666\uFE0E',red:true}}
@@ -140,11 +139,19 @@ function NavTabs({page,go,className}:{page:Page|null;go:(p:Page)=>void;className
 }
 function AuthScreen({joinCode}:{joinCode:string}){
  const [identifier,setIdentifier]=useState(''),[email,setEmail]=useState(''),[username,setUsername]=useState(''),[password,setPassword]=useState('')
- const [tab,setTab]=useState<'sign-in'|'register'>('sign-in'),[notice,setNotice]=useState(''),[working,setWorking]=useState(false)
+ // An expired or already-used reset link lands here with an error, so offer a fresh one straight away.
+ const [tab,setTab]=useState<'sign-in'|'register'|'reset'>(authLinkError?'reset':'sign-in'),[notice,setNotice]=useState(authLinkError?`${authLinkError.replace(/\.?$/,'.')} Request a new reset link.`:''),[working,setWorking]=useState(false),[sentTo,setSentTo]=useState('')
  const blue=useBlue()
  const act=async(fn:()=>Promise<void>)=>{setWorking(true);setNotice('');try{await fn()}catch(e){setNotice(errorMessage(e))}finally{setWorking(false)}}
+ const switchTab=(t:typeof tab)=>{setTab(t);setNotice('');setSentTo('')}
  const submit=()=>void act(async()=>{
-  if(tab==='register'){
+  if(tab==='reset'){
+   const address=email.trim()
+   if(!isEmailIdentifier(address))throw new Error('Enter the email address of your account.')
+   const {error}=await supabase.auth.resetPasswordForEmail(address,{redirectTo:`${location.origin}/`})
+   if(error)throw error
+   setSentTo(address)
+  }else if(tab==='register'){
    const handle=username.trim()
    if(!isUsername(handle))throw new Error('Username must contain 3–22 letters, numbers or underscores.')
    if(password.length<10)throw new Error('Choose a password of at least 10 characters.')
@@ -180,10 +187,20 @@ function AuthScreen({joinCode}:{joinCode:string}){
    <div className="brandLarge"><span className="brandFan" aria-hidden="true"><span className="fanBack"/><span className="fanFront"><span className="miniIndex">D</span>{'\u2660\uFE0E'}</span></span><h1>Durak<br/>Ranked</h1></div>
    <p>Keep score for the games you play with a real deck. Vote on who's left holding cards, and see your rating per mode.</p>
   </header>}
+  {tab==='reset'?<form className="authCard" aria-labelledby="reset-title" onSubmit={e=>{e.preventDefault();submit()}}>
+   <h2 id="reset-title">Reset your password</h2>
+   {sentTo?<p role="status">If <strong>{sentTo}</strong> belongs to an account, a reset link is on its way. Open it to choose a new password. It can take a few minutes; check your spam folder too.</p>:<>
+    <p className="fieldHint">Enter the email address you signed up with and we'll send you a link to choose a new password.</p>
+    <label className="field">Email address<input required type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)}/></label>
+    {notice&&errorLine}
+    <Button type="submit" disabled={working} className="wide">{working?'Please wait…':'Send reset link'}</Button>
+   </>}
+   <button type="button" className="linkButton plain" onClick={()=>switchTab('sign-in')}>Back to sign in</button>
+  </form>:<>
   <div className="authTabs" role="group" aria-label="Account">
    <span className={`authThumb ${tab==='register'?'right':''}`} aria-hidden="true"/>
-   <button type="button" aria-pressed={tab==='sign-in'} className={tab==='sign-in'?'selected':''} onClick={()=>setTab('sign-in')}>Sign in</button>
-   <button type="button" aria-pressed={tab==='register'} className={tab==='register'?'selected':''} onClick={()=>setTab('register')}>Create account</button>
+   <button type="button" aria-pressed={tab==='sign-in'} className={tab==='sign-in'?'selected':''} onClick={()=>switchTab('sign-in')}>Sign in</button>
+   <button type="button" aria-pressed={tab==='register'} className={tab==='register'?'selected':''} onClick={()=>switchTab('register')}>Create account</button>
   </div>
   <form className="authCard" aria-label={tab==='register'?'Create account':'Sign in'} onSubmit={e=>{e.preventDefault();submit()}}>
    {tab==='register'?<>
@@ -193,8 +210,33 @@ function AuthScreen({joinCode}:{joinCode:string}){
    <div className="fieldGroup"><label className="field">Password<input required minLength={tab==='register'?10:1} type="password" autoComplete={tab==='register'?'new-password':'current-password'} aria-describedby={tab==='register'?'password-hint':undefined} value={password} onChange={e=>setPassword(e.target.value)}/></label>{tab==='register'&&<p id="password-hint" className="fieldHint">At least 10 characters</p>}</div>
    {notice&&!usernameError&&errorLine}
    <Button type="submit" disabled={working} className="wide">{working?'Please wait…':tab==='register'?'Create account':'Sign in'}</Button>
+   {tab==='sign-in'&&<button type="button" className="linkButton plain" onClick={()=>switchTab('reset')}>Forgot your password?</button>}
   </form>
-  {tab==='register'&&<p className="authNote">No email confirmation required during this testing phase. Use an email address you control so you can recover your account.</p>}
+  {tab==='register'&&<p className="authNote">Use an email address you control: it's how you reset a forgotten password.</p>}
+  </>}
+ </main></div>
+}
+
+// Shown after opening a password-reset link: the link signs you in, and you choose a new password before going on.
+function NewPasswordScreen({onDone}:{onDone:()=>void}){
+ const [password,setPassword]=useState(''),[repeat,setRepeat]=useState(''),[notice,setNotice]=useState(''),[working,setWorking]=useState(false)
+ const submit=async()=>{
+  setNotice('')
+  if(password.length<10){setNotice('Choose a password of at least 10 characters.');return}
+  if(password!==repeat){setNotice('The two passwords don\'t match.');return}
+  setWorking(true)
+  try{const {error}=await supabase.auth.updateUser({password});if(error)throw error;onDone()}
+  catch(e){setNotice(errorMessage(e))}finally{setWorking(false)}
+ }
+ return <div className="authWrap"><main className="authInner">
+  <h1 className="brandHeading"><Brand/></h1>
+  <form className="authCard" aria-labelledby="new-password-title" onSubmit={e=>{e.preventDefault();void submit()}}>
+   <h2 id="new-password-title">Choose a new password</h2>
+   <div className="fieldGroup"><label className="field">New password<input required minLength={10} type="password" autoComplete="new-password" aria-describedby="reset-password-hint" value={password} onChange={e=>setPassword(e.target.value)}/></label><p id="reset-password-hint" className="fieldHint">At least 10 characters</p></div>
+   <label className="field">Repeat new password<input required minLength={10} type="password" autoComplete="new-password" value={repeat} onChange={e=>setRepeat(e.target.value)}/></label>
+   {notice&&<p className="fieldError" role="alert"><span aria-hidden="true">{'♦︎'}</span>{notice}</p>}
+   <Button type="submit" disabled={working} className="wide">{working?'Please wait…':'Save new password'}</Button>
+  </form>
  </main></div>
 }
 
@@ -204,15 +246,19 @@ export default function App(){
  const [joinCode,setJoinCode]=useState(getJoinCode())
  const [friendRows,setFriendRows]=useState<{other:string;status:'pending'|'accepted';mine:boolean}[]>([]),[person,setPerson]=useState<{id:string;name:string}|null>(null)
  const [theme,setThemeState]=useState<Theme>(readTheme)
+ // True from opening a password-reset link until the new password is saved.
+ const [recovering,setRecovering]=useState(recoveryLink)
  const [showChances,setShowChancesState]=useState(readShowChances)
  const setShowChances=(show:boolean)=>{setShowChancesState(show);saveShowChances(show)}
  const themeValue=useMemo(()=>({theme,setTheme:(t:Theme)=>{setThemeState(t);saveTheme(t);applyTheme(t)}}),[theme])
  const user=session?.user
  const reloadProfile=useCallback(async()=>{if(!user)return;const {data,error}=await supabase.from('profiles').select('*').eq('id',user.id).single();if(error)throw error;setProfile(data as Profile)},[user?.id])
- useEffect(()=>{let valid=true;void supabase.auth.getSession().then(({data})=>{if(valid){setSession(data.session);setLoading(false)}});const{subscription}=supabase.auth.onAuthStateChange((_event,s)=>{setSession(s);setLoading(false)}).data;return()=>{valid=false;subscription.unsubscribe()}},[])
+ useEffect(()=>{let valid=true;void supabase.auth.getSession().then(({data})=>{if(valid){setSession(data.session);setLoading(false)}});const{subscription}=supabase.auth.onAuthStateChange((event,s)=>{if(event==='PASSWORD_RECOVERY')setRecovering(true);setSession(s);setLoading(false)}).data;return()=>{valid=false;subscription.unsubscribe()}},[])
  useEffect(()=>{if(user){void reloadProfile().catch(e=>setMessage(errorMessage(e))) }else setProfile(null)},[user?.id,reloadProfile])
  useEffect(()=>{if(!joinCode||!user)return;const c=joinCode;setJoinCode('');void (async()=>{try{setBusy(true);const id=await rpc<string>('join_table',{p_code:c});setTableId(id);history.replaceState(null,'',location.pathname)}catch(e){setMessage(errorMessage(e))}finally{setBusy(false)}})()},[user?.id,joinCode])
  useEffect(()=>{window.scrollTo(0,0)},[page,tableId])
+ // The client leaves a failed link's #error=… in the address bar; the sign-in screen has already read it.
+ useEffect(()=>{if(authLinkError)history.replaceState(null,'',location.pathname+location.search)},[])
  const loadFriends=useCallback(async()=>{if(!user)return;const{data}=await supabase.from('friendships').select('*');setFriendRows((data||[]).map(f=>({other:f.user_a===user.id?f.user_b:f.user_a,status:f.status,mine:f.requested_by===user.id})))},[user?.id])
  useEffect(()=>{void loadFriends().catch(console.error)},[loadFriends])
  const friendCtx=useMemo(()=>({me:user?.id||'',rel:(id:string):Rel=>{const r=friendRows.find(x=>x.other===id);return !r?'none':r.status==='accepted'?'friend':r.mine?'sent':'incoming'},pick:(id:string,name:string)=>{setPerson({id,name});void loadFriends().catch(console.error)}}),[user?.id,friendRows,loadFriends])
@@ -225,6 +271,7 @@ export default function App(){
  if(!configured)return themed(<div className="setup"><Brand/><h1>Connect your backend</h1><p>Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> to a <code>.env</code> file, then restart Vite.</p><p className="muted">See README.md for the complete Supabase setup.</p></div>)
  if(loading)return themed(<div className="loading" role="status"><Brand/><p>Loading {APP_NAME}…</p></div>)
  if(!session)return themed(<AuthScreen joinCode={joinCode}/>)
+ if(recovering)return themed(<NewPasswordScreen onDone={()=>{setRecovering(false);setMessage('Password changed. You\'re signed in.')}}/>)
  const initials=(profile?.username||'U').slice(0,2).toUpperCase()
  const go=(p:Page)=>{setTableId(null);setPage(p)}
  return themed(<div className="appShell">
@@ -541,7 +588,6 @@ const canStop=games.length>0&&games.every(g=>['awaiting','voting','tie_offer'].i
      <span className="rowText"><b><PlayerName id={m.user_id} name={who}/>{mine&&<span className="youChip">you</span>}</b>{chances?.[m.user_id]&&<ChanceLine chance={chances[m.user_id]}/>}{host&&<small><Crown className="hostIcon" size={13} aria-hidden="true"/> Host</small>}</span>
      {table.status==='lobby'&&table.host_id===me&&!mine&&<button className="linkButton" disabled={busy} aria-label={`Make ${who} the host`} onClick={()=>promote(m.user_id)}>Make host</button>}
      {table.status==='lobby'&&table.host_id===me&&!mine&&<button className="linkButton danger" disabled={busy} aria-label={`Remove ${who} from the table`} onClick={()=>kick(m.user_id,who)}>Remove</button>}
-     <span className="rowRep" title="5-star reputation baseline">★ 5.0</span>
     </li>})}
     {seats>0&&<li><button className="playerRow waiting" aria-label="Waiting for someone to join. Show the invite" onClick={()=>setShowQR(true)}><span className="tintAvatar md empty" aria-hidden="true"/><span>Waiting for someone to join…</span></button></li>}
    </ul>:<ul className="seatGrid">
@@ -551,7 +597,7 @@ const canStop=games.length>0&&games.every(g=>['awaiting','voting','tie_offer'].i
      <span className="seatInitials" aria-hidden="true">{who.slice(0,2).toUpperCase()}</span>
      <b className="seatName" title={who}><PlayerName id={m.user_id} name={who}/></b>
      {chances?.[m.user_id]&&<ChanceLine chance={chances[m.user_id]}/>}
-     <span className="seatMeta"><span title="5-star reputation baseline">★ 5.0</span>{host&&' · host'}</span>
+     {host&&<span className="seatMeta">host</span>}
      {table.status==='lobby'&&table.host_id===me&&!mine&&<button className="seatAction" disabled={busy} aria-label={`Make ${who} the host`} onClick={()=>promote(m.user_id)}>Make host</button>}
      {table.status==='lobby'&&table.host_id===me&&!mine&&<button className="seatAction danger" disabled={busy} aria-label={`Remove ${who} from the table`} onClick={()=>kick(m.user_id,who)}>Remove</button>}
     </li>})}
@@ -826,10 +872,10 @@ function ProfileScreen({me,profile,action,reload,showChances,setShowChances}:{me
  return <div className="stack page pageEntry">
   {blue?<header className="profileHero">
    <Avatar id={me} name={who} me={me} size="lg"/>
-   <div><h1>{who}</h1><p>{accountEmail&&<>{accountEmail} · </>}<Stars/> reputation</p></div>
+   <div><h1>{who}</h1>{accountEmail&&<p>{accountEmail}</p>}</div>
   </header>:<header className="profileHero">
    <span className="seat mine heroPlayer" aria-hidden="true"><span className="seatInitials">{who.slice(0,2).toUpperCase()}</span></span>
-   <div><h1>{who}</h1><p><Stars/> reputation</p></div>
+   <div><h1>{who}</h1></div>
   </header>}
   <dl className="statRow"><div><dt>Games</dt><dd>{total}</dd></div><div><dt>Wins</dt><dd>{wins}</dd></div><div><dt>Losses</dt><dd>{losses}</dd></div></dl>
   <section aria-labelledby="my-ratings-title">

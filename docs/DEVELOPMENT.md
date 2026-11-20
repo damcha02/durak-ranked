@@ -1,6 +1,6 @@
 # Durak Ranked: development and deployment
 
-A mobile-first Progressive Web App (PWA) for iOS, Android and desktop. **The physical card game is not simulated.** The app tracks tables, result votes, four mode-specific Elo ratings, friend groups, and player statistics.
+A mobile-first Progressive Web App (PWA) for iOS, Android and desktop. **The physical card game is not simulated.** The app tracks tables, result votes, four mode-specific Elo ratings, friends, and player statistics.
 
 > Status: **implementation starter / pre-production alpha**. This is real source code and SQL, not a deployed or end-to-end verified application. Tests of schema, SQL functions, authentication providers, and multi-phone concurrency must be run against a real Supabase project before use with friends. Do not open it to the public before the security checklist in `docs/ARCHITECTURE.md` is completed.
 
@@ -30,7 +30,7 @@ Requires Node.js 20+, npm and an owned Supabase project. The source alone cannot
 
 1. Create a Supabase project on https://supabase.com/dashboard.
 2. Apply migration files **in filename order** using the Supabase CLI (`supabase db push` after linking) or Supabase SQL Editor. Using the CLI ensures migrations are tracked. Review SQL before applying it: it creates policies/functions and an Auth trigger.
-3. In Supabase **Authentication → Providers**, enable Email; configure Google OAuth if desired. Apple OAuth is optional and normally requires Apple Developer Program membership. In **Authentication → URL Configuration**, set your site URL and add dev and production redirect URLs (`http://localhost:5173/**`, `https://your-site.pages.dev/**`).
+3. In Supabase **Authentication → Providers**, enable Email; configure Google OAuth if desired. Apple OAuth is optional and normally requires Apple Developer Program membership. In **Authentication → URL Configuration**, set your site URL and add dev and production redirect URLs (`http://localhost:5173/**`, `https://your-site.pages.dev/**`). Password-reset links redirect to the site root, so it must be on this list.
 4. Copy `.env.example` to `.env` and supply your Supabase **project URL** and **publishable key**. Never use your secret service-role key in the Vite environment.
 5. `npm install` then `npm run dev`. Browse `http://localhost:5173`.
 6. Create three accounts, join the same table, start Natural Durak, record a result, and check rating updates.

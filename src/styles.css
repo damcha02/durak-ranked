@@ -235,7 +235,6 @@ select{appearance:none;-webkit-appearance:none;padding-right:40px;background-ima
 .codeLarge{font-family:var(--serif);font-size:1.6rem;font-weight:700;letter-spacing:.2em;color:var(--ink)}
 .playerAvatar{flex:none;width:36px;height:36px;display:grid;place-items:center;border:1.5px solid var(--ink);border-radius:50%;background:var(--card);font:700 .8rem/1 var(--serif)}
 .youPill{padding:2px 6px;border-radius:4px;background:var(--sunk);border:1px solid var(--line);color:var(--ink-2);font-size:.7rem;font-weight:700;letter-spacing:.04em}
-.stars{display:inline-flex;align-items:center;gap:4px;color:var(--ink-2);font-size:.85rem;font-weight:700;white-space:nowrap}
 .hint{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;padding:12px;border:1px solid #c8d6c4;border-radius:var(--radius-sm);background:var(--felt-tint);color:var(--felt-deep);font-size:.95rem;line-height:1.5}
 .hint svg{flex:none;margin-top:2px}
 .leaveLink{margin-top:12px;color:var(--red)}
@@ -314,7 +313,6 @@ select{appearance:none;-webkit-appearance:none;padding-right:40px;background-ima
 .heroPlayer .seatInitials{font-size:28px}
 .profileHero h1{overflow-wrap:anywhere}
 .profileHero p{margin-top:4px;color:var(--ink-soft)}
-.stars{display:inline-flex;align-items:center;gap:4px;color:var(--ink-2);font-weight:700;white-space:nowrap}
 .statRow{display:grid;grid-template-columns:repeat(3,1fr);margin:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .statRow>div{display:flex;flex-direction:column-reverse;align-items:center;padding:12px 4px}
 .statRow>div+div{border-left:1px solid var(--line)}
@@ -558,7 +556,6 @@ select{appearance:none;-webkit-appearance:none;padding-right:40px;background-ima
 [data-theme=blue] .playerRow.waiting{color:var(--ink-soft);font-size:1rem}
 [data-theme=blue] .youChip{padding:2px 9px;border-radius:999px;background:var(--felt-tint);font-size:.8125rem;font-weight:600}
 [data-theme=blue] .hostIcon{color:var(--brass);vertical-align:-2px}
-[data-theme=blue] .rowRep{font-weight:600}
 [data-theme=blue] .lobbyFooter>p{color:var(--ink-soft)}
 [data-theme=blue] .voteHead h2{font-size:1.625rem}
 [data-theme=blue] .voteTimer{width:auto;height:auto;flex-direction:row;gap:4px;padding:6px 12px;border:0;border-radius:999px;background:var(--felt-tint);color:var(--felt-deep)}
